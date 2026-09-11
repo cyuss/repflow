@@ -6,17 +6,34 @@ commit when stable.
 
 | Phase | Objective | Status |
 |---|---|---|
-| 0 | Environment | ✅ done (one manual step outstanding) |
-| 1 | Build proof | ⏳ blocked on device definitions |
+| 0 | Environment | ✅ verified — SDK 9.2.0, 62 device definitions |
+| 1 | Build proof | ✅ verified — builds and runs in the simulator |
 | 2 | Domain model | ✅ implemented |
-| 3 | Workout engine | ✅ implemented |
+| 3 | Workout engine | ✅ implemented, 18 tests green |
 | 4 | Watch UI | ✅ implemented |
 | 5 | Rest timer | ✅ implemented |
 | 6 | Garmin activity recording | ✅ implemented |
 | 7 | Persistence | ✅ implemented |
-| 8 | Tests & device matrix | ✅ tests written; matrix pending devices |
-| 9 | Physical device build | ✅ tooling ready; run pending |
-| 10 | Connect IQ release pipeline | ✅ tooling ready; run pending |
+| 8 | Tests & device matrix | ✅ 33/33 products build; matrix generated |
+| 9 | Physical device build | ✅ tooling ready — **on-watch run pending** |
+| 10 | Connect IQ release pipeline | ✅ `.iq` bundle produced — **submission pending** |
+
+**Verified on 2026-09-11, Connect IQ SDK 9.2.0:**
+
+- `make build-all` — 33/33 declared products compile at **strict** type
+  checking (`-l 3`), with no errors and no warnings beyond the expected
+  per-device launcher-icon scaling notice
+- `make test` — 18/18 unit tests pass on `fenix6pro` and `fenix9pro47mm`
+- `make sim` — the app builds, pushes and runs in the Connect IQ Simulator
+- `make package` — produces a genuine Connect IQ `.iq` Store bundle
+  (7-zip container, 58 device variants)
+
+**Outstanding, and genuinely human-only:**
+
+- The manual smoke test (`docs/SMOKE_TEST.md`) in the simulator and on a
+  physical Fenix — it needs eyes and button presses
+- Store screenshots and icon (`store-assets/`)
+- Submission to the Connect IQ developer portal (Garmin account)
 
 ---
 
@@ -30,20 +47,23 @@ generated an RSA 4096 developer key outside the repo; wrote `doctor.sh` /
 `doctor.ps1` and the three bootstrap scripts; recorded everything in
 `docs/ENVIRONMENT.md`.
 
-**Outstanding manual step:** device definitions require signing in to the
-Connect IQ SDK Manager with a Garmin account. Not automatable —
-see `docs/ENVIRONMENT.md`.
+Device definitions required signing in to the Connect IQ SDK Manager with a
+Garmin account — the one step that cannot be automated (see
+`docs/ENVIRONMENT.md`). Once done, 62 device definitions were available.
 
 ## Phase 1 — Build proof
 
 **Objective:** a minimal RepFlow that compiles and launches in the simulator.
 
-Blocked until device definitions are installed. `monkeyc` cannot target any
-device without them. Once installed:
+Done. Device definitions were installed through the SDK Manager, after which
+`make build` and `make sim` both succeed. RepFlow pushes to and runs in the
+simulator on `fenix9pro47mm` and `fenix6pro`.
 
-```sh
-make doctor && make build && make sim
-```
+A correction worth recording: the SDK's bundled `resources/device-reference/`
+folder contains no Fenix 9 entries, which initially looked like "the Fenix 9 Pro
+does not exist". The downloaded device definitions tell the truth —
+`fenix9pro47mm`, `fenix9pro51mm` and five more Fenix 9 variants are real and
+compile. Always discover ids with `scripts/devices.sh --all`.
 
 ## Phase 2 — Domain model
 
@@ -101,8 +121,10 @@ keys, capped history, every call exception-wrapped.
 **Objective:** the product promise, executable.
 
 `tests/WorkoutEngineTest.mc` covers all ten required scenarios plus engine
-invariants. `scripts/device-matrix.sh` generates `docs/DEVICE_MATRIX.md` from
-the installed device definitions — pending those definitions.
+invariants, and passes at strict type checking. `scripts/device-matrix.sh`
+generates the capability table in `docs/DEVICE_MATRIX.md` by reading Garmin's own
+`compiler.json` / `simulator.json` — resolution, watch-app memory limit, physical
+keys, touch support and API level, none of it hand-written.
 
 ## Phase 9 — Physical device build
 

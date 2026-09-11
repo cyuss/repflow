@@ -295,7 +295,7 @@ function testSessionSerializationRoundTrip(logger as Test.Logger) as Boolean {
     var restored = WorkoutSession.fromStorage(engine.getSession().toStorage());
 
     Test.assertEqual(restored.startedAt, TestSupport.T0);
-    Test.assertEqual(restored.currentExerciseId, "A");
+    Test.assertEqual(restored.currentExerciseId as String, "A");
     Test.assertEqual(restored.state, SESSION_ACTIVE);
     Test.assertEqual(restored.workout.name, "Test");
     Test.assertEqual(restored.workout.exercises.size(), 3);
@@ -303,10 +303,11 @@ function testSessionSerializationRoundTrip(logger as Test.Logger) as Boolean {
     var a = restored.workout.findExercise("A") as Exercise;
     Test.assertEqual(a.state, EX_ACTIVE);
     Test.assertEqual(a.sets.size(), 1);
-    Test.assertEqual(a.sets[0].actualReps, 9);
-    Test.assertEqual(a.sets[0].actualWeight, 57.5);
-    Test.assertEqual(a.sets[0].completedAt, TestSupport.T0 + 10);
     Test.assert(a.sets[0].completed);
+    // Nullable on WorkoutSet; the `completed` assertion above is what guarantees them.
+    Test.assertEqual(a.sets[0].actualReps as Number, 9);
+    Test.assertEqual(a.sets[0].actualWeight as Float, 57.5);
+    Test.assertEqual(a.sets[0].completedAt as Number, TestSupport.T0 + 10);
     // Inheritance still works after a restore — this is what makes resume useful.
     Test.assertEqual(a.plannedWeight(), 57.5);
     Test.assertEqual(a.plannedReps(), 9);

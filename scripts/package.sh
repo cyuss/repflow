@@ -113,7 +113,7 @@ if monkeyc -e -w -r \
     -f "$REPO_ROOT/monkey.jungle" \
     -o "$IQ" \
     -y "$DEVELOPER_KEY" \
-    -l "${TYPECHECK:-2}"; then
+    -l "${TYPECHECK:-3}"; then
   [ -f "$IQ" ] || die "monkeyc reported success but $IQ does not exist."
   ok "Store bundle created: $IQ ($(wc -c < "$IQ" | tr -d ' ') bytes)"
   echo

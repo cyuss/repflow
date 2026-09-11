@@ -90,8 +90,10 @@ Verified limitations you must not paper over:
 - Device definitions require a **signed-in Garmin account** in the SDK Manager.
   There is no way to automate this.
 
-Device ids come from the SDK (`make devices`, `scripts/devices.sh --known`).
-**There is no Fenix 9 Pro in SDK 9.2.0** — the newest Fenix family is Fenix 8.
+Device ids come from the **installed device definitions**: `make devices` or
+`scripts/devices.sh --all`. Do **not** trust `scripts/devices.sh --known` — it
+reads the SDK's bundled reference-artwork folder, which lags reality (it lists no
+Fenix 9 at all, even though `fenix9pro47mm` and `fenix9pro51mm` build fine).
 
 ## Commands
 
@@ -122,10 +124,16 @@ Device ids come from the SDK (`make devices`, `scripts/devices.sh --known`).
 
 ## Current milestone
 
-**V0.1 MVP.** The engine, UI, recording, persistence, tests, tooling and
-documentation are implemented. Remaining work is verification-driven: build and
-run against real device definitions, complete the simulator and physical smoke
-tests, then prepare the first Store submission.
+**V0.1 MVP — code complete and verified against SDK 9.2.0.**
+
+- 33/33 declared products build at strict type checking (`-l 3`)
+- 18/18 unit tests pass on `fenix6pro` and `fenix9pro47mm`
+- the app runs in the Connect IQ Simulator
+- `make package` produces a real `.iq` Store bundle
+
+What is left needs a human: the manual smoke test (`docs/SMOKE_TEST.md`) in the
+simulator and on a physical Fenix, store screenshots and icon, and the Connect
+IQ portal submission.
 
 Check `CHANGELOG.md` `## [Unreleased]` and `docs/IMPLEMENTATION_PLAN.md` for the
 live status.

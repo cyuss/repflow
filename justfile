@@ -4,7 +4,7 @@
 #   just build fenix847mm
 
 device := env_var_or_default("DEVICE", "fenix6pro")
-typecheck := env_var_or_default("TYPECHECK", "2")
+typecheck := env_var_or_default("TYPECHECK", "3")
 
 # Show the available recipes
 default:

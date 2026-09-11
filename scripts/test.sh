@@ -27,7 +27,7 @@ monkeyc \
   -o "$PRG" \
   -y "$DEVELOPER_KEY" \
   -d "$DEVICE" \
-  -l "${TYPECHECK:-2}" \
+  -l "${TYPECHECK:-3}" \
   --warn \
   -t
 ok "Test binary built: $PRG"

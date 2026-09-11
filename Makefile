@@ -5,7 +5,7 @@ SHELL := /bin/bash
 #   make build DEVICE=fenix847mm
 DEVICE ?= fenix6pro
 # monkeyc type-check level: 0=off 1=gradual 2=informative 3=strict
-TYPECHECK ?= 2
+TYPECHECK ?= 3
 
 export DEVICE
 export TYPECHECK

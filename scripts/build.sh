@@ -25,7 +25,7 @@ build_one() {
     -o "$out"
     -y "$DEVELOPER_KEY"
     -d "$device"
-    -l "${TYPECHECK:-2}"
+    -l "${TYPECHECK:-3}"
     --warn
   )
   if [ -n "${RELEASE:-}" ]; then

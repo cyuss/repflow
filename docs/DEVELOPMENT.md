@@ -23,21 +23,24 @@ Every command works through `make` or `just`.
 ```sh
 make devices                          # ids that can be built right now
 make build DEVICE=fenix847mm
-make sim   DEVICE=fenix8pro47mm
+make sim   DEVICE=fenix9pro47mm
 just build fenix847mm
 ```
 
-Device ids always come from the installed SDK. `scripts/devices.sh --known`
-lists every device the SDK knows about; `--missing` lists products declared in
-`manifest.xml` whose definitions are not installed locally.
+Device ids always come from the installed device definitions.
+`scripts/devices.sh --all` lists everything installed locally and is the
+authoritative source; `--missing` lists products declared in `manifest.xml`
+whose definitions are not installed. (`--known` reads the SDK's bundled
+reference-artwork folder, which lags reality — it has no Fenix 9 entries.)
 
 ### Type checking
 
-`monkeyc`'s type checker runs at level 2 (*informative*) by default. Raise it
-for a stricter pass:
+`monkeyc`'s type checker runs at level **3 (strict)** by default, and the whole
+tree — source and tests — is clean at that level. Keep it that way. You can
+lower it temporarily while refactoring:
 
 ```sh
-make build TYPECHECK=3     # 0=off 1=gradual 2=informative 3=strict
+make build TYPECHECK=1     # 0=off 1=gradual 2=informative 3=strict
 ```
 
 ## Project layout
