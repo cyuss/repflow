@@ -57,6 +57,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resolution-adaptive drawing in code rather than per-device XML layouts
 - Per-device launcher icons rendered at each product's exact pixel size
   (`scripts/make-icons.sh`), so nothing is rescaled
+- Height-aware font selection (`Theme.pickFontFitting`): fonts are chosen to fit
+  the space actually available, not just the width, so nothing overflows on the
+  shorter 260x260 Fenix 6 Pro screen
+- Accent and heart-rate colours chosen from Garmin's 64-colour palette so they
+  render exactly on 8-bit MIP displays as well as on AMOLED
 
 #### Garmin integration
 

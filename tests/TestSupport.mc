@@ -1,5 +1,6 @@
 import Toybox.Lang;
 import Toybox.Test;
+import Toybox.Graphics;
 
 //! Shared helpers for the RepFlow unit tests.
 //!
@@ -32,6 +33,28 @@ module TestSupport {
 
     public function exerciseOf(engine as WorkoutEngine, id as String) as Exercise {
         return engine.getWorkout().findExercise(id) as Exercise;
+    }
+
+    //! An off-screen Dc with the running device's real font metrics, for the
+    //! layout tests.
+    //!
+    //! Graphics.createBufferedBitmap is API 4.0; a Fenix 6 Pro is API 3.4 and
+    //! only has the BufferedBitmap constructor. Returns null where neither is
+    //! available, so the caller can skip rather than fail.
+    public function offscreenDc(size as Number) as Graphics.Dc? {
+        if (Graphics has :createBufferedBitmap) {
+            var ref = Graphics.createBufferedBitmap({ :width => size, :height => size });
+            var buffered = ref.get();
+            if (buffered == null) {
+                return null;
+            }
+            return (buffered as Graphics.BufferedBitmap).getDc();
+        }
+        if (Graphics has :BufferedBitmap) {
+            var bitmap = new Graphics.BufferedBitmap({ :width => size, :height => size });
+            return bitmap.getDc();
+        }
+        return null;
     }
 
     //! Complete `count` sets of the currently selected exercise at its

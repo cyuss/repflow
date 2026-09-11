@@ -35,14 +35,22 @@ class RestView extends WatchUi.View {
             Theme.fontsLabel(), Theme.COLOR_DIM);
         y += gap;
 
-        y = Theme.drawFitted(dc, y, rest.format(), Theme.fontsHero(),
-            rest.isRunning() ? Theme.COLOR_TEXT : Theme.COLOR_DONE);
-        y += gap;
+        // Cap the countdown so the "next up" block below always has room. On a
+        // 260x260 Fenix 6 Pro an uncapped hero font would swallow it whole.
+        var smallRow = dc.getFontHeight(Graphics.FONT_XTINY);
+        var timerBudget = h - y - (smallRow * 4) - (gap * 6);
+        var timerFont = Theme.pickFontFitting(dc, rest.format(), Theme.fontsHero(),
+            Theme.usableWidth(dc, y), timerBudget);
+        dc.setColor(rest.isRunning() ? Theme.COLOR_TEXT : Theme.COLOR_DONE,
+            Graphics.COLOR_TRANSPARENT);
+        dc.drawText(dc.getWidth() / 2, y, timerFont, rest.format(),
+            Graphics.TEXT_JUSTIFY_CENTER);
+        y += dc.getFontHeight(timerFont) + gap;
 
         // Heart rate recovering between sets is exactly what you want to watch
         // during a rest, so it belongs here rather than a page away.
         var hr = LiveMetrics.heartRate();
-        if (hr != null) {
+        if (hr != null && (h - y) > smallRow * 5) {
             y = Theme.drawValueWithUnit(dc, y, hr.toString(),
                 WatchUi.loadResource(Rez.Strings.Bpm) as String,
                 Theme.fontsBody(), Theme.COLOR_HR, Theme.COLOR_DIM);

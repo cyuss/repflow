@@ -93,6 +93,48 @@ For each device, verify:
 | Layouts | No clipped text on the smallest (`fenix6pro`, 240x240) or largest (`fenix9pro51mm`, 466x466) screen |
 | API level | `minApiLevel` 3.1.0 satisfied by the device |
 
+## Fenix 6 Pro — the constraining device
+
+The Fenix 6 Pro is the secondary target and the one that constrains the design.
+Everything RepFlow draws is sized against it, because it is the hardest case:
+
+| Property | Fenix 6 Pro | Fenix 9 Pro 47 mm |
+|---|---|---|
+| Resolution | 260x260 | 454x454 |
+| Display | MIP, **8 bits per pixel (64 colours)** | AMOLED, 16 bpp |
+| Alpha blending | **no** | yes |
+| Touch | **no** | yes |
+| API level | 3.4 | 6.0 |
+| Watch-app memory | 1280 KB | 768 KB |
+
+Three consequences, all handled:
+
+**1. Short screens need height-aware fonts.** A 260x260 display is wide enough
+for the largest number font but nowhere near tall enough. Choosing a font by
+width alone overflowed whatever sat below it — on the exercise screen the reps
+were pushed straight through the `COMPLETE SET` bar. `Theme.pickFontFitting`
+takes a height budget as well as a width, and every screen that stacks a large
+number below or above something else now passes one. Locked down by
+`testPickFontRespectsHeightBudget`, which measures against the running device's
+real font metrics.
+
+**2. 64 colours, no alpha.** On an 8-bit MIP panel Garmin snaps any colour to the
+nearest of 64, where each channel is one of `00`/`55`/`AA`/`FF`. RepFlow's accent
+and heart-rate colours are chosen *from* that palette (`0x00AAFF`, `0xFF5555`),
+so they render identically on the Fenix 6 Pro and on AMOLED rather than drifting
+to an approximate neighbour. Nothing uses alpha blending.
+
+**3. No touch.** Every action is reachable by button; touch only ever adds a
+shortcut. Verify this on any device with *Settings → Toggle Touch Screen*.
+
+API 3.4 also predates some newer APIs. `Graphics.createBufferedBitmap` is 4.0,
+for instance, so `TestSupport.offscreenDc` falls back to the `BufferedBitmap`
+constructor — the same `has`-guarded pattern used for `Attention.vibrate` and
+`ActivityRecording`.
+
+A release build for the Fenix 6 Pro is about **40 KB** against a 1280 KB budget,
+so memory is not a constraint there.
+
 ## Fallbacks for older devices
 
 RepFlow's `minApiLevel` is **3.1.0**; the Fenix 6 family reports API level 3.4, so it qualifies. Where a

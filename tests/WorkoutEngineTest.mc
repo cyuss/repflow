@@ -1,5 +1,6 @@
 import Toybox.Lang;
 import Toybox.Test;
+import Toybox.Graphics;
 
 //! Behaviour tests for the flexible workout engine.
 //!
@@ -530,5 +531,75 @@ function testReselectingFinishedExerciseKeepsWorkoutComplete(logger as Test.Logg
     Test.assert(engine.undoLastSet());
     Test.assert(!engine.isWorkoutComplete());
     Test.assertEqual(engine.unfinishedExercises().size(), 1);
+    return true;
+}
+
+// ----------------------------------------------------------------------
+// Layout: fonts must fit the space they are given, not just the width.
+//
+// These run against a real device Dc obtained from a buffered bitmap, so they
+// use the actual font metrics of whichever device the suite is run on. That is
+// the point: the bug they guard against only appeared on the smaller, shorter
+// screens (a 260x260 Fenix 6 Pro), where a font wide enough to fit was far too
+// tall and pushed the reps through the action bar.
+// ----------------------------------------------------------------------
+
+(:test)
+function testPickFontRespectsHeightBudget(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.offscreenDc(260);
+    if (dc == null) {
+        return true;   // device without buffered bitmaps: nothing to assert
+    }
+    var hero = Theme.fontsHero();
+
+    // With no height budget the widest-fitting font wins, and on a short screen
+    // it can be very tall indeed.
+    var unbounded = Theme.pickFont(dc, "55", hero, 240);
+    Test.assert(dc.getFontHeight(unbounded) > 0);
+
+    // Given a budget, the chosen font must honour it — unless even the smallest
+    // font in the ladder is taller, in which case the smallest is returned.
+    var budgets = [80, 60, 40, 24] as Array<Number>;
+    var smallest = hero[hero.size() - 1];
+    for (var i = 0; i < budgets.size(); i++) {
+        var font = Theme.pickFontFitting(dc, "55", hero, 240, budgets[i]);
+        var height = dc.getFontHeight(font);
+        Test.assert(height <= budgets[i] || font == smallest);
+        // Never larger than the unconstrained choice.
+        Test.assert(height <= dc.getFontHeight(unbounded));
+    }
+    return true;
+}
+
+//! usableWidth must stay positive and never exceed the display, at any height.
+(:test)
+function testUsableWidthStaysOnScreen(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.offscreenDc(260);
+    if (dc == null) {
+        return true;
+    }
+    for (var y = 0; y <= 260; y += 20) {
+        var w = Theme.usableWidth(dc, y);
+        Test.assert(w > 0);
+        Test.assert(w <= dc.getWidth());
+    }
+    return true;
+}
+
+//! Formatting helpers, which the layout sizes itself around.
+(:test)
+function testFormatting(logger as Test.Logger) as Boolean {
+    Test.assertEqual(Theme.formatWeight(55.0), "55");
+    Test.assertEqual(Theme.formatWeight(57.5), "57.5");
+    Test.assertEqual(Theme.formatWeight(0.0), "0");
+    Test.assertEqual(Theme.formatWeight(1.25), "1.3");   // rounded to a tenth
+
+    Test.assertEqual(Theme.formatDuration(0), "0:00");
+    Test.assertEqual(Theme.formatDuration(67), "1:07");
+    Test.assertEqual(Theme.formatDuration(3723), "1:02:03");
+
+    // Volume switches to tonnes so the number stays short on a small screen.
+    Test.assertEqual(Theme.formatVolume(960.0), "960 kg");
+    Test.assertEqual(Theme.formatVolume(2970.0), "3.0 t");
     return true;
 }

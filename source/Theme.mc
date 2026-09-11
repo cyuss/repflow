@@ -18,11 +18,15 @@ module Theme {
     const COLOR_BG = Graphics.COLOR_BLACK;
     const COLOR_TEXT = Graphics.COLOR_WHITE;
     const COLOR_DIM = Graphics.COLOR_LT_GRAY;
-    const COLOR_ACCENT = 0x00A8E8;      // RepFlow blue
+    //! RepFlow blue. Chosen from Garmin's 64-colour palette (each channel one of
+    //! 00/55/AA/FF) so it renders identically on an 8-bit MIP display like the
+    //! Fenix 6 Pro instead of being snapped to an approximate neighbour.
+    const COLOR_ACCENT = 0x00AAFF;
     const COLOR_DONE = Graphics.COLOR_GREEN;
     const COLOR_PENDING = Graphics.COLOR_ORANGE;
     const COLOR_SKIPPED = Graphics.COLOR_DK_GRAY;
-    const COLOR_HR = 0xFF4444;
+    //! Also a palette colour, for the same reason.
+    const COLOR_HR = 0xFF5555;
 
     //! Colour used for an exercise state in lists and headers.
     public function stateColor(state as ExerciseState) as Number {
@@ -125,10 +129,31 @@ module Theme {
         fonts as Array<Graphics.FontDefinition>,
         maxWidth as Number
     ) as Graphics.FontDefinition {
+        return pickFontFitting(dc, text, fonts, maxWidth, 0);
+    }
+
+    //! Pick the largest font that fits BOTH a width and a height budget.
+    //!
+    //! Width alone is not enough. A 260x260 Fenix 6 Pro has plenty of room
+    //! across for a huge number font but nowhere near enough down the screen,
+    //! so a width-only choice overflows whatever sits below it. Pass
+    //! `maxHeight` 0 to ignore the height constraint.
+    public function pickFontFitting(
+        dc as Graphics.Dc,
+        text as String,
+        fonts as Array<Graphics.FontDefinition>,
+        maxWidth as Number,
+        maxHeight as Number
+    ) as Graphics.FontDefinition {
         for (var i = 0; i < fonts.size(); i++) {
-            if (dc.getTextWidthInPixels(text, fonts[i]) <= maxWidth) {
-                return fonts[i];
+            var font = fonts[i];
+            if (dc.getTextWidthInPixels(text, font) > maxWidth) {
+                continue;
             }
+            if (maxHeight > 0 && dc.getFontHeight(font) > maxHeight) {
+                continue;
+            }
+            return font;
         }
         return fonts[fonts.size() - 1];
     }
@@ -162,6 +187,21 @@ module Theme {
         valueColor as Number,
         unitColor as Number
     ) as Number {
+        return drawValueWithUnitCapped(dc, y, value, unit, fonts, valueColor, unitColor, 0);
+    }
+
+    //! As drawValueWithUnit, but the number may not exceed `maxHeight` pixels
+    //! (0 for no limit). Use this whenever something is drawn below it.
+    public function drawValueWithUnitCapped(
+        dc as Graphics.Dc,
+        y as Number,
+        value as String,
+        unit as String,
+        fonts as Array<Graphics.FontDefinition>,
+        valueColor as Number,
+        unitColor as Number,
+        maxHeight as Number
+    ) as Number {
         var maxWidth = usableWidth(dc, y);
         var unitFont = Graphics.FONT_TINY;
         var unitText = unit.length() > 0 ? " " + unit : "";
@@ -169,7 +209,7 @@ module Theme {
             ? dc.getTextWidthInPixels(unitText, unitFont)
             : 0;
 
-        var valueFont = pickFont(dc, value, fonts, maxWidth - unitWidth);
+        var valueFont = pickFontFitting(dc, value, fonts, maxWidth - unitWidth, maxHeight);
         var valueWidth = dc.getTextWidthInPixels(value, valueFont);
         var valueHeight = dc.getFontHeight(valueFont);
 

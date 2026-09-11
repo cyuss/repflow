@@ -63,26 +63,45 @@ class WorkoutSummaryView extends WatchUi.View {
         var duration = Theme.formatDuration(_summary.durationSec);
         var volume = Theme.formatVolume(_summary.totalVolume);
 
-        var durationFont = Theme.pickFont(dc, duration, Theme.fontsBig(),
-            Theme.usableWidth(dc, dc.getHeight() / 2));
         var labelHeight = dc.getFontHeight(Graphics.FONT_XTINY);
-        var volumeFont = Theme.pickFont(dc, volume, Theme.fontsBig(),
-            Theme.usableWidth(dc, dc.getHeight() / 2));
+        var maxWidth = Theme.usableWidth(dc, dc.getHeight() / 2);
+        // Two stacked numbers plus their labels have to fit the space that is
+        // left, so each gets an explicit share of it rather than the largest
+        // font that happens to fit the width.
+        var available = actionTop - y;
+        var numberBudget = (available - labelHeight * 2 - gap * 3) / 2;
+
+        var durationFont = Theme.pickFontFitting(dc, duration, Theme.fontsBig(),
+            maxWidth, numberBudget);
+        var volumeFont = Theme.pickFontFitting(dc, volume, Theme.fontsBig(),
+            maxWidth, numberBudget);
 
         var blockHeight = dc.getFontHeight(durationFont) + labelHeight
             + gap * 3 + dc.getFontHeight(volumeFont) + labelHeight;
-        var top = y + ((actionTop - y) - blockHeight) / 2;
+        var top = y + (available - blockHeight) / 2;
         if (top < y) {
             top = y;
         }
 
-        top = Theme.drawFitted(dc, top, duration, Theme.fontsBig(), Theme.COLOR_TEXT);
-        top = Theme.drawFitted(dc, top, WatchUi.loadResource(Rez.Strings.Duration) as String,
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
+        top = _drawNumberWithLabel(dc, top, duration, durationFont,
+            WatchUi.loadResource(Rez.Strings.Duration) as String, Theme.COLOR_TEXT);
         top += gap * 3;
+        _drawNumberWithLabel(dc, top, volume, volumeFont,
+            WatchUi.loadResource(Rez.Strings.Volume) as String, Theme.COLOR_ACCENT);
+    }
 
-        top = Theme.drawFitted(dc, top, volume, Theme.fontsBig(), Theme.COLOR_ACCENT);
-        Theme.drawFitted(dc, top, WatchUi.loadResource(Rez.Strings.Volume) as String,
+    private function _drawNumberWithLabel(
+        dc as Graphics.Dc,
+        y as Number,
+        value as String,
+        font as Graphics.FontDefinition,
+        label as String,
+        color as Number
+    ) as Number {
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(dc.getWidth() / 2, y, font, value, Graphics.TEXT_JUSTIFY_CENTER);
+        y += dc.getFontHeight(font);
+        return Theme.drawFitted(dc, y, label,
             [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
     }
 

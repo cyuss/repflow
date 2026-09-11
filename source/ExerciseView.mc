@@ -79,31 +79,38 @@ class ExerciseView extends WatchUi.View {
         // Progress dots, one per target set.
         y = Theme.drawSetDots(dc, y, exercise.targetSets, exercise.completedSetCount());
 
-        // The two numbers, centred in whatever room is left between here and
-        // the action bar. Measuring the block first is what keeps the weight and
-        // the reps from crowding each other on a small screen.
+        // The two numbers share whatever room is left between here and the
+        // action bar, and the fonts are chosen to FIT that room — not just to
+        // fit the width. A 260x260 Fenix 6 Pro is wide enough for the largest
+        // number font but nowhere near tall enough, so a width-only choice
+        // pushes the reps straight through the action bar.
+        var innerGap = h / 30;
+        var available = actionTop - y - innerGap;
         var repsText = controller.pendingReps().toString();
         var repsUnit = WatchUi.loadResource(Rez.Strings.Reps) as String;
-        var repsFont = Graphics.FONT_MEDIUM;
+        var maxWidth = Theme.usableWidth(dc, h / 2);
+
+        // Reps take the smaller share; the load is the number read mid-set.
+        var repsFont = Theme.pickFontFitting(dc, repsText, Theme.fontsTitle(),
+            maxWidth, (available * 30) / 100);
         var repsHeight = dc.getFontHeight(repsFont);
 
         var weightText = Theme.formatWeight(controller.pendingWeight());
-        var weightFont = Theme.pickFont(dc, weightText, Theme.fontsHero(),
-            (Theme.usableWidth(dc, h / 2) * 70) / 100);
+        var weightBudget = available - innerGap - repsHeight;
+        var weightFont = Theme.pickFontFitting(dc, weightText, Theme.fontsHero(),
+            (maxWidth * 70) / 100, weightBudget);
         var weightHeight = dc.getFontHeight(weightFont);
 
-        var innerGap = h / 30;
         var blockHeight = weightHeight + innerGap + repsHeight;
-        var available = actionTop - y;
         var blockTop = y + (available - blockHeight) / 2;
         if (blockTop < y) {
             blockTop = y;
         }
 
-        var afterWeight = Theme.drawValueWithUnit(
+        var afterWeight = Theme.drawValueWithUnitCapped(
             dc, blockTop, weightText,
             WatchUi.loadResource(Rez.Strings.Kg) as String,
-            Theme.fontsHero(), Theme.COLOR_TEXT, Theme.COLOR_DIM);
+            Theme.fontsHero(), Theme.COLOR_TEXT, Theme.COLOR_DIM, weightBudget);
 
         _drawReps(dc, afterWeight + innerGap, repsText, repsUnit, repsFont);
     }
@@ -144,14 +151,17 @@ class ExerciseView extends WatchUi.View {
             Theme.fontsLabel(), Theme.COLOR_DIM);
         y += gap;
 
-        // Heart rate is the number worth reading mid-set, so it gets the hero slot.
+        // Heart rate is the number worth reading mid-set, so it gets the hero
+        // slot — capped so the three rows below it always have room.
+        var rowHeight = dc.getFontHeight(Graphics.FONT_XTINY);
+        var heroBudget = h - y - (rowHeight + gap) * 3 - gap * 3;
         var hr = LiveMetrics.heartRate();
-        y = Theme.drawValueWithUnit(
+        y = Theme.drawValueWithUnitCapped(
             dc, y, LiveMetrics.format(hr),
             WatchUi.loadResource(Rez.Strings.Bpm) as String,
             Theme.fontsHero(),
             hr != null ? Theme.COLOR_HR : Theme.COLOR_SKIPPED,
-            Theme.COLOR_DIM);
+            Theme.COLOR_DIM, heroBudget);
         y += gap + gap;
 
         var timer = LiveMetrics.timerSeconds();

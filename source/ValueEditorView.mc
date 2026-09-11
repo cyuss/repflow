@@ -63,15 +63,19 @@ class ValueEditorView extends WatchUi.View {
             ? WatchUi.loadResource(Rez.Strings.Kg) as String
             : WatchUi.loadResource(Rez.Strings.Reps) as String;
 
-        // Centre the number in the room between the header and the action bar.
-        var font = Theme.pickFont(dc, value, Theme.fontsHero(), Theme.usableWidth(dc, h / 2));
+        // Centre the number in the room between the header and the action bar,
+        // leaving space for the step hint that sits just above the bar.
+        var hintHeight = dc.getFontHeight(Graphics.FONT_XTINY);
+        var budget = (actionTop - y) - hintHeight - gap * 2;
+        var font = Theme.pickFontFitting(dc, value, Theme.fontsHero(),
+            Theme.usableWidth(dc, h / 2), budget);
         var valueHeight = dc.getFontHeight(font);
-        var top = y + ((actionTop - y) - valueHeight) / 2;
+        var top = y + (budget - valueHeight) / 2;
         if (top < y + gap) {
             top = y + gap;
         }
-        Theme.drawValueWithUnit(dc, top, value, unit, Theme.fontsHero(),
-            Theme.COLOR_ACCENT, Theme.COLOR_DIM);
+        Theme.drawValueWithUnitCapped(dc, top, value, unit, Theme.fontsHero(),
+            Theme.COLOR_ACCENT, Theme.COLOR_DIM, budget);
 
         // The step size, so the athlete knows what a press is worth.
         var step = isWeight
