@@ -17,10 +17,12 @@ module ExerciseActionsMenu {
 
     public function show(exercise as Exercise) as Void {
         var menu = new WatchUi.Menu2({ :title => exercise.name });
-        menu.addItem(new WatchUi.MenuItem(
-            WatchUi.loadResource(Rez.Strings.ActionEditReps) as String, null, ACTION_EDIT_REPS, {}));
+        // Weight first: it is the value that changes most often, so it sits
+        // under the cursor the moment the menu opens.
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.ActionEditWeight) as String, null, ACTION_EDIT_WEIGHT, {}));
+        menu.addItem(new WatchUi.MenuItem(
+            WatchUi.loadResource(Rez.Strings.ActionEditReps) as String, null, ACTION_EDIT_REPS, {}));
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.ActionSkipForNow) as String, null, ACTION_SKIP_FOR_NOW, {}));
         menu.addItem(new WatchUi.MenuItem(

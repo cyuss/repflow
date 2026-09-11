@@ -92,3 +92,56 @@ require_device_installed() {
     exit 1
   fi
 }
+
+# ---------------------------------------------------------------------------
+# Connect IQ Simulator
+# ---------------------------------------------------------------------------
+
+simulator_running() {
+  pgrep -f "ConnectIQ.app/Contents/MacOS" >/dev/null 2>&1 \
+    || pgrep -x simulator >/dev/null 2>&1
+}
+
+# Launch the simulator if it is not already up. Being "up" as a process does not
+# mean it is ready to accept a push, so callers must still retry — see
+# monkeydo_retry below.
+ensure_simulator() {
+  if simulator_running; then
+    return 0
+  fi
+  info "Starting Connect IQ Simulator..."
+  connectiq >/dev/null 2>&1 || return 1
+  local i
+  for i in $(seq 1 30); do
+    simulator_running && break
+    sleep 1
+  done
+  # Give the freshly started GUI a moment to open its listening socket.
+  sleep 3
+  return 0
+}
+
+# Push to the simulator, retrying while it is still coming up.
+# "Unable to connect to simulator" is what monkeydo prints in that window, and
+# it still exits 0, so the output has to be inspected rather than the status.
+#   monkeydo_retry <log file> <prg> <device> [extra monkeydo args...]
+monkeydo_retry() {
+  local log="$1"; shift
+  local attempt
+  for attempt in 1 2 3 4 5; do
+    set +e
+    monkeydo "$@" > "$log" 2>&1
+    set -e
+    if ! grep -q "Unable to connect to simulator" "$log"; then
+      cat "$log"
+      return 0
+    fi
+    if [ "$attempt" -lt 5 ]; then
+      info "Simulator not ready yet (attempt $attempt/5) — retrying..."
+      ensure_simulator || true
+      sleep 4
+    fi
+  done
+  cat "$log"
+  return 1
+}

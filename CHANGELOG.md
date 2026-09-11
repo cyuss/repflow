@@ -43,9 +43,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Workout picker, exercise screen, rest screen, workout overview, value editor,
   exercise actions menu and workout summary
+- **Multiple data screens during an exercise, paged with UP/DOWN like a native
+  Garmin activity**: SET (load, reps, action), BODY (live heart rate, timer,
+  calories) and WORKOUT (volume, exercises, sets, reps)
+- Live heart rate also shown on the rest screen, where recovery is worth watching
+- Paged workout summary: headline, work done, and Garmin's own body metrics
 - Button-first interaction: one press of START completes a set, one press of
   BACK opens the overview; touch is optional everywhere
+- Measured layout engine (`Theme`): text is placed from a running cursor with
+  explicit gaps and a round-screen-aware usable width, so lines cannot collide
+  or crowd on any screen size; units are set alongside their numbers rather than
+  floating beneath them
 - Resolution-adaptive drawing in code rather than per-device XML layouts
+- Per-device launcher icons rendered at each product's exact pixel size
+  (`scripts/make-icons.sh`), so nothing is rescaled
 
 #### Garmin integration
 

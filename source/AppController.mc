@@ -22,6 +22,9 @@ class AppController {
     //! Weight/reps the athlete has dialled in for the set about to be performed.
     private var _pendingWeight as Float;
     private var _pendingReps as Number;
+    //! Which data screen the exercise view is showing. Lives here rather than on
+    //! the view so it survives rest screens and menu round-trips.
+    private var _exercisePage as Number;
 
     public function initialize() {
         _engine = null;
@@ -30,6 +33,7 @@ class AppController {
         _ticker = null;
         _pendingWeight = 0.0;
         _pendingReps = 0;
+        _exercisePage = 0;
     }
 
     public static function instance() as AppController {
@@ -63,6 +67,16 @@ class AppController {
 
     public function pendingReps() as Number {
         return _pendingReps;
+    }
+
+    public function exercisePage() as Number {
+        return _exercisePage;
+    }
+
+    //! Page through the exercise data screens, wrapping at both ends.
+    public function turnExercisePage(delta as Number) as Void {
+        var count = Tuning.PAGE_COUNT;
+        _exercisePage = (_exercisePage + delta + count) % count;
     }
 
     public static function now() as Number {
@@ -111,6 +125,7 @@ class AppController {
         if (ex != null) {
             syncPendingValues(ex);
         }
+        _exercisePage = Tuning.PAGE_SET;
         _persist();
         return true;
     }
@@ -178,6 +193,7 @@ class AppController {
         if (ex != null) {
             syncPendingValues(ex);
         }
+        _exercisePage = Tuning.PAGE_SET;
         _persist();
         return true;
     }
@@ -202,6 +218,9 @@ class AppController {
         syncPendingValues(exercise);
         _persist();
         vibrate(50, 40);
+        // Always return to the set page: the next thing the athlete does is the
+        // next set, not read metrics.
+        _exercisePage = Tuning.PAGE_SET;
         startRest(exercise.restDuration);
     }
 
@@ -276,6 +295,12 @@ class AppController {
         var ok = _recorder.stopAndDiscard();
         _engine = null;
         return ok;
+    }
+
+    //! Persist the session now. Used after an edit that changed nothing in the
+    //! engine but should still survive an app restart.
+    public function persistNow() as Void {
+        _persist();
     }
 
     //! Called from RepFlowApp.onStop — never lose a workout to a backgrounded app.

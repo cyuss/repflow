@@ -11,4 +11,16 @@ module Tuning {
 
     //! Seconds added or removed by UP/DOWN on the rest screen.
     const REST_STEP = 15;
+
+    // ------------------------------------------------------------------
+    // Exercise data screens, paged with UP/DOWN like a native Garmin activity.
+    // ------------------------------------------------------------------
+
+    //! The set: exercise, load, reps, and the COMPLETE SET action.
+    const PAGE_SET = 0;
+    //! Live Garmin metrics: heart rate, elapsed time, calories.
+    const PAGE_BODY = 1;
+    //! Session totals: volume, exercises, sets, reps.
+    const PAGE_WORKOUT = 2;
+    const PAGE_COUNT = 3;
 }

@@ -29,46 +29,38 @@ class WorkoutListView extends WatchUi.View {
 
     public function onUpdate(dc as Graphics.Dc) as Void {
         Theme.clear(dc);
-        var w = dc.getWidth();
         var h = dc.getHeight();
         var workout = _workouts[_index];
+        var gap = h / 30;
 
-        Theme.drawFitted(
-            dc, (h * 0.14).toNumber(), WatchUi.loadResource(Rez.Strings.ChooseWorkout) as String,
-            [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_DIM, (w * 0.9).toNumber()
-        );
+        var actionTop = Theme.drawActionBar(dc, "START", Theme.COLOR_ACCENT);
 
-        Theme.drawFitted(
-            dc, (h * 0.34).toNumber(), workout.name,
-            [Graphics.FONT_LARGE, Graphics.FONT_MEDIUM, Graphics.FONT_SMALL, Graphics.FONT_TINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_TEXT, (w * 0.88).toNumber()
-        );
+        var y = h / 8;
+        y = Theme.drawFitted(dc, y, WatchUi.loadResource(Rez.Strings.AppName) as String,
+            Theme.fontsLabel(), Theme.COLOR_ACCENT);
+        y += gap;
+        y = Theme.drawFitted(dc, y, WatchUi.loadResource(Rez.Strings.ChooseWorkout) as String,
+            Theme.fontsLabel(), Theme.COLOR_DIM);
 
-        Theme.drawFitted(
-            dc, (h * 0.55).toNumber(), workout.exercises.size().toString() + " exercises",
-            [Graphics.FONT_SMALL, Graphics.FONT_TINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_ACCENT, (w * 0.9).toNumber()
-        );
-
-        _drawDots(dc, (h * 0.78).toNumber());
-
-        Theme.drawFitted(
-            dc, (h * 0.85).toNumber(), "START",
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_DIM, (w * 0.9).toNumber()
-        );
-    }
-
-    //! Position indicator — one dot per available workout.
-    private function _drawDots(dc as Graphics.Dc, y as Number) as Void {
-        var n = _workouts.size();
-        var spacing = 14;
-        var startX = dc.getWidth() / 2 - ((n - 1) * spacing) / 2;
-        for (var i = 0; i < n; i++) {
-            dc.setColor(i == _index ? Theme.COLOR_ACCENT : Theme.COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
-            dc.fillCircle(startX + i * spacing, y, i == _index ? 4 : 3);
+        // Centre the workout name in the space between the header and the
+        // action bar, rather than pinning it to a fixed fraction of the screen.
+        var nameFont = Theme.pickFont(dc, workout.name, Theme.fontsTitle(),
+            Theme.usableWidth(dc, h / 2));
+        var nameHeight = dc.getFontHeight(nameFont);
+        var countText = workout.exercises.size().toString() + " exercises";
+        var countHeight = dc.getFontHeight(Graphics.FONT_XTINY);
+        var blockHeight = nameHeight + gap + countHeight;
+        var blockTop = y + ((actionTop - y) - blockHeight) / 2;
+        if (blockTop < y) {
+            blockTop = y;
         }
+
+        var afterName = Theme.drawFitted(dc, blockTop, workout.name,
+            Theme.fontsTitle(), Theme.COLOR_TEXT);
+        Theme.drawFitted(dc, afterName + gap, countText,
+            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
+
+        Theme.drawPageDots(dc, _workouts.size(), _index);
     }
 }
 
@@ -100,7 +92,8 @@ class WorkoutListDelegate extends WatchUi.BehaviorDelegate {
             controller.selectExercise(workout.exercises[0].id);
             WatchUi.switchToView(new ExerciseView(), new ExerciseDelegate(), WatchUi.SLIDE_LEFT);
         } else {
-            WatchUi.switchToView(new WorkoutOverviewView(), new WorkoutOverviewDelegate(), WatchUi.SLIDE_LEFT);
+            WatchUi.switchToView(new WorkoutOverviewView(), new WorkoutOverviewDelegate(),
+                WatchUi.SLIDE_LEFT);
         }
         return true;
     }

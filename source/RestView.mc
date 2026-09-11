@@ -4,11 +4,12 @@ import Toybox.WatchUi;
 
 //! Shown immediately after a set is completed.
 //!
-//!     REST
-//!     01:30
-//!     Next
-//!     Lat Pulldown · Set 2/4
-//!     10 x 55 kg
+//!        REST
+//!       01:30            <- draining arc around the edge
+//!       ♥ 132
+//!   ----------------
+//!   Next  Lat Pulldown
+//!   Set 2/4 · 10 x 55 kg
 //!
 //! Buttons:
 //!   START      skip rest and go straight back to the exercise
@@ -24,28 +25,39 @@ class RestView extends WatchUi.View {
         Theme.clear(dc);
         var controller = AppController.instance();
         var rest = controller.restTimer();
-        var w = dc.getWidth();
         var h = dc.getHeight();
+        var gap = h / 36;
 
         _drawProgressArc(dc, rest);
 
-        Theme.drawFitted(
-            dc, (h * 0.13).toNumber(), WatchUi.loadResource(Rez.Strings.Rest) as String,
-            [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_DIM, (w * 0.9).toNumber()
-        );
+        var y = h / 9;
+        y = Theme.drawFitted(dc, y, WatchUi.loadResource(Rez.Strings.Rest) as String,
+            Theme.fontsLabel(), Theme.COLOR_DIM);
+        y += gap;
 
-        Theme.drawFitted(
-            dc, (h * 0.26).toNumber(), rest.format(),
-            [Graphics.FONT_NUMBER_HOT, Graphics.FONT_NUMBER_MEDIUM, Graphics.FONT_LARGE] as Array<Graphics.FontDefinition>,
-            rest.isRunning() ? Theme.COLOR_TEXT : Theme.COLOR_DONE, (w * 0.75).toNumber()
-        );
+        y = Theme.drawFitted(dc, y, rest.format(), Theme.fontsHero(),
+            rest.isRunning() ? Theme.COLOR_TEXT : Theme.COLOR_DONE);
+        y += gap;
 
-        _drawNextUp(dc, controller);
+        // Heart rate recovering between sets is exactly what you want to watch
+        // during a rest, so it belongs here rather than a page away.
+        var hr = LiveMetrics.heartRate();
+        if (hr != null) {
+            y = Theme.drawValueWithUnit(dc, y, hr.toString(),
+                WatchUi.loadResource(Rez.Strings.Bpm) as String,
+                Theme.fontsBody(), Theme.COLOR_HR, Theme.COLOR_DIM);
+        }
+        y += gap + gap;
+
+        _drawNextUp(dc, y, controller);
     }
 
     //! What comes next, so the athlete can plan while resting.
-    private function _drawNextUp(dc as Graphics.Dc, controller as AppController) as Void {
+    private function _drawNextUp(
+        dc as Graphics.Dc,
+        y as Number,
+        controller as AppController
+    ) as Void {
         var engine = controller.engine();
         if (engine == null) {
             return;
@@ -54,31 +66,29 @@ class RestView extends WatchUi.View {
         if (next == null) {
             return;
         }
-        var w = dc.getWidth();
         var h = dc.getHeight();
-        var maxW = (w * 0.82).toNumber();
+        var gap = h / 44;
 
-        Theme.drawFitted(
-            dc, (h * 0.58).toNumber(), WatchUi.loadResource(Rez.Strings.NextLabel) as String,
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_DIM, maxW
-        );
+        // A hairline separates "now" from "next" without costing a text line.
+        var rule = Theme.usableWidth(dc, y);
+        dc.setColor(Theme.COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+        dc.fillRectangle((dc.getWidth() - rule) / 2, y, rule, 1);
+        y += gap + 1;
 
-        Theme.drawFitted(
-            dc, (h * 0.66).toNumber(), next.name,
-            [Graphics.FONT_SMALL, Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_TEXT, maxW
-        );
+        y = Theme.drawFitted(dc, y, WatchUi.loadResource(Rez.Strings.NextLabel) as String,
+            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
+        y += gap;
+
+        y = Theme.drawFitted(dc, y, next.name, Theme.fontsBody(), Theme.COLOR_TEXT);
+        y += gap;
 
         var detail = (WatchUi.loadResource(Rez.Strings.SetLabel) as String) + " " +
             next.currentSetNumber().toString() + "/" + next.targetSets.toString() +
-            "   " + next.plannedReps().toString() + " x " + Theme.formatWeight(next.plannedWeight()) +
+            "   " + next.plannedReps().toString() + " x " +
+            Theme.formatWeight(next.plannedWeight()) + " " +
             (WatchUi.loadResource(Rez.Strings.Kg) as String);
-        Theme.drawFitted(
-            dc, (h * 0.79).toNumber(), detail,
-            [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_ACCENT, maxW
-        );
+        Theme.drawFitted(dc, y, detail,
+            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_ACCENT);
     }
 
     //! Thin arc that drains as the rest elapses — readable at a glance.
@@ -88,11 +98,12 @@ class RestView extends WatchUi.View {
         }
         var w = dc.getWidth();
         var h = dc.getHeight();
-        var radius = (w < h ? w : h) / 2 - 4;
+        var radius = (w < h ? w : h) / 2 - 5;
         var cx = w / 2;
         var cy = h / 2;
         var sweep = (360.0 * (1.0 - rest.progress())).toNumber();
-        dc.setPenWidth(6);
+
+        dc.setPenWidth(7);
         dc.setColor(Theme.COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
         dc.drawCircle(cx, cy, radius);
         if (sweep > 0) {
@@ -133,7 +144,8 @@ class RestDelegate extends WatchUi.BehaviorDelegate {
         var controller = AppController.instance();
         controller.stopTicker();
         controller.restTimer().skip();
-        WatchUi.switchToView(new WorkoutOverviewView(), new WorkoutOverviewDelegate(), WatchUi.SLIDE_RIGHT);
+        WatchUi.switchToView(new WorkoutOverviewView(), new WorkoutOverviewDelegate(),
+            WatchUi.SLIDE_RIGHT);
         return true;
     }
 

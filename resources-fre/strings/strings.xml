@@ -5,6 +5,9 @@
     <string id="SetLabel">Serie</string>
     <string id="CompleteSet">VALIDER SERIE</string>
     <string id="Reps">reps</string>
+    <string id="PageBody">CORPS</string>
+    <string id="PageWorkout">SEANCE</string>
+    <string id="Bpm">bpm</string>
     <string id="Rest">REPOS</string>
     <string id="NextLabel">Suite</string>
     <string id="SkipRest">Passer repos</string>
@@ -32,5 +35,6 @@
     <string id="Volume">Volume</string>
     <string id="Calories">Calories</string>
     <string id="AvgHr">FC moy</string>
+    <string id="MaxHr">FC max</string>
     <string id="Saved">Enregistre</string>
 </strings>

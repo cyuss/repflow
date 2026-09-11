@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- RepFlow launcher icon: a dumbbell, drawn on transparent background so the
+       watch's own launcher frame shows through. -->
+  <g fill="#FFFFFF">
+    <rect x="18"  y="196" width="46"  height="120" rx="16"/>
+    <rect x="70"  y="150" width="58"  height="212" rx="22"/>
+    <rect x="384" y="150" width="58"  height="212" rx="22"/>
+    <rect x="448" y="196" width="46"  height="120" rx="16"/>
+  </g>
+  <rect x="128" y="228" width="256" height="56" rx="10" fill="#00A8E8"/>
+</svg>

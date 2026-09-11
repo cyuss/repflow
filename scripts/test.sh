@@ -32,32 +32,23 @@ monkeyc \
   -t
 ok "Test binary built: $PRG"
 
-simulator_running() {
-  if [ "$(uname -s)" = "Darwin" ]; then
-    pgrep -f "ConnectIQ.app/Contents/MacOS" >/dev/null 2>&1
-  else
-    pgrep -f "$SDK_HOME/bin/simulator" >/dev/null 2>&1
-  fi
-}
-
-if ! simulator_running; then
-  info "Starting Connect IQ Simulator..."
-  connectiq >/dev/null 2>&1 || die "Could not start the simulator. Start it, then re-run this script."
-  for _ in $(seq 1 30); do
-    simulator_running && break
-    sleep 1
-  done
-fi
+ensure_simulator || die "Could not start the simulator. Start it, then re-run this script."
 
 LOG="$BUILD_DIR/test-$DEVICE.log"
 info "Running tests on $DEVICE..."
 set +e
 if [ -n "$TEST_NAME" ]; then
-  monkeydo "$PRG" "$DEVICE" -t "$TEST_NAME" 2>&1 | tee "$LOG"
+  monkeydo_retry "$LOG" "$PRG" "$DEVICE" -t "$TEST_NAME"
 else
-  monkeydo "$PRG" "$DEVICE" -t 2>&1 | tee "$LOG"
+  monkeydo_retry "$LOG" "$PRG" "$DEVICE" -t
 fi
+RETRY_STATUS=$?
 set -e
+if [ "$RETRY_STATUS" -ne 0 ]; then
+  fail "Could not reach the Connect IQ Simulator after several attempts."
+  info "Open it by hand, then re-run. Output: $LOG"
+  exit 1
+fi
 
 echo
 # monkeydo exits 0 even when tests fail, so the summary line is authoritative.

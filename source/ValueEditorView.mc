@@ -2,7 +2,7 @@ import Toybox.Lang;
 import Toybox.Graphics;
 import Toybox.WatchUi;
 
-//! Full-screen single-number editor: one huge digit group, UP/DOWN to change,
+//! Full-screen single-number editor: one huge number, UP/DOWN to change,
 //! START to confirm. No keyboard, no picker wheel, no tiny targets.
 module ValueEditor {
     const MODE_REPS = 0;
@@ -41,32 +41,44 @@ class ValueEditorView extends WatchUi.View {
     public function onUpdate(dc as Graphics.Dc) as Void {
         Theme.clear(dc);
         var controller = AppController.instance();
-        var w = dc.getWidth();
         var h = dc.getHeight();
+        var gap = h / 30;
+        var isWeight = _mode == ValueEditor.MODE_WEIGHT;
 
-        var title = _mode == ValueEditor.MODE_REPS
-            ? WatchUi.loadResource(Rez.Strings.Reps) as String
-            : WatchUi.loadResource(Rez.Strings.Kg) as String;
-        Theme.drawFitted(
-            dc, (h * 0.16).toNumber(), title,
-            [Graphics.FONT_SMALL, Graphics.FONT_TINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_DIM, (w * 0.9).toNumber()
-        );
+        var actionTop = Theme.drawActionBar(dc, "START = OK", Theme.COLOR_ACCENT);
 
-        var value = _mode == ValueEditor.MODE_REPS
-            ? controller.pendingReps().toString()
-            : Theme.formatWeight(controller.pendingWeight());
-        Theme.drawFitted(
-            dc, (h * 0.36).toNumber(), value,
-            [Graphics.FONT_NUMBER_THAI_HOT, Graphics.FONT_NUMBER_HOT, Graphics.FONT_NUMBER_MEDIUM] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_ACCENT, (w * 0.8).toNumber()
-        );
+        var y = h / 8;
+        y = Theme.drawFitted(dc, y, _exercise.name, Theme.fontsLabel(), Theme.COLOR_DIM);
+        y += gap;
 
-        Theme.drawFitted(
-            dc, (h * 0.84).toNumber(), "START = OK",
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_DIM, (w * 0.9).toNumber()
-        );
+        var title = isWeight
+            ? WatchUi.loadResource(Rez.Strings.ActionEditWeight) as String
+            : WatchUi.loadResource(Rez.Strings.ActionEditReps) as String;
+        y = Theme.drawFitted(dc, y, title, Theme.fontsLabel(), Theme.COLOR_TEXT);
+
+        var value = isWeight
+            ? Theme.formatWeight(controller.pendingWeight())
+            : controller.pendingReps().toString();
+        var unit = isWeight
+            ? WatchUi.loadResource(Rez.Strings.Kg) as String
+            : WatchUi.loadResource(Rez.Strings.Reps) as String;
+
+        // Centre the number in the room between the header and the action bar.
+        var font = Theme.pickFont(dc, value, Theme.fontsHero(), Theme.usableWidth(dc, h / 2));
+        var valueHeight = dc.getFontHeight(font);
+        var top = y + ((actionTop - y) - valueHeight) / 2;
+        if (top < y + gap) {
+            top = y + gap;
+        }
+        Theme.drawValueWithUnit(dc, top, value, unit, Theme.fontsHero(),
+            Theme.COLOR_ACCENT, Theme.COLOR_DIM);
+
+        // The step size, so the athlete knows what a press is worth.
+        var step = isWeight
+            ? "+/- " + Theme.formatWeight(Tuning.WEIGHT_STEP)
+            : "+/- 1";
+        Theme.drawFitted(dc, actionTop - dc.getFontHeight(Graphics.FONT_XTINY) - gap, step,
+            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_SKIPPED);
     }
 }
 
@@ -101,13 +113,17 @@ class ValueEditorDelegate extends WatchUi.BehaviorDelegate {
 
     //! Confirm and go straight back to training.
     public function onSelect() as Boolean {
-        WatchUi.switchToView(new ExerciseView(), new ExerciseDelegate(), WatchUi.SLIDE_RIGHT);
-        return true;
+        return _done();
     }
 
     //! BACK also accepts the value — there is nothing destructive to cancel,
     //! and an accidental press should not throw the athlete out of the workout.
     public function onBack() as Boolean {
+        return _done();
+    }
+
+    private function _done() as Boolean {
+        AppController.instance().persistNow();
         WatchUi.switchToView(new ExerciseView(), new ExerciseDelegate(), WatchUi.SLIDE_RIGHT);
         return true;
     }

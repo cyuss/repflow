@@ -22,30 +22,13 @@ info "Building for $DEVICE..."
 PRG="$BUILD_DIR/RepFlow-$DEVICE.prg"
 
 # 2. Launch the simulator if it is not already up
-simulator_running() {
-  if [ "$(uname -s)" = "Darwin" ]; then
-    pgrep -f "ConnectIQ.app/Contents/MacOS" >/dev/null 2>&1
-  else
-    pgrep -f "$SDK_HOME/bin/simulator" >/dev/null 2>&1
-  fi
-}
-
 if simulator_running; then
   ok "Connect IQ Simulator already running."
-else
-  info "Starting Connect IQ Simulator..."
-  if ! connectiq >/dev/null 2>&1; then
-    fail "Could not launch the Connect IQ Simulator automatically."
-    info "Start it by hand, then run:"
-    info "  monkeydo \"$PRG\" $DEVICE"
-    exit 1
-  fi
-  # The simulator needs a moment before it accepts a push.
-  for _ in $(seq 1 30); do
-    simulator_running && break
-    sleep 1
-  done
-  simulator_running || warn "Simulator did not report as running; trying to push anyway."
+elif ! ensure_simulator; then
+  fail "Could not launch the Connect IQ Simulator automatically."
+  info "Start it by hand, then run:"
+  info "  monkeydo \"$PRG\" $DEVICE"
+  exit 1
 fi
 
 # 3. Push and run
@@ -56,11 +39,13 @@ fi
 # shell immediately instead.
 info "Pushing RepFlow to the simulator..."
 if [ -n "${REPFLOW_DETACH:-}" ]; then
-  monkeydo "$PRG" "$DEVICE" >"$BUILD_DIR/sim-$DEVICE.log" 2>&1 &
-  sleep 5
-  ok "RepFlow pushed to the simulator on $DEVICE (detached)."
-  info "App output: $BUILD_DIR/sim-$DEVICE.log"
-  exit 0
+  if monkeydo_retry "$BUILD_DIR/sim-$DEVICE.log" "$PRG" "$DEVICE" >/dev/null; then
+    ok "RepFlow pushed to the simulator on $DEVICE (detached)."
+    info "App output: $BUILD_DIR/sim-$DEVICE.log"
+    exit 0
+  fi
+  fail "Could not reach the simulator."
+  exit 1
 fi
 
 info "monkeydo stays attached while the app runs — Ctrl-C to detach."

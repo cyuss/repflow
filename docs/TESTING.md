@@ -46,6 +46,20 @@ Plus the invariants that are easy to regress:
 | `testExtraSetsBeyondTarget` | Extra sets are allowed and counted |
 | `testUndoLastSet` | Undo removes the set and reopens the exercise |
 | `testSuggestNextExercise` | "Next" prefers current → pending → fresh → none |
+| `testReselectingFinishedExerciseKeepsWorkoutComplete` | Reviewing a finished exercise does not make the workout look unfinished |
+
+And the release smoke test, encoded as an executable scenario:
+
+| Test | What it protects |
+|---|---|
+| `testSmokeTestScenario` | The exact engine sequence of `docs/SMOKE_TEST.md`, end to end: complete A, raise the weight, defer B, do C, resume B, return to A with values intact, finish and check the summary maths |
+
+`testSmokeTestScenario` cannot press buttons, so it does not replace the manual
+smoke test — but it means a regression in the product's core promise fails the
+suite instead of waiting to be noticed by hand on a watch. It has already earned
+its place: writing it surfaced a real bug, where reselecting a finished exercise
+made `isWorkoutComplete()` return false and demanded a pointless confirmation on
+ending the workout.
 
 ## Writing tests
 

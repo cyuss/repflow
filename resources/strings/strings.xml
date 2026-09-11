@@ -10,6 +10,11 @@
     <string id="Kg">kg</string>
     <string id="Reps">reps</string>
 
+    <!-- Data screens -->
+    <string id="PageBody">BODY</string>
+    <string id="PageWorkout">WORKOUT</string>
+    <string id="Bpm">bpm</string>
+
     <!-- Rest -->
     <string id="Rest">REST</string>
     <string id="NextLabel">Next</string>
@@ -46,5 +51,6 @@
     <string id="Volume">Volume</string>
     <string id="Calories">Calories</string>
     <string id="AvgHr">Avg HR</string>
+    <string id="MaxHr">Max HR</string>
     <string id="Saved">Saved</string>
 </strings>

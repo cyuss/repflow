@@ -97,7 +97,7 @@ Useful simulator menus:
 | Screen | START | UP / DOWN | BACK | MENU (long press) |
 |---|---|---|---|---|
 | Workout list | start workout | change workout | exit | — |
-| Exercise | **complete set** | weight ± 2.5 kg | overview | exercise actions |
+| Exercise | **complete set** | **change data screen** | overview | exercise actions |
 | Rest | skip rest | rest ± 15 s | overview | exercise actions |
 | Overview | select exercise | scroll | back to training | — |
 | Value editor | confirm | change value | confirm | — |
@@ -105,6 +105,28 @@ Useful simulator menus:
 
 The design rule: completing a set is always one press of START, and the
 overview is always one press of BACK.
+
+### Data screens
+
+The exercise screen is **paged with UP/DOWN**, the way every native Garmin
+activity behaves — that is the muscle memory RepFlow should not fight:
+
+| Page | Shows |
+|---|---|
+| **SET** | Exercise, set X/Y, progress dots, load in kg, reps, `COMPLETE SET` |
+| **BODY** | Live heart rate (hero), elapsed timer, average HR, calories |
+| **WORKOUT** | Training volume (hero), exercises done, sets, reps |
+
+Because UP/DOWN pages rather than adjusts, **weight and reps are edited from the
+MENU** — "Edit weight" is deliberately the first item, so it sits under the
+cursor the instant the menu opens. That is the right trade: the load changes
+roughly once per exercise, while a set is completed several times per exercise
+and still takes a single press. On touch devices, tapping the weight or the reps
+on the SET page opens the same editor directly.
+
+Live metrics come from `source/LiveMetrics.mc`, the only place RepFlow reads
+`Activity.getActivityInfo()`. Every field is nullable and renders as `--` rather
+than a fabricated zero when the device has nothing to give.
 
 ## VS Code
 
@@ -118,21 +140,25 @@ SDK, and the debugger.
 
 `make bootstrap` installs the extension when the `code` command is available.
 
-## Expected build warnings
+## Build warnings
 
-One warning is emitted for every device and is expected:
+**A clean build emits none.** Any warning is a defect — treat it as one.
 
+### Launcher icons
+
+Launcher icons are a different pixel size on almost every product (40x40 on
+Fenix 6, 65x65 on Fenix 9 Pro, 56x56 on vivoactive 5, ...). Shipping one bitmap
+makes the compiler rescale it, with a warning and a soft-looking icon.
+
+Instead, the icon is rendered at each required size into `resources-icon-<N>/`,
+and `monkey.jungle` points every device at the folder holding its exact size.
+Regenerate them all with:
+
+```sh
+scripts/make-icons.sh
 ```
-WARNING: <device>: The launcher icon (80x80) isn't compatible with the
-specified launcher icon size of the device '<device>' (40x40).
-The image will be scaled to the target size.
-```
 
-Launcher icon sizes differ per device (40x40 on Fenix 6, 65x65 on Fenix 9 Pro,
-56x56 on vivoactive 5, ...), so no single source size satisfies all 33 products.
-`resources/drawables/launcher_icon.svg` is **vector**, so the scaling is
-lossless — the alternative would be 33 per-device resource folders holding the
-same drawing. Anything *other* than this warning should be treated as a defect.
+The vector master is `store-assets/icon.svg`; edit that, never the PNGs.
 
 ## Conventions
 
