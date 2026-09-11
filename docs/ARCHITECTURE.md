@@ -38,7 +38,11 @@ Dependencies point **downward only**:
   1 Hz `Toybox.Timer` lives in `AppController`.
 - `GarminRecorder` is the only file that touches `ActivityRecording`.
 - `SessionRepository` is the only file that touches `Application.Storage`.
-- Views never call storage or recording directly.
+- Views, menus and delegates never call storage or recording. Every action that
+  changes workout state goes through an `AppController` method, which performs
+  the engine transition *and* the persistence, so the two can never drift apart.
+  The single exception is `RepFlowApp.getInitialView()`, the composition root,
+  which asks `SessionRepository` whether there is a session to resume.
 
 ## Files
 
@@ -93,7 +97,7 @@ started.
 No XML layouts. The screens are simple (a title, one or two big numbers, an
 action label) and `Theme.drawFitted` picks the largest font from a ladder that
 fits the available width. One code path scales from the Fenix 6 Pro's 240×240
-to the Fenix 8's 454×454 without a per-device layout file, which keeps both the
+to the Fenix 9 Pro 51 mm's 466×466 without a per-device layout file, which keeps both the
 memory footprint and the device matrix small.
 
 `WatchUi.Menu2` is used for the overview and the action menus so scrolling,

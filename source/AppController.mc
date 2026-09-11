@@ -142,6 +142,47 @@ class AppController {
     }
 
     // ------------------------------------------------------------------
+    // Exercise actions
+    //
+    // These wrap the engine transitions that the action menu offers, so that
+    // persistence stays in this layer and the views never touch storage.
+    // ------------------------------------------------------------------
+
+    //! "Skip for now" — the machine is busy. Stays PENDING and resumable.
+    public function deferExercise(exerciseId as String) as Boolean {
+        var engine = _engine;
+        if (engine == null || !engine.deferExercise(exerciseId)) {
+            return false;
+        }
+        _persist();
+        return true;
+    }
+
+    //! Declare an exercise finished before its target sets were reached.
+    public function forceCompleteExercise(exerciseId as String) as Boolean {
+        var engine = _engine;
+        if (engine == null || !engine.forceCompleteExercise(exerciseId)) {
+            return false;
+        }
+        _persist();
+        return true;
+    }
+
+    //! Undo the last completed set of the selected exercise.
+    public function undoLastSet() as Boolean {
+        var engine = _engine;
+        if (engine == null || !engine.undoLastSet()) {
+            return false;
+        }
+        var ex = engine.currentExercise();
+        if (ex != null) {
+            syncPendingValues(ex);
+        }
+        _persist();
+        return true;
+    }
+
+    // ------------------------------------------------------------------
     // Completing a set
     // ------------------------------------------------------------------
 

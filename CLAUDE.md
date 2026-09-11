@@ -50,7 +50,7 @@ Views ──▶ AppController ──▶ WorkoutEngine (pure: imports only Toybox
   comment lists every legal transition — read it before touching state.
 - Views render and forward presses. They never call storage or recording.
 - Screens are drawn in code (`Theme.drawFitted` picks a font that fits), not
-  from XML layouts, so one path covers 240×240 through 454×454.
+  from XML layouts, so one path covers 240×240 through 466×466.
 - Navigation is **flat**: `WatchUi.switchToView` everywhere, not `pushView`.
   `WatchUi.Confirmation` pops itself and fights this — that is why
   `EndWorkoutFlow` uses a `Menu2` instead.
@@ -145,4 +145,4 @@ live status.
 - Regenerate or commit the developer signing key.
 - Commit build artifacts (`build/`) or anything matching `*.der`, `*.pem`, `*.key`.
 - Build speculative architecture for roadmap items (V0.2+). Keep the MVP small.
-- Add a Garmin permission beyond `Fit` without a concrete need.
+- Add a Garmin permission beyond `Fit` / `FitContributor` without a concrete need.

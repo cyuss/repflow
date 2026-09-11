@@ -47,7 +47,6 @@ class ExerciseActionsDelegate extends WatchUi.Menu2InputDelegate {
 
     public function onSelect(item as WatchUi.MenuItem) as Void {
         var controller = AppController.instance();
-        var engine = controller.engine();
         var id = item.getId() as String;
 
         if (id.equals(ExerciseActionsMenu.ACTION_EDIT_REPS)) {
@@ -60,10 +59,7 @@ class ExerciseActionsDelegate extends WatchUi.Menu2InputDelegate {
         }
         if (id.equals(ExerciseActionsMenu.ACTION_SKIP_FOR_NOW)) {
             // PENDING — resumable, never counted as completed or abandoned.
-            if (engine != null) {
-                engine.deferExercise(_exercise.id);
-                SessionRepository.saveActive(engine.getSession());
-            }
+            controller.deferExercise(_exercise.id);
             _showOverview();
             return;
         }
@@ -72,19 +68,12 @@ class ExerciseActionsDelegate extends WatchUi.Menu2InputDelegate {
             return;
         }
         if (id.equals(ExerciseActionsMenu.ACTION_MARK_DONE)) {
-            if (engine != null) {
-                engine.forceCompleteExercise(_exercise.id);
-                SessionRepository.saveActive(engine.getSession());
-            }
+            controller.forceCompleteExercise(_exercise.id);
             _showOverview();
             return;
         }
         if (id.equals(ExerciseActionsMenu.ACTION_UNDO_SET)) {
-            if (engine != null) {
-                engine.undoLastSet();
-                controller.syncPendingValues(_exercise);
-                SessionRepository.saveActive(engine.getSession());
-            }
+            controller.undoLastSet();
             _backToExercise();
             return;
         }
