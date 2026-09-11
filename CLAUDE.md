@@ -90,10 +90,13 @@ Verified limitations you must not paper over:
 - Device definitions require a **signed-in Garmin account** in the SDK Manager.
   There is no way to automate this.
 - **`try/catch` does not catch Monkey C runtime errors** ("Symbol Not Found",
-  "Unexpected Type") — they abort the app. Never rely on a catch to make a
-  parser safe. Validate persisted or external data first: see
-  `source/SessionSnapshot.mc`. Bump `SCHEMA_VERSION` whenever the stored layout
-  changes.
+  "Unexpected Type") — they abort the app. Verified by experiment; see
+  `docs/API_LIMITATIONS.md` §9. Never rely on a catch to make a parser safe.
+  Validate persisted or external data first: see `source/SessionSnapshot.mc`,
+  and bump `SCHEMA_VERSION` whenever the stored layout changes.
+- **Do not trust a `monkeydo` crash report without clearing the simulator log
+  first** — it replays stale crashes from a log shared with the test binary.
+  See the trap section in `docs/TESTING.md`.
 
 Device ids come from the **installed device definitions**: `make devices` or
 `scripts/devices.sh --all`. Do **not** trust `scripts/devices.sh --known` — it

@@ -25,7 +25,7 @@ import Toybox.Graphics;
 //!
 //! Widths here are the chord of the display at the band's *narrowest* edge, not
 //! its centre, so nothing can spill past the bezel at the top or bottom of a
-//! band. Nothing allocates, so redrawing during a set costs no objects.
+//! band.
 module FieldGrid {
 
     //! Usable width of a horizontal band on a round screen.
@@ -68,18 +68,18 @@ module FieldGrid {
     ) as Void {
         var captionFont = Graphics.FONT_XTINY;
         var captionHeight = dc.getFontHeight(captionFont);
-        var valueArea = valueArea(dc, height);
+        var area = valueArea(dc, height);
 
         var valueFont = Theme.pickFontFitting(dc, value, Theme.fontsCell(),
-            (width * 92) / 100, valueArea);
+            (width * 92) / 100, area);
         var valueHeight = dc.getFontHeight(valueFont);
 
         var cx = x + width / 2;
         dc.setColor(valueColor, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, y + (valueArea - valueHeight) / 2, valueFont, value,
+        dc.drawText(cx, y + (area - valueHeight) / 2, valueFont, value,
             Graphics.TEXT_JUSTIFY_CENTER);
 
-        if (valueArea != height) {
+        if (area != height) {
             dc.setColor(Theme.COLOR_DIM, Graphics.COLOR_TRANSPARENT);
             dc.drawText(cx, y + height - captionHeight, captionFont, caption,
                 Graphics.TEXT_JUSTIFY_CENTER);

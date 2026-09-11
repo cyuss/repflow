@@ -132,28 +132,29 @@ through the signed-in SDK Manager. See `docs/ENVIRONMENT.md`.
 
 ## 9. `catch` does not catch Monkey C runtime errors
 
-**Verified the hard way**: a stored session written by an earlier build crashed
-RepFlow on launch in the simulator, with:
+**Verified by direct experiment** in the simulator (a throwaway unit test that
+invoked a method on a null read out of a Dictionary, inside a `try/catch`):
 
 ```
-Error: Symbol Not Found Error
-Details: Failed invoking <symbol>
+DEBUG: about to invoke on null
+Error: Unexpected Type Error          <- the catch block was never reached
 ```
 
 Monkey C separates `Toybox.Lang.Exception`, which `try/catch` handles, from
-runtime **errors** — *Symbol Not Found*, *Unexpected Type* — which it does not.
-Those abort the application. Wrapping a parser in `try/catch` therefore does
-**not** make it safe against malformed input: calling a method on a value that
-turned out to be null takes the whole app down.
+runtime **errors** — *Unexpected Type*, *Symbol Not Found* — which it does not.
+Those abort the application.
 
-On a watch this is severe: the bad value is in persistent storage, so the app
-crashes on *every* launch and the athlete cannot clear it.
+Wrapping a parser in `try/catch` therefore does **not** make it safe against
+malformed input: calling a method on a value that turned out to be the wrong
+type takes the whole app down. On a watch that matters more than on a desktop,
+because the bad value can be in persistent storage — so the app would fail on
+every launch, and the athlete has no way to clear it.
 
 **What RepFlow does:** `source/SessionSnapshot.mc` validates the persisted
 snapshot field by field, and checks a `SCHEMA_VERSION` marker, *before* anything
 is parsed. `SessionRepository.loadActive()` discards anything unrecognised
-instead of guessing at it. The try/catch is still there, but it is the second
-line of defence, not the first. `tests/SessionSnapshotTest.mc` covers version
+instead of guessing at it. The try/catch is still there, but as the second line
+of defence rather than the first. `tests/SessionSnapshotTest.mc` covers version
 mismatches, missing fields, wrong types and nested damage.
 
 The same applies anywhere else external data is parsed — treat storage, and any

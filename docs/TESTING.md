@@ -94,6 +94,40 @@ Return `true` to pass; a failed `Test.assert*` throws and fails the test.
   where the bugs live. The `Storage` read/write itself is a thin, exception-
   wrapped Garmin call.
 
+## A trap: monkeydo replays stale crashes
+
+`monkeydo` prints
+
+```
+Error: Symbol Not Found Error
+Details: Failed invoking <symbol>
+Encountered an app crash.
+```
+
+by reading the simulator's **shared** crash log, not only the run you just
+started. The log is
+
+```
+$TMPDIR/com.garmin.connectiq/GARMIN/APPS/LOGS/CIQ_LOG.YML
+```
+
+and it is shared by every binary — including the `-test` build. A crash left
+there by an earlier run of a *different* binary is reported again on a later,
+perfectly healthy launch.
+
+This cost a wrong diagnosis once: a failing unit test wrote a crash record, and
+several subsequent app launches were then reported as crashing when they were
+not. Before believing a crash, clear the log and reproduce:
+
+```sh
+: > "$TMPDIR/com.garmin.connectiq/GARMIN/APPS/LOGS/CIQ_LOG.YML"
+monkeydo build/RepFlow-<device>.prg <device>
+```
+
+An empty log after the run means the app did not crash. The log is also where
+the real stack trace lives when it *did* — `monkeydo`'s own output often shows
+an empty `Stack:`.
+
 ## Rules
 
 - Tests describe intended product behaviour. If a test fails, the first

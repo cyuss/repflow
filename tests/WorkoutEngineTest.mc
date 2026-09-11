@@ -707,3 +707,48 @@ function testBandWidthStaysInsideTheGlass(logger as Test.Logger) as Boolean {
         < FieldGrid.bandWidth(dc, size / 2 - height / 2, height));
     return true;
 }
+
+//! Actually DRAW every grid primitive, onto a real off-screen Dc.
+//!
+//! The measurement tests above all called the sizing helpers directly and were
+//! green while the app crashed on launch: inside drawCell a local named
+//! `valueArea` shadowed the module function `valueArea`, so the call resolved to
+//! an uninitialised local and threw "Symbol Not Found" the moment a screen was
+//! painted. Nothing that only measures can catch that — something has to run the
+//! drawing code.
+(:test)
+function testGridPrimitivesDraw(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+    var size = TestSupport.screenSize();
+    var top = (size * 26) / 100;
+    var bottom = size - size / 11;
+    var edge = FieldGrid.edgeHeight(top, bottom);
+    var middleTop = top + edge;
+    var middleHeight = (bottom - edge) - middleTop;
+
+    // The full four-field layout, exactly as the metric pages compose it.
+    FieldGrid.drawSingle(dc, top, edge, "1:02:34", "TIME", Theme.COLOR_TEXT);
+    FieldGrid.drawRule(dc, middleTop);
+    FieldGrid.drawPair(dc, middleTop, middleHeight,
+        "128", "AVG HR", Theme.COLOR_HR,
+        "210", "KCAL", Theme.COLOR_TEXT);
+    FieldGrid.drawRule(dc, bottom - edge);
+    FieldGrid.drawSingle(dc, bottom - edge, edge, "--", "HR", Theme.COLOR_SKIPPED);
+
+    // A cell so short the caption has to be dropped, and a very wide value.
+    FieldGrid.drawCell(dc, 0, 0, size, size / 14, "3.2 t", "VOLUME", Theme.COLOR_ACCENT);
+    FieldGrid.drawCell(dc, 0, 0, size, size / 3, "137.5", "WEIGHT", Theme.COLOR_TEXT);
+
+    // And the Theme primitives every screen leans on.
+    Theme.drawActionBar(dc, "COMPLETE SET", Theme.COLOR_ACCENT);
+    Theme.drawPageDots(dc, 3, 1);
+    Theme.drawSetDots(dc, size / 2, 4, 2);
+    Theme.drawFitted(dc, size / 3, "Romanian Deadlift", Theme.fontsTitle(), Theme.COLOR_TEXT);
+    Theme.drawValueWithUnit(dc, size / 3, "55", "kg", Theme.fontsHero(),
+        Theme.COLOR_TEXT, Theme.COLOR_DIM);
+    Theme.drawMetricRow(dc, size / 2, "VOLUME", "3.2 t", Theme.COLOR_ACCENT);
+    return true;
+}
