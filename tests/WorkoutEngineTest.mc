@@ -436,3 +436,99 @@ function testSuggestNextExercise(logger as Test.Logger) as Boolean {
     Test.assert(engine.suggestNextExercise() == null);
     return true;
 }
+
+// ----------------------------------------------------------------------
+// The release smoke test, as an executable scenario.
+//
+// This mirrors docs/SMOKE_TEST.md step for step. It cannot press buttons, but
+// it does exercise the exact engine sequence those steps produce — so a
+// regression in the product's core promise fails CI rather than waiting to be
+// noticed by hand on a watch.
+// ----------------------------------------------------------------------
+(:test)
+function testSmokeTestScenario(logger as Test.Logger) as Boolean {
+    var engine = TestSupport.newEngine();
+
+    // Steps 2-5: start on A, complete two sets, raising the load on the second.
+    Test.assert(engine.selectExercise("A"));
+    engine.completeCurrentSet(10, 50.0, TestSupport.T0);
+    var a = TestSupport.exerciseOf(engine, "A");
+    Test.assertEqual(a.plannedWeight(), 50.0);      // set 2 inherits set 1
+    engine.completeCurrentSet(10, 55.0, TestSupport.T0 + 120);
+
+    // Step 6: the overview shows A worked but not finished (target is 2... so
+    // A is in fact complete here; give it a third target-exceeding set later).
+    Test.assertEqual(a.completedSetCount(), 2);
+
+    // Steps 7-8: open B, then defer it — the machine is busy.
+    Test.assert(engine.selectExercise("B"));
+    Test.assert(engine.deferExercise("B"));
+    Test.assertEqual(TestSupport.stateOf(engine, "B"), EX_PENDING);
+    Test.assertNotEqual(TestSupport.stateOf(engine, "B"), EX_COMPLETED);
+    Test.assertNotEqual(TestSupport.stateOf(engine, "B"), EX_SKIPPED);
+
+    // Steps 9-10: do C instead, all the way through.
+    Test.assert(engine.selectExercise("C"));
+    TestSupport.completeSets(engine, 2);
+    Test.assertEqual(TestSupport.stateOf(engine, "C"), EX_COMPLETED);
+
+    // Step 11: the overview reflects all three states accurately.
+    Test.assertEqual(TestSupport.stateOf(engine, "A"), EX_COMPLETED);
+    Test.assertEqual(TestSupport.stateOf(engine, "B"), EX_PENDING);
+    Test.assertEqual(TestSupport.stateOf(engine, "C"), EX_COMPLETED);
+    Test.assert(!engine.isWorkoutComplete());  // B still blocks completion
+
+    // Steps 12-13: B resumes from its original state, nothing lost.
+    Test.assert(engine.selectExercise("B"));
+    var b = TestSupport.exerciseOf(engine, "B");
+    Test.assertEqual(b.completedSetCount(), 0);
+    Test.assertEqual(b.currentSetNumber(), 1);
+    Test.assertEqual(b.plannedWeight(), 40.0);    // untouched template default
+    TestSupport.completeSets(engine, 2);
+    Test.assertEqual(TestSupport.stateOf(engine, "B"), EX_COMPLETED);
+
+    // Step 14: returning to A inherits the raised weight from step 5.
+    Test.assert(engine.selectExercise("A"));
+    Test.assertEqual(a.plannedWeight(), 55.0);
+    Test.assertEqual(a.plannedReps(), 10);
+
+    // Steps 16-18: everything done, so ending needs no confirmation, and the
+    // summary matches what was actually performed.
+    Test.assert(engine.isWorkoutComplete());
+    var summary = engine.finishWorkout(TestSupport.T0 + 3600);
+    Test.assertEqual(summary.durationSec, 3600);
+    Test.assertEqual(summary.exercisesWorked, 3);
+    Test.assertEqual(summary.completedSets, 6);
+    // A: 10x50 + 10x55 = 1050. B: 2 x 12x40 = 960. C: 2 x 8x60 = 960.
+    Test.assertEqual(summary.totalVolume, 2970.0);
+    Test.assertEqual(summary.totalReps, 60);
+    Test.assertEqual(engine.getSession().state, SESSION_FINISHED);
+    return true;
+}
+
+//! Reselecting a finished exercise (to review it, or add an extra set) makes it
+//! ACTIVE again. That must not make the workout look unfinished, or ending it
+//! would demand a pointless confirmation.
+(:test)
+function testReselectingFinishedExerciseKeepsWorkoutComplete(logger as Test.Logger) as Boolean {
+    var engine = TestSupport.newEngine();
+    var ids = ["A", "B", "C"] as Array<String>;
+    for (var i = 0; i < ids.size(); i++) {
+        engine.selectExercise(ids[i]);
+        TestSupport.completeSets(engine, 2);
+    }
+    Test.assert(engine.isWorkoutComplete());
+
+    // Go back to A to look at it. It becomes ACTIVE again...
+    Test.assert(engine.selectExercise("A"));
+    Test.assertEqual(TestSupport.stateOf(engine, "A"), EX_ACTIVE);
+    // ...but its sets are all still done, so there is no work left.
+    Test.assert(engine.isWorkoutComplete());
+    Test.assertEqual(engine.unfinishedExercises().size(), 0);
+
+    // A genuinely unfinished exercise still blocks completion.
+    Test.assert(engine.undoLastSet());
+    Test.assert(!engine.isWorkoutComplete());
+    Test.assertEqual(engine.unfinishedExercises().size(), 1);
+    return true;
+}

@@ -163,14 +163,24 @@ class WorkoutEngine {
     // Queries used by the UI
     // ------------------------------------------------------------------
 
-    //! Exercises the athlete still has work left on (not completed, not skipped).
+    //! Exercises the athlete still has work left on.
+    //!
+    //! This asks about *work*, not about the display state, because the two can
+    //! legitimately disagree: reselecting an exercise whose sets are all done
+    //! makes it ACTIVE again (so the athlete can review it or add a set), and
+    //! that must not make the workout look unfinished.
     public function unfinishedExercises() as Array<Exercise> {
         var out = [] as Array<Exercise>;
         var list = _session.workout.exercises;
         for (var i = 0; i < list.size(); i++) {
-            if (ExerciseStateUtil.isUnfinished(list[i].state)) {
-                out.add(list[i]);
+            var ex = list[i];
+            if (ex.state == EX_SKIPPED) {
+                continue; // deliberately abandoned for this session
             }
+            if (ex.hasReachedTargetSets() || ex.forcedComplete) {
+                continue; // the work is done, whatever the exercise is showing
+            }
+            out.add(ex);
         }
         return out;
     }
