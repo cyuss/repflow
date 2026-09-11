@@ -1,0 +1,50 @@
+<strings>
+    <string id="AppName">RepFlow</string>
+
+    <!-- Workout list -->
+    <string id="ChooseWorkout">Choose workout</string>
+
+    <!-- Exercise screen -->
+    <string id="SetLabel">Set</string>
+    <string id="CompleteSet">COMPLETE SET</string>
+    <string id="Kg">kg</string>
+    <string id="Reps">reps</string>
+
+    <!-- Rest -->
+    <string id="Rest">REST</string>
+    <string id="NextLabel">Next</string>
+    <string id="SkipRest">Skip rest</string>
+
+    <!-- Overview -->
+    <string id="Overview">Overview</string>
+    <string id="Pending">Pending</string>
+
+    <!-- Exercise actions menu -->
+    <string id="ExerciseActions">Exercise</string>
+    <string id="ActionStart">Start</string>
+    <string id="ActionSkipForNow">Skip for now</string>
+    <string id="ActionOverview">Workout overview</string>
+    <string id="ActionEditWeight">Edit weight</string>
+    <string id="ActionEditReps">Edit reps</string>
+    <string id="ActionMarkDone">Mark exercise done</string>
+    <string id="ActionEndWorkout">End workout</string>
+
+    <!-- End workout -->
+    <string id="EndWorkout">End workout?</string>
+    <string id="UnfinishedWarning">Exercises unfinished</string>
+    <string id="ConfirmEnd">End anyway</string>
+    <string id="Resume">Keep training</string>
+    <string id="SaveActivity">Save</string>
+    <string id="DiscardActivity">Discard</string>
+
+    <!-- Summary -->
+    <string id="SummaryTitle">Workout done</string>
+    <string id="Duration">Duration</string>
+    <string id="Exercises">Exercises</string>
+    <string id="SetsDone">Sets</string>
+    <string id="TotalReps">Reps</string>
+    <string id="Volume">Volume</string>
+    <string id="Calories">Calories</string>
+    <string id="AvgHr">Avg HR</string>
+    <string id="Saved">Saved</string>
+</strings>

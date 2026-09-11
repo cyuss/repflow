@@ -1,0 +1,27 @@
+# Build output
+build/
+bin/
+*.prg
+*.prg.debug.xml
+*.iq
+*.png.mss
+
+# Developer signing keys — NEVER commit these
+*.der
+*.pem
+*.key
+*.p12
+*.pfx
+developer_key*
+keys/
+.keys/
+
+# OS / editor
+.DS_Store
+.vscode/settings.json
+.idea/
+
+# Local environment
+.env
+.env.local
+scripts/.env

@@ -1,0 +1,8 @@
+project.manifest = manifest.xml
+
+# Base source set (domain + engine + UI)
+base.sourcePath = source
+
+# Unit tests are compiled only in test builds (-t flag adds the :test annotation),
+# but the files must be on the source path for the test runner to find them.
+base.sourcePath = source;tests

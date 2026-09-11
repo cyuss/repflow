@@ -1,0 +1,10 @@
+v0.1.0 — first release
+
+- Flexible workout engine: select any exercise at any time
+- Skip occupied machines and resume them later with all sets intact
+- Alternate exercises freely for supersets and circuits
+- Weight and rep inheritance from your last performed set
+- Rest timer with haptic alert
+- Strength training activity recording to Garmin Connect
+- Workout summary with sets, reps and training volume
+- Three built-in workouts

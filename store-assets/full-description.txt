@@ -1,0 +1,30 @@
+RepFlow is a flexible strength-training app for Garmin watches.
+
+Change exercise order at any time, skip occupied machines, resume exercises
+later and track your sets, reps and weights without interrupting your workout.
+
+Your workout. Your order.
+
+WHY REPFLOW
+Structured workouts assume you will do the exercises in the order they were
+written. Real gyms disagree: the machine is taken, you want to superset, you
+want to come back to something later. RepFlow lets you move freely without
+losing a single set.
+
+FEATURES
+- Select any exercise at any time from a one-press workout overview
+- "Skip for now" marks an occupied machine as pending, never as completed or
+  skipped, and it resumes exactly where you left it
+- Alternate between partially completed exercises for supersets and circuits
+- The next set is pre-filled with the weight and reps you actually performed
+- One press of START completes a set
+- Rest timer with haptic alert, skip and extend
+- Workout summary: duration, sets, reps and training volume
+- Records a real strength training activity that syncs to Garmin Connect
+- Works fully offline: no phone, no internet, no account
+
+PLEASE NOTE
+Garmin's Connect IQ platform does not allow third-party apps to write native
+per-set data into the FIT file. RepFlow records a genuine strength training
+activity and marks one lap per set, and keeps the full set-by-set detail on the
+watch. Garmin Connect's built-in per-set breakdown will not be populated.

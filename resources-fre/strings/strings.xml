@@ -1,0 +1,36 @@
+<strings>
+    <string id="AppName">RepFlow</string>
+    <string id="Kg">kg</string>
+    <string id="ChooseWorkout">Choisir seance</string>
+    <string id="SetLabel">Serie</string>
+    <string id="CompleteSet">VALIDER SERIE</string>
+    <string id="Reps">reps</string>
+    <string id="Rest">REPOS</string>
+    <string id="NextLabel">Suite</string>
+    <string id="SkipRest">Passer repos</string>
+    <string id="Overview">Vue seance</string>
+    <string id="Pending">En attente</string>
+    <string id="ExerciseActions">Exercice</string>
+    <string id="ActionStart">Demarrer</string>
+    <string id="ActionSkipForNow">Passer pour l instant</string>
+    <string id="ActionOverview">Vue seance</string>
+    <string id="ActionEditWeight">Modifier poids</string>
+    <string id="ActionEditReps">Modifier reps</string>
+    <string id="ActionMarkDone">Marquer termine</string>
+    <string id="ActionEndWorkout">Terminer seance</string>
+    <string id="EndWorkout">Terminer ?</string>
+    <string id="UnfinishedWarning">Exercices non finis</string>
+    <string id="ConfirmEnd">Terminer quand meme</string>
+    <string id="Resume">Continuer</string>
+    <string id="SaveActivity">Enregistrer</string>
+    <string id="DiscardActivity">Supprimer</string>
+    <string id="SummaryTitle">Seance terminee</string>
+    <string id="Duration">Duree</string>
+    <string id="Exercises">Exercices</string>
+    <string id="SetsDone">Series</string>
+    <string id="TotalReps">Reps</string>
+    <string id="Volume">Volume</string>
+    <string id="Calories">Calories</string>
+    <string id="AvgHr">FC moy</string>
+    <string id="Saved">Enregistre</string>
+</strings>
