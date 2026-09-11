@@ -76,6 +76,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SessionRepository` — active session saved after every state change, restored
   on launch
 - Compact serialisation with short keys; history capped at 20 summary entries
+- `SessionSnapshot` validates the persisted session field by field, against a
+  schema version, **before** parsing it. Monkey C runtime errors such as
+  "Symbol Not Found" are not Exceptions and are not caught, so a snapshot from
+  an older build would otherwise crash the app on every launch with no way to
+  recover
 
 #### Tests
 

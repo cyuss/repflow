@@ -34,19 +34,34 @@ module SessionRepository {
     }
 
     //! Restore an interrupted session, or null when there is nothing to resume.
+    //!
+    //! The snapshot is validated field by field BEFORE anything is parsed. A
+    //! try/catch is not sufficient on its own: Monkey C's "Symbol Not Found" and
+    //! "Unexpected Type" runtime errors are not Exceptions and are not caught,
+    //! so misreading a snapshot written by an older build would crash the app on
+    //! every launch, with no way for the athlete to recover.
     public function loadActive() as WorkoutSession? {
+        var raw = null;
         try {
-            var raw = Storage.getValue(KEY_ACTIVE);
-            if (raw == null || !(raw instanceof Dictionary)) {
-                return null;
-            }
+            raw = Storage.getValue(KEY_ACTIVE);
+        } catch (e) {
+            return null;
+        }
+        if (raw == null) {
+            return null;
+        }
+        if (!SessionSnapshot.isValid(raw)) {
+            // Unrecognised or damaged — discard it instead of guessing.
+            clearActive();
+            return null;
+        }
+        try {
             var session = WorkoutSession.fromStorage(raw as Dictionary);
             if (session.state == SESSION_FINISHED) {
                 return null;
             }
             return session;
         } catch (e) {
-            // Corrupt or written by an older schema — drop it rather than crash.
             clearActive();
             return null;
         }

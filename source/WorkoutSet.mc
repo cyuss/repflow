@@ -65,10 +65,24 @@ class WorkoutSet {
         return [index, targetReps, targetWeight, actualReps, actualWeight, completed, completedAt];
     }
 
+    //! Storage can hand a whole number back as a Number even though it was
+    //! written as a Float.
+    private static function _toFloat(value as Object?) as Float? {
+        if (value instanceof Float) {
+            return value as Float;
+        }
+        if (value instanceof Number) {
+            return (value as Number).toFloat();
+        }
+        return null;
+    }
+
     public static function fromStorage(data as Array) as WorkoutSet {
-        var set = new WorkoutSet(data[0] as Number, data[1] as Number, data[2] as Float);
+        var weight = _toFloat(data[2] as Object?);
+        var set = new WorkoutSet(data[0] as Number, data[1] as Number,
+            weight != null ? weight : 0.0);
         set.actualReps = data[3] as Number?;
-        set.actualWeight = data[4] as Float?;
+        set.actualWeight = _toFloat(data[4] as Object?);
         set.completed = data[5] as Boolean;
         set.completedAt = data[6] as Number?;
         return set;

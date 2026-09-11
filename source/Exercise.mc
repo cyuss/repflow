@@ -140,13 +140,25 @@ class Exercise {
         };
     }
 
+    //! Storage can hand a whole number back as a Number even though it was
+    //! written as a Float.
+    private static function _toFloat(value as Object?) as Float {
+        if (value instanceof Float) {
+            return value as Float;
+        }
+        if (value instanceof Number) {
+            return (value as Number).toFloat();
+        }
+        return 0.0;
+    }
+
     public static function fromStorage(data as Dictionary) as Exercise {
         var ex = new Exercise(
             data["i"] as String,
             data["n"] as String,
             data["ts"] as Number,
             data["tr"] as Number,
-            data["w"] as Float,
+            _toFloat(data["w"] as Object?),
             data["r"] as Number
         );
         ex.state = data["st"] as ExerciseState;

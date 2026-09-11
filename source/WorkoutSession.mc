@@ -70,6 +70,8 @@ class WorkoutSession {
 
     public function toStorage() as Dictionary {
         return {
+            // Schema marker: SessionSnapshot refuses anything it does not know.
+            "v" => SessionSnapshot.SCHEMA_VERSION,
             "w" => workout.toStorage(),
             "s" => startedAt,
             "f" => finishedAt,

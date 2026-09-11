@@ -89,6 +89,11 @@ Verified limitations you must not paper over:
 - Garmin Connect workouts **cannot be read or reordered** from Connect IQ.
 - Device definitions require a **signed-in Garmin account** in the SDK Manager.
   There is no way to automate this.
+- **`try/catch` does not catch Monkey C runtime errors** ("Symbol Not Found",
+  "Unexpected Type") — they abort the app. Never rely on a catch to make a
+  parser safe. Validate persisted or external data first: see
+  `source/SessionSnapshot.mc`. Bump `SCHEMA_VERSION` whenever the stored layout
+  changes.
 
 Device ids come from the **installed device definitions**: `make devices` or
 `scripts/devices.sh --all`. Do **not** trust `scripts/devices.sh --known` — it
