@@ -2,9 +2,9 @@
 # Prepare a RepFlow release: verify, test, build every supported device, and
 # collect the artifacts.
 #
-# This script does everything that can legitimately be automated. The final
-# Connect IQ Store `.iq` bundle is produced by Garmin's own export tooling and
-# this script stops and says so rather than fabricating a file.
+# This script does everything that can legitimately be automated, including the
+# Connect IQ Store .iq bundle via monkeyc --package-app. It never claims to have
+# produced an .iq file that does not exist.
 
 set -euo pipefail
 # shellcheck source=scripts/lib.sh
@@ -13,9 +13,22 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 activate_sdk
 
 RELEASE_DIR="$BUILD_DIR/release"
-VERSION="$(grep -m1 '^## \[' "$REPO_ROOT/CHANGELOG.md" | sed 's/## \[//;s/\].*//' || echo unknown)"
+# The newest *released* version heading in the CHANGELOG, ignoring [Unreleased].
+# grep -v exits 1 when it filters everything out, which `set -e` would treat as
+# a fatal error, so the pipeline is guarded.
+VERSION="$(sed -n 's/^## \[\([^]]*\)\].*/\1/p' "$REPO_ROOT/CHANGELOG.md" \
+    | grep -v -i '^unreleased$' | awk 'NR==1' || true)"
+if [ -z "$VERSION" ]; then
+    VERSION="0.1.0-dev"
+    UNRELEASED=1
+fi
 
 printf '%sRepFlow release packaging — version %s%s\n\n' "$C_BOLD" "$VERSION" "$C_OFF"
+
+if [ -n "${UNRELEASED:-}" ]; then
+  warn "CHANGELOG.md has no released version heading yet — packaging as $VERSION."
+  info "Before submitting to the Store, move [Unreleased] under a real version."
+fi
 
 # 1. Working tree state ------------------------------------------------
 if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
@@ -34,7 +47,7 @@ ok "Environment checks passed"
 
 # 3. Manifest sanity ---------------------------------------------------
 MANIFEST="$REPO_ROOT/manifest.xml"
-APP_ID="$(grep -o 'id="[0-9A-Fa-f]\{32\}"' "$MANIFEST" | head -1 | sed 's/id="//;s/"//')"
+APP_ID="$(grep -o 'id="[0-9A-Fa-f]\{32\}"' "$MANIFEST" | sed 's/id="//;s/"//' | awk 'NR==1')"
 [ -n "$APP_ID" ] || die "Could not read the application UUID from manifest.xml"
 ok "Application UUID: $APP_ID"
 info "This UUID must never change for a published app (docs/SIGNING.md)."
@@ -52,7 +65,7 @@ if [ -n "${MISSING// /}" ]; then
 fi
 
 # 4. Tests -------------------------------------------------------------
-TEST_DEVICE="$(buildable_devices | head -1)"
+TEST_DEVICE="$(buildable_devices | awk 'NR==1')"
 [ -n "$TEST_DEVICE" ] || die "No buildable device available — cannot run the test suite."
 info "Running unit tests on $TEST_DEVICE..."
 "$REPO_ROOT/scripts/test.sh" "$TEST_DEVICE" || die "Tests failed — release aborted."

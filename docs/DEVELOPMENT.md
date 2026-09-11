@@ -115,6 +115,22 @@ SDK, and the debugger.
 
 `make bootstrap` installs the extension when the `code` command is available.
 
+## Expected build warnings
+
+One warning is emitted for every device and is expected:
+
+```
+WARNING: <device>: The launcher icon (80x80) isn't compatible with the
+specified launcher icon size of the device '<device>' (40x40).
+The image will be scaled to the target size.
+```
+
+Launcher icon sizes differ per device (40x40 on Fenix 6, 65x65 on Fenix 9 Pro,
+56x56 on vivoactive 5, ...), so no single source size satisfies all 33 products.
+`resources/drawables/launcher_icon.svg` is **vector**, so the scaling is
+lossless — the alternative would be 33 per-device resource folders holding the
+same drawing. Anything *other* than this warning should be treated as a defect.
+
 ## Conventions
 
 - Private fields and methods are prefixed with `_`.

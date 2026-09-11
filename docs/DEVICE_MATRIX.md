@@ -111,6 +111,16 @@ No modern-device behaviour is compromised for legacy compatibility.
 
 ## Results log
 
-| Date | Version | Device | Build | Simulator | Physical | Notes |
-|---|---|---|---|---|---|---|
-| | | | | | | |
+| Date | Version | Device | Build | Unit tests | Simulator | Physical | Notes |
+|---|---|---|---|---|---|---|---|
+| 2026-09-11 | 0.1.0-dev | all 33 products | ✅ 33/33 | — | — | — | `make build-all`, SDK 9.2.0 |
+| 2026-09-11 | 0.1.0-dev | `fenix6pro` | ✅ | ✅ 18/18 | ✅ launches | ⬜ pending | Tightest layout; no touch |
+| 2026-09-11 | 0.1.0-dev | `fenix9pro47mm` | ✅ | ✅ 18/18 | ✅ launches | ⬜ pending | Primary target |
+| | | | | | | | |
+
+### Release binary sizes
+
+Release builds (`monkeyc -r`) are around **35 KB**; debug builds are ~150 KB
+because of the embedded symbol information. Only the release size matters for
+the device memory budget — this is what makes `fenix6` / `fenix6s`, with a
+128 KB watch-app limit, comfortably viable.

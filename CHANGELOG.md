@@ -76,8 +76,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Notes
 
-- Verified against Connect IQ SDK 9.2.0: 34 device targets compile, and the
-  unit suite (18 tests) passes on both `fenix6pro` and `fenix9pro47mm`.
+- Verified against Connect IQ SDK 9.2.0: all 33 declared products compile, the
+  unit suite (18 tests) passes on both `fenix6pro` and `fenix9pro47mm`, the app
+  launches in the Connect IQ Simulator, and `make package` produces a genuine
+  Connect IQ Store `.iq` bundle covering 58 device variants.
 - The SDK's bundled `resources/device-reference/` folder lags the real device
   list and contains no Fenix 9 entries, but the downloaded Fenix 9 Pro device
   definitions build correctly. Always discover ids with
