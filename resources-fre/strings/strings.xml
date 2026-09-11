@@ -5,6 +5,16 @@
     <string id="SetLabel">Serie</string>
     <string id="CompleteSet">VALIDER SERIE</string>
     <string id="Reps">reps</string>
+    <string id="FieldWeight">POIDS</string>
+    <string id="FieldReps">REPS</string>
+    <string id="FieldHr">FC</string>
+    <string id="FieldAvgHr">FC MOY</string>
+    <string id="FieldMaxHr">FC MAX</string>
+    <string id="FieldTime">TEMPS</string>
+    <string id="FieldKcal">KCAL</string>
+    <string id="FieldVolume">VOLUME</string>
+    <string id="FieldSets">SERIES</string>
+    <string id="FieldExercises">EXOS</string>
     <string id="PageBody">CORPS</string>
     <string id="PageWorkout">SEANCE</string>
     <string id="Bpm">bpm</string>

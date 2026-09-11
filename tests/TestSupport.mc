@@ -1,6 +1,7 @@
 import Toybox.Lang;
 import Toybox.Test;
 import Toybox.Graphics;
+import Toybox.System;
 
 //! Shared helpers for the RepFlow unit tests.
 //!
@@ -35,6 +36,25 @@ module TestSupport {
         return engine.getWorkout().findExercise(id) as Exercise;
     }
 
+    //! An off-screen Dc the size of THIS device's screen, with its real font
+    //! metrics — which is the only meaningful surface to test a layout against.
+    //! Pairing one device's fonts with another device's screen size proves
+    //! nothing about either.
+    public function screenDc() as Graphics.Dc? {
+        var settings = System.getDeviceSettings();
+        var size = settings.screenHeight < settings.screenWidth
+            ? settings.screenHeight
+            : settings.screenWidth;
+        return offscreenDc(size);
+    }
+
+    public function screenSize() as Number {
+        var settings = System.getDeviceSettings();
+        return settings.screenHeight < settings.screenWidth
+            ? settings.screenHeight
+            : settings.screenWidth;
+    }
+
     //! An off-screen Dc with the running device's real font metrics, for the
     //! layout tests.
     //!
@@ -55,6 +75,23 @@ module TestSupport {
             return bitmap.getDc();
         }
         return null;
+    }
+
+    //! Assert the font chosen for `value` fits the cell it was given, and is at
+    //! least `minHeight` tall — a cell that silently shrinks to a tiny font
+    //! defeats the whole point of a data field.
+    public function assertCellFits(
+        dc as Graphics.Dc,
+        value as String,
+        cellWidth as Number,
+        valueArea as Number,
+        minHeight as Number
+    ) as Void {
+        var maxWidth = (cellWidth * 92) / 100;
+        var font = Theme.pickFontFitting(dc, value, Theme.fontsCell(), maxWidth, valueArea);
+        Test.assert(dc.getFontHeight(font) <= valueArea);
+        Test.assert(dc.getTextWidthInPixels(value, font) <= maxWidth);
+        Test.assert(dc.getFontHeight(font) >= minHeight);
     }
 
     //! Complete `count` sets of the currently selected exercise at its

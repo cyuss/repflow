@@ -2,18 +2,17 @@ import Toybox.Lang;
 import Toybox.Graphics;
 import Toybox.WatchUi;
 
-//! End-of-workout screen, paged like the exercise screens.
+//! End-of-workout screen, on the same data-field grid as the exercise screens.
 //!
-//!   Page 1 — the headline: duration and training volume
-//!   Page 2 — the work:     exercises, sets, reps
-//!   Page 3 — the body:     Garmin's calories and heart rate, where available
+//!   Page 1 — the work   duration, volume, sets, reps
+//!   Page 2 — the body   Garmin's heart rate and calories, where available
 //!
-//! Garmin metrics come straight from Activity.getActivityInfo() and are simply
-//! omitted when the device or the activity does not provide them.
+//! Garmin metrics come straight from Activity.getActivityInfo() and show "--"
+//! rather than a fabricated zero when the device does not provide them.
 //! START saves the Garmin activity, MENU offers discard.
 class WorkoutSummaryView extends WatchUi.View {
 
-    public const PAGE_COUNT = 3;
+    public const PAGE_COUNT = 2;
 
     private var _summary as SessionSummary;
     private var _page as Number;
@@ -32,116 +31,80 @@ class WorkoutSummaryView extends WatchUi.View {
     public function onUpdate(dc as Graphics.Dc) as Void {
         Theme.clear(dc);
         var h = dc.getHeight();
-        var gap = h / 32;
 
         var actionTop = Theme.drawActionBar(
             dc, WatchUi.loadResource(Rez.Strings.SaveActivity) as String, Theme.COLOR_DONE);
 
-        var y = h / 9;
+        var y = h / 14;
         y = Theme.drawFitted(dc, y, WatchUi.loadResource(Rez.Strings.SummaryTitle) as String,
-            Theme.fontsLabel(), Theme.COLOR_DONE);
-        y += gap + gap;
+            Theme.fontsTitle(), Theme.COLOR_DONE);
+        y += h / 40;
+        FieldGrid.drawRule(dc, y);
+
+        var top = y + 1;
+        var bottom = actionTop - h / 60;
 
         if (_page == 1) {
-            _drawWorkPage(dc, y, gap);
-        } else if (_page == 2) {
-            _drawBodyPage(dc, y, gap);
+            _drawBodyPage(dc, top, bottom);
         } else {
-            _drawHeadlinePage(dc, y, gap, actionTop);
+            _drawWorkPage(dc, top, bottom);
         }
 
         Theme.drawPageDots(dc, PAGE_COUNT, _page);
     }
 
-    //! The two numbers worth seeing first, given room to breathe.
-    private function _drawHeadlinePage(
-        dc as Graphics.Dc,
-        y as Number,
-        gap as Number,
-        actionTop as Number
-    ) as Void {
-        var duration = Theme.formatDuration(_summary.durationSec);
-        var volume = Theme.formatVolume(_summary.totalVolume);
+    //! Duration leads full width — "1:02:34" needs it — with sets and reps
+    //! sharing the wide middle, and volume closing full width.
+    private function _drawWorkPage(dc as Graphics.Dc, top as Number, bottom as Number) as Void {
+        var edge = FieldGrid.edgeHeight(top, bottom);
+        var middleTop = top + edge;
+        var bottomTop = bottom - edge;
 
-        var labelHeight = dc.getFontHeight(Graphics.FONT_XTINY);
-        var maxWidth = Theme.usableWidth(dc, dc.getHeight() / 2);
-        // Two stacked numbers plus their labels have to fit the space that is
-        // left, so each gets an explicit share of it rather than the largest
-        // font that happens to fit the width.
-        var available = actionTop - y;
-        var numberBudget = (available - labelHeight * 2 - gap * 3) / 2;
-
-        var durationFont = Theme.pickFontFitting(dc, duration, Theme.fontsBig(),
-            maxWidth, numberBudget);
-        var volumeFont = Theme.pickFontFitting(dc, volume, Theme.fontsBig(),
-            maxWidth, numberBudget);
-
-        var blockHeight = dc.getFontHeight(durationFont) + labelHeight
-            + gap * 3 + dc.getFontHeight(volumeFont) + labelHeight;
-        var top = y + (available - blockHeight) / 2;
-        if (top < y) {
-            top = y;
-        }
-
-        top = _drawNumberWithLabel(dc, top, duration, durationFont,
-            WatchUi.loadResource(Rez.Strings.Duration) as String, Theme.COLOR_TEXT);
-        top += gap * 3;
-        _drawNumberWithLabel(dc, top, volume, volumeFont,
-            WatchUi.loadResource(Rez.Strings.Volume) as String, Theme.COLOR_ACCENT);
-    }
-
-    private function _drawNumberWithLabel(
-        dc as Graphics.Dc,
-        y as Number,
-        value as String,
-        font as Graphics.FontDefinition,
-        label as String,
-        color as Number
-    ) as Number {
-        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(dc.getWidth() / 2, y, font, value, Graphics.TEXT_JUSTIFY_CENTER);
-        y += dc.getFontHeight(font);
-        return Theme.drawFitted(dc, y, label,
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
-    }
-
-    private function _drawWorkPage(dc as Graphics.Dc, y as Number, gap as Number) as Void {
-        y = Theme.drawMetricRow(dc, y,
-            WatchUi.loadResource(Rez.Strings.Exercises) as String,
-            _summary.exercisesWorked.toString() + "/" + _summary.exerciseCount.toString(),
+        FieldGrid.drawSingle(dc, top, edge,
+            Theme.formatDuration(_summary.durationSec),
+            WatchUi.loadResource(Rez.Strings.FieldTime) as String,
             Theme.COLOR_TEXT);
-        y += gap + gap;
 
-        y = Theme.drawMetricRow(dc, y,
-            WatchUi.loadResource(Rez.Strings.SetsDone) as String,
+        FieldGrid.drawRule(dc, middleTop);
+        FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
             _summary.completedSets.toString(),
-            Theme.COLOR_TEXT);
-        y += gap + gap;
-
-        Theme.drawMetricRow(dc, y,
-            WatchUi.loadResource(Rez.Strings.TotalReps) as String,
+            WatchUi.loadResource(Rez.Strings.FieldSets) as String,
+            Theme.COLOR_TEXT,
             _summary.totalReps.toString(),
+            WatchUi.loadResource(Rez.Strings.FieldReps) as String,
             Theme.COLOR_TEXT);
+
+        FieldGrid.drawRule(dc, bottomTop);
+        FieldGrid.drawSingle(dc, bottomTop, edge,
+            Theme.formatVolume(_summary.totalVolume),
+            WatchUi.loadResource(Rez.Strings.FieldVolume) as String,
+            Theme.COLOR_ACCENT);
     }
 
-    //! Garmin's own numbers. Rows show "--" rather than a fabricated zero when
-    //! the device does not provide them.
-    private function _drawBodyPage(dc as Graphics.Dc, y as Number, gap as Number) as Void {
-        y = Theme.drawMetricRow(dc, y,
-            WatchUi.loadResource(Rez.Strings.AvgHr) as String,
-            LiveMetrics.format(LiveMetrics.averageHeartRate()),
-            Theme.COLOR_HR);
-        y += gap + gap;
+    //! Garmin's own numbers, plus how much of the workout was actually worked.
+    private function _drawBodyPage(dc as Graphics.Dc, top as Number, bottom as Number) as Void {
+        var edge = FieldGrid.edgeHeight(top, bottom);
+        var middleTop = top + edge;
+        var bottomTop = bottom - edge;
 
-        y = Theme.drawMetricRow(dc, y,
-            WatchUi.loadResource(Rez.Strings.MaxHr) as String,
-            LiveMetrics.format(LiveMetrics.maxHeartRate()),
-            Theme.COLOR_HR);
-        y += gap + gap;
-
-        Theme.drawMetricRow(dc, y,
-            WatchUi.loadResource(Rez.Strings.Calories) as String,
+        FieldGrid.drawSingle(dc, top, edge,
             LiveMetrics.format(LiveMetrics.calories()),
+            WatchUi.loadResource(Rez.Strings.FieldKcal) as String,
+            Theme.COLOR_TEXT);
+
+        FieldGrid.drawRule(dc, middleTop);
+        FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
+            LiveMetrics.format(LiveMetrics.averageHeartRate()),
+            WatchUi.loadResource(Rez.Strings.FieldAvgHr) as String,
+            Theme.COLOR_HR,
+            LiveMetrics.format(LiveMetrics.maxHeartRate()),
+            WatchUi.loadResource(Rez.Strings.FieldMaxHr) as String,
+            Theme.COLOR_HR);
+
+        FieldGrid.drawRule(dc, bottomTop);
+        FieldGrid.drawSingle(dc, bottomTop, edge,
+            _summary.exercisesWorked.toString() + "/" + _summary.exerciseCount.toString(),
+            WatchUi.loadResource(Rez.Strings.FieldExercises) as String,
             Theme.COLOR_TEXT);
     }
 }

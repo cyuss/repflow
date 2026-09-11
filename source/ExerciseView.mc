@@ -3,12 +3,26 @@ import Toybox.Graphics;
 import Toybox.WatchUi;
 import Toybox.System;
 
-//! The screen the athlete spends the workout on — a set of data screens paged
-//! with UP/DOWN, the way every other Garmin activity behaves.
+//! The screen the athlete spends the workout on.
 //!
-//!   Page 1 — SET        the exercise, the load, the dominant action
-//!   Page 2 — BODY       live Garmin metrics: heart rate, time, calories
-//!   Page 3 — WORKOUT    session totals: sets, reps, volume, exercises
+//! Laid out as a Garmin data-field grid — bands of big value + small caption,
+//! separated by hairlines — and paged with UP/DOWN like any native activity.
+//!
+//!   SET                  BODY / WORKOUT
+//!   +-------------+      +---------------+
+//!   | Lat Pulldown|      |      132      |   full width: a wide value, and
+//!   |  SET 2 / 4  |      |       HR      |   the narrow top of the circle
+//!   +------+------+      +-------+-------+
+//!   |  55  |  10  |      |  128  |  210  |   split: only in the middle, where
+//!   |WEIGHT| REPS |      | AVG HR|  KCAL |   the glass is widest
+//!   +------+------+      +-------+-------+
+//!   | COMPLETE SET|      |     12:34     |
+//!   +-------------+      |      TIME     |
+//!                        +---------------+
+//!
+//! Only the middle band is ever split into columns, and wide values
+//! ("1:02:34", "3.2 t") always take a full-width band — that is what the
+//! geometry of a round display allows. See FieldGrid.
 //!
 //! Buttons:
 //!   START      complete the set (one press, from any page)
@@ -42,171 +56,117 @@ class ExerciseView extends WatchUi.View {
         if (page == Tuning.PAGE_BODY) {
             _drawBodyPage(dc, exercise);
         } else if (page == Tuning.PAGE_WORKOUT) {
-            _drawWorkoutPage(dc, engine as WorkoutEngine, exercise);
+            _drawWorkoutPage(dc, engine as WorkoutEngine);
         } else {
             _drawSetPage(dc, controller, exercise);
         }
         Theme.drawPageDots(dc, Tuning.PAGE_COUNT, page);
     }
 
-    // ------------------------------------------------------------------
-    // Page 1 — the set
-    // ------------------------------------------------------------------
+    //! Just a title and a rule. Used by the metric pages, where the set counter
+    //! is redundant and the space is worth more as field height — on a 260x260
+    //! screen it is the difference between a readable field and a cramped one.
+    private function _drawCompactHeader(dc as Graphics.Dc, title as String) as Number {
+        var h = dc.getHeight();
+        var y = Theme.drawFitted(dc, h / 14, title, Theme.fontsTitle(), Theme.COLOR_TEXT);
+        y += h / 44;
+        FieldGrid.drawRule(dc, y);
+        return y + 1;
+    }
 
+    //! Exercise name and set counter, above a rule. Returns the y where the
+    //! field grid can start.
+    private function _drawHeader(dc as Graphics.Dc, exercise as Exercise) as Number {
+        var h = dc.getHeight();
+        var y = h / 14;
+
+        y = Theme.drawFitted(dc, y, exercise.name, Theme.fontsTitle(), Theme.COLOR_TEXT);
+
+        var setLine = (WatchUi.loadResource(Rez.Strings.SetLabel) as String).toUpper() + " " +
+            exercise.currentSetNumber().toString() + " / " + exercise.targetSets.toString();
+        y = Theme.drawFitted(dc, y + h / 80, setLine,
+            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
+            Theme.stateColor(exercise.state));
+
+        // Progress dots only where there is room to spare. On a 260x260 screen
+        // the set counter above already says it, and the space is worth more.
+        if (h >= 400) {
+            y = Theme.drawSetDots(dc, y + h / 60, exercise.targetSets,
+                exercise.completedSetCount());
+        }
+
+        y += h / 40;
+        FieldGrid.drawRule(dc, y);
+        return y + 1;
+    }
+
+    //! Page 1 — the load and the reps, as two fields side by side.
     private function _drawSetPage(
         dc as Graphics.Dc,
         controller as AppController,
         exercise as Exercise
     ) as Void {
-        var h = dc.getHeight();
-        // Reserve the bottom band for the action, then lay content out above it.
         var actionTop = Theme.drawActionBar(
             dc, WatchUi.loadResource(Rez.Strings.CompleteSet) as String, Theme.COLOR_ACCENT);
+        var top = _drawHeader(dc, exercise);
+        var bottom = actionTop - dc.getHeight() / 60;
 
-        var gap = h / 40;
-        var y = h / 11;
-
-        // Exercise name.
-        y = Theme.drawFitted(dc, y, exercise.name, Theme.fontsTitle(), Theme.COLOR_TEXT);
-        y += gap;
-
-        // Set X / Y, coloured by the exercise's state.
-        var setLine = (WatchUi.loadResource(Rez.Strings.SetLabel) as String) + " " +
-            exercise.currentSetNumber().toString() + " / " + exercise.targetSets.toString();
-        y = Theme.drawFitted(dc, y, setLine, Theme.fontsLabel(), Theme.stateColor(exercise.state));
-        y += gap;
-
-        // Progress dots, one per target set.
-        y = Theme.drawSetDots(dc, y, exercise.targetSets, exercise.completedSetCount());
-
-        // The two numbers share whatever room is left between here and the
-        // action bar, and the fonts are chosen to FIT that room — not just to
-        // fit the width. A 260x260 Fenix 6 Pro is wide enough for the largest
-        // number font but nowhere near tall enough, so a width-only choice
-        // pushes the reps straight through the action bar.
-        var innerGap = h / 30;
-        var available = actionTop - y - innerGap;
-        var repsText = controller.pendingReps().toString();
-        var repsUnit = WatchUi.loadResource(Rez.Strings.Reps) as String;
-        var maxWidth = Theme.usableWidth(dc, h / 2);
-
-        // Reps take the smaller share; the load is the number read mid-set.
-        var repsFont = Theme.pickFontFitting(dc, repsText, Theme.fontsTitle(),
-            maxWidth, (available * 30) / 100);
-        var repsHeight = dc.getFontHeight(repsFont);
-
-        var weightText = Theme.formatWeight(controller.pendingWeight());
-        var weightBudget = available - innerGap - repsHeight;
-        var weightFont = Theme.pickFontFitting(dc, weightText, Theme.fontsHero(),
-            (maxWidth * 70) / 100, weightBudget);
-        var weightHeight = dc.getFontHeight(weightFont);
-
-        var blockHeight = weightHeight + innerGap + repsHeight;
-        var blockTop = y + (available - blockHeight) / 2;
-        if (blockTop < y) {
-            blockTop = y;
-        }
-
-        var afterWeight = Theme.drawValueWithUnitCapped(
-            dc, blockTop, weightText,
-            WatchUi.loadResource(Rez.Strings.Kg) as String,
-            Theme.fontsHero(), Theme.COLOR_TEXT, Theme.COLOR_DIM, weightBudget);
-
-        _drawReps(dc, afterWeight + innerGap, repsText, repsUnit, repsFont);
+        FieldGrid.drawPair(dc, top, bottom - top,
+            Theme.formatWeight(controller.pendingWeight()),
+            WatchUi.loadResource(Rez.Strings.FieldWeight) as String,
+            Theme.COLOR_TEXT,
+            controller.pendingReps().toString(),
+            WatchUi.loadResource(Rez.Strings.FieldReps) as String,
+            Theme.COLOR_TEXT);
     }
 
-    //! Reps, with the unit beside the number in the same dim tone as "kg".
-    private function _drawReps(
-        dc as Graphics.Dc,
-        y as Number,
-        value as String,
-        unit as String,
-        font as Graphics.FontDefinition
-    ) as Void {
-        var unitFont = Graphics.FONT_XTINY;
-        var unitText = " " + unit;
-        var valueWidth = dc.getTextWidthInPixels(value, font);
-        var unitWidth = dc.getTextWidthInPixels(unitText, unitFont);
-        var left = (dc.getWidth() - (valueWidth + unitWidth)) / 2;
-        var valueHeight = dc.getFontHeight(font);
-        var unitHeight = dc.getFontHeight(unitFont);
-
-        dc.setColor(Theme.COLOR_TEXT, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(left, y, font, value, Graphics.TEXT_JUSTIFY_LEFT);
-        dc.setColor(Theme.COLOR_DIM, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(left + valueWidth, y + valueHeight - unitHeight - (valueHeight / 10),
-            unitFont, unitText, Graphics.TEXT_JUSTIFY_LEFT);
-    }
-
-    // ------------------------------------------------------------------
-    // Page 2 — live Garmin metrics
-    // ------------------------------------------------------------------
-
+    //! Page 2 — live Garmin metrics, in Garmin's four-field round layout:
+    //! a full-width band, a split middle, a full-width band.
+    //!
+    //! Heart rate leads because it is the number worth a glance mid-set, and
+    //! the elapsed time sits full width at the bottom because "1:02:34" is far
+    //! too wide for half a cell on a round screen.
     private function _drawBodyPage(dc as Graphics.Dc, exercise as Exercise) as Void {
         var h = dc.getHeight();
-        var gap = h / 32;
-        var y = h / 10;
+        var top = _drawCompactHeader(dc, exercise.name);
+        var bottom = h - h / 11;
 
-        y = Theme.drawFitted(dc, y, WatchUi.loadResource(Rez.Strings.PageBody) as String,
-            Theme.fontsLabel(), Theme.COLOR_DIM);
-        y += gap;
-
-        // Heart rate is the number worth reading mid-set, so it gets the hero
-        // slot — capped so the three rows below it always have room.
-        var rowHeight = dc.getFontHeight(Graphics.FONT_XTINY);
-        var heroBudget = h - y - (rowHeight + gap) * 3 - gap * 3;
         var hr = LiveMetrics.heartRate();
-        y = Theme.drawValueWithUnitCapped(
-            dc, y, LiveMetrics.format(hr),
-            WatchUi.loadResource(Rez.Strings.Bpm) as String,
-            Theme.fontsHero(),
-            hr != null ? Theme.COLOR_HR : Theme.COLOR_SKIPPED,
-            Theme.COLOR_DIM, heroBudget);
-        y += gap + gap;
-
         var timer = LiveMetrics.timerSeconds();
-        y = Theme.drawMetricRow(dc, y,
-            WatchUi.loadResource(Rez.Strings.Duration) as String,
-            timer != null ? Theme.formatDuration(timer) : LiveMetrics.NO_VALUE,
-            Theme.COLOR_TEXT);
-        y += gap;
 
-        y = Theme.drawMetricRow(dc, y,
-            WatchUi.loadResource(Rez.Strings.AvgHr) as String,
+        var edge = FieldGrid.edgeHeight(top, bottom);
+        var middleTop = top + edge;
+        var bottomTop = bottom - edge;
+
+        FieldGrid.drawSingle(dc, top, edge,
+            LiveMetrics.format(hr),
+            WatchUi.loadResource(Rez.Strings.FieldHr) as String,
+            hr != null ? Theme.COLOR_HR : Theme.COLOR_SKIPPED);
+
+        FieldGrid.drawRule(dc, middleTop);
+        FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
             LiveMetrics.format(LiveMetrics.averageHeartRate()),
-            Theme.COLOR_TEXT);
-        y += gap;
-
-        Theme.drawMetricRow(dc, y,
-            WatchUi.loadResource(Rez.Strings.Calories) as String,
+            WatchUi.loadResource(Rez.Strings.FieldAvgHr) as String,
+            Theme.COLOR_TEXT,
             LiveMetrics.format(LiveMetrics.calories()),
+            WatchUi.loadResource(Rez.Strings.FieldKcal) as String,
+            Theme.COLOR_TEXT);
+
+        FieldGrid.drawRule(dc, bottomTop);
+        FieldGrid.drawSingle(dc, bottomTop, edge,
+            timer != null ? Theme.formatDuration(timer) : LiveMetrics.NO_VALUE,
+            WatchUi.loadResource(Rez.Strings.FieldTime) as String,
             Theme.COLOR_TEXT);
     }
 
-    // ------------------------------------------------------------------
-    // Page 3 — what has been done so far
-    // ------------------------------------------------------------------
-
-    private function _drawWorkoutPage(
-        dc as Graphics.Dc,
-        engine as WorkoutEngine,
-        exercise as Exercise
-    ) as Void {
+    //! Page 3 — what the session has accumulated so far, same round layout.
+    //! Volume leads full width ("3.2 t", "12 450 kg"); sets and reps are short
+    //! enough to share the middle.
+    private function _drawWorkoutPage(dc as Graphics.Dc, engine as WorkoutEngine) as Void {
         var h = dc.getHeight();
-        var gap = h / 32;
-        var y = h / 10;
         var summary = engine.summary(AppController.now());
 
-        y = Theme.drawFitted(dc, y, WatchUi.loadResource(Rez.Strings.PageWorkout) as String,
-            Theme.fontsLabel(), Theme.COLOR_DIM);
-        y += gap;
-
-        y = Theme.drawValueWithUnit(
-            dc, y, Theme.formatVolume(summary.totalVolume), "",
-            Theme.fontsBig(), Theme.COLOR_ACCENT, Theme.COLOR_DIM);
-        y = Theme.drawFitted(dc, y, WatchUi.loadResource(Rez.Strings.Volume) as String,
-            Theme.fontsLabel(), Theme.COLOR_DIM);
-        y += gap + gap;
+        var top = _drawCompactHeader(dc, engine.getWorkout().name);
 
         var done = 0;
         var list = engine.getWorkout().exercises;
@@ -216,21 +176,29 @@ class ExerciseView extends WatchUi.View {
             }
         }
 
-        y = Theme.drawMetricRow(dc, y,
-            WatchUi.loadResource(Rez.Strings.Exercises) as String,
-            done.toString() + "/" + summary.exerciseCount.toString(),
-            Theme.COLOR_TEXT);
-        y += gap;
+        var bottom = h - h / 11;
+        var edge = FieldGrid.edgeHeight(top, bottom);
+        var middleTop = top + edge;
+        var bottomTop = bottom - edge;
 
-        y = Theme.drawMetricRow(dc, y,
-            WatchUi.loadResource(Rez.Strings.SetsDone) as String,
+        FieldGrid.drawSingle(dc, top, edge,
+            Theme.formatVolume(summary.totalVolume),
+            WatchUi.loadResource(Rez.Strings.FieldVolume) as String,
+            Theme.COLOR_ACCENT);
+
+        FieldGrid.drawRule(dc, middleTop);
+        FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
             summary.completedSets.toString(),
-            Theme.COLOR_TEXT);
-        y += gap;
-
-        Theme.drawMetricRow(dc, y,
-            WatchUi.loadResource(Rez.Strings.TotalReps) as String,
+            WatchUi.loadResource(Rez.Strings.FieldSets) as String,
+            Theme.COLOR_TEXT,
             summary.totalReps.toString(),
+            WatchUi.loadResource(Rez.Strings.FieldReps) as String,
+            Theme.COLOR_TEXT);
+
+        FieldGrid.drawRule(dc, bottomTop);
+        FieldGrid.drawSingle(dc, bottomTop, edge,
+            done.toString() + "/" + summary.exerciseCount.toString(),
+            WatchUi.loadResource(Rez.Strings.FieldExercises) as String,
             Theme.COLOR_TEXT);
     }
 }
@@ -282,8 +250,9 @@ class ExerciseDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
-    //! Touch devices get a shortcut straight into the editors: tap the weight,
-    //! or tap the reps. Optional — everything here works with buttons alone.
+    //! Touch devices get a shortcut straight into the editors: tap the left
+    //! field for weight, the right one for reps. Optional — everything here
+    //! works with buttons alone.
     public function onTap(event as WatchUi.ClickEvent) as Boolean {
         var controller = AppController.instance();
         if (controller.exercisePage() != Tuning.PAGE_SET) {
@@ -298,11 +267,13 @@ class ExerciseDelegate extends WatchUi.BehaviorDelegate {
             return false;
         }
         var coords = event.getCoordinates();
-        var screenHeight = System.getDeviceSettings().screenHeight;
-        if (coords[1] < screenHeight * 0.42 || coords[1] > screenHeight * 0.80) {
-            return false;   // header and action bar are not edit targets
+        var settings = System.getDeviceSettings();
+        // Only the field band responds; the header and action bar do not.
+        if (coords[1] < settings.screenHeight * 0.30 ||
+            coords[1] > settings.screenHeight * 0.78) {
+            return false;
         }
-        if (coords[1] < screenHeight * 0.64) {
+        if (coords[0] < settings.screenWidth / 2) {
             ValueEditor.editWeight(exercise);
         } else {
             ValueEditor.editReps(exercise);

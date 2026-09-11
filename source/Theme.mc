@@ -59,6 +59,24 @@ module Theme {
         ] as Array<Graphics.FontDefinition>;
     }
 
+    //! Ladder for a data field cell. Starts with the big number fonts and keeps
+    //! going down into the text fonts, because a four-field layout on a 260x260
+    //! screen leaves a band too short for even the smallest number font — and a
+    //! value that does not fit its cell is worse than a smaller one.
+    public function fontsCell() as Array<Graphics.FontDefinition> {
+        return [
+            Graphics.FONT_NUMBER_THAI_HOT,
+            Graphics.FONT_NUMBER_HOT,
+            Graphics.FONT_NUMBER_MEDIUM,
+            Graphics.FONT_NUMBER_MILD,
+            Graphics.FONT_LARGE,
+            Graphics.FONT_MEDIUM,
+            Graphics.FONT_SMALL,
+            Graphics.FONT_TINY,
+            Graphics.FONT_XTINY
+        ] as Array<Graphics.FontDefinition>;
+    }
+
     public function fontsBig() as Array<Graphics.FontDefinition> {
         return [
             Graphics.FONT_NUMBER_MEDIUM,

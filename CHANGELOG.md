@@ -50,10 +50,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Paged workout summary: headline, work done, and Garmin's own body metrics
 - Button-first interaction: one press of START completes a set, one press of
   BACK opens the overview; touch is optional everywhere
+- **Garmin-style data field grid** (`FieldGrid`): bands of big value plus small
+  caption, separated by hairlines, as on a native activity screen
+- Layout respects the display being round — only the middle band is split into
+  columns, and wide values ("1:02:34", "3.2 t") take a full-width band, because
+  a half cell near the top or bottom of a circle is far too narrow for them
 - Measured layout engine (`Theme`): text is placed from a running cursor with
   explicit gaps and a round-screen-aware usable width, so lines cannot collide
-  or crowd on any screen size; units are set alongside their numbers rather than
-  floating beneath them
+  or crowd on any screen size
 - Resolution-adaptive drawing in code rather than per-device XML layouts
 - Per-device launcher icons rendered at each product's exact pixel size
   (`scripts/make-icons.sh`), so nothing is rescaled

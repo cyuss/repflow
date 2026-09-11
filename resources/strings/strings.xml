@@ -10,6 +10,19 @@
     <string id="Kg">kg</string>
     <string id="Reps">reps</string>
 
+    <!-- Data field captions. Short and uppercase: they sit under a big value
+         in a narrow cell, so anything long gets shrunk to nothing. -->
+    <string id="FieldWeight">WEIGHT</string>
+    <string id="FieldReps">REPS</string>
+    <string id="FieldHr">HR</string>
+    <string id="FieldAvgHr">AVG HR</string>
+    <string id="FieldMaxHr">MAX HR</string>
+    <string id="FieldTime">TIME</string>
+    <string id="FieldKcal">KCAL</string>
+    <string id="FieldVolume">VOLUME</string>
+    <string id="FieldSets">SETS</string>
+    <string id="FieldExercises">EXOS</string>
+
     <!-- Data screens -->
     <string id="PageBody">BODY</string>
     <string id="PageWorkout">WORKOUT</string>

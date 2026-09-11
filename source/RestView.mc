@@ -4,12 +4,16 @@ import Toybox.WatchUi;
 
 //! Shown immediately after a set is completed.
 //!
-//!        REST
-//!       01:30            <- draining arc around the edge
-//!       ♥ 132
-//!   ----------------
-//!   Next  Lat Pulldown
-//!   Set 2/4 · 10 x 55 kg
+//!   +---------------------+
+//!   |        REST         |   <- draining arc around the rim
+//!   |       01:30         |
+//!   +----------+----------+
+//!   |   132    |   3/4    |
+//!   |    HR    |   SETS   |
+//!   +----------+----------+
+//!   | Lat Pulldown        |   what is next, so you can plan
+//!   | SET 3/4  10 x 55 KG |
+//!   +---------------------+
 //!
 //! Buttons:
 //!   START      skip rest and go straight back to the exercise
@@ -26,73 +30,69 @@ class RestView extends WatchUi.View {
         var controller = AppController.instance();
         var rest = controller.restTimer();
         var h = dc.getHeight();
-        var gap = h / 36;
 
         _drawProgressArc(dc, rest);
 
+        // The countdown is the hero: it owns the top third outright.
         var y = h / 9;
         y = Theme.drawFitted(dc, y, WatchUi.loadResource(Rez.Strings.Rest) as String,
-            Theme.fontsLabel(), Theme.COLOR_DIM);
-        y += gap;
+            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
 
-        // Cap the countdown so the "next up" block below always has room. On a
-        // 260x260 Fenix 6 Pro an uncapped hero font would swallow it whole.
-        var smallRow = dc.getFontHeight(Graphics.FONT_XTINY);
-        var timerBudget = h - y - (smallRow * 4) - (gap * 6);
+        var countdownTop = y + h / 60;
+        var countdownHeight = (h * 26) / 100;
         var timerFont = Theme.pickFontFitting(dc, rest.format(), Theme.fontsHero(),
-            Theme.usableWidth(dc, y), timerBudget);
+            (Theme.usableWidth(dc, countdownTop + countdownHeight / 2) * 80) / 100,
+            countdownHeight);
         dc.setColor(rest.isRunning() ? Theme.COLOR_TEXT : Theme.COLOR_DONE,
             Graphics.COLOR_TRANSPARENT);
-        dc.drawText(dc.getWidth() / 2, y, timerFont, rest.format(),
+        dc.drawText(dc.getWidth() / 2, countdownTop, timerFont, rest.format(),
             Graphics.TEXT_JUSTIFY_CENTER);
-        y += dc.getFontHeight(timerFont) + gap;
 
-        // Heart rate recovering between sets is exactly what you want to watch
-        // during a rest, so it belongs here rather than a page away.
-        var hr = LiveMetrics.heartRate();
-        if (hr != null && (h - y) > smallRow * 5) {
-            y = Theme.drawValueWithUnit(dc, y, hr.toString(),
-                WatchUi.loadResource(Rez.Strings.Bpm) as String,
-                Theme.fontsBody(), Theme.COLOR_HR, Theme.COLOR_DIM);
-        }
-        y += gap + gap;
+        var top = countdownTop + dc.getFontHeight(timerFont) + h / 60;
+        FieldGrid.drawRule(dc, top);
+        top += 1;
 
-        _drawNextUp(dc, y, controller);
+        _drawFields(dc, top, controller);
     }
 
-    //! What comes next, so the athlete can plan while resting.
-    private function _drawNextUp(
+    //! A field band, then what is coming next.
+    private function _drawFields(
         dc as Graphics.Dc,
-        y as Number,
+        top as Number,
         controller as AppController
     ) as Void {
+        var h = dc.getHeight();
         var engine = controller.engine();
-        if (engine == null) {
-            return;
+        var next = engine != null ? engine.suggestNextExercise() : null;
+
+        // Reserve the bottom for "next up" only when there is one.
+        var bottom = h - h / 14;
+        var nextHeight = next != null ? (h * 22) / 100 : 0;
+        var fieldBottom = bottom - nextHeight;
+
+        var hr = LiveMetrics.heartRate();
+        var setsDone = "--";
+        if (next != null) {
+            setsDone = next.completedSetCount().toString() + "/" + next.targetSets.toString();
         }
-        var next = engine.suggestNextExercise();
+
+        FieldGrid.drawPair(dc, top, fieldBottom - top,
+            LiveMetrics.format(hr),
+            WatchUi.loadResource(Rez.Strings.FieldHr) as String,
+            hr != null ? Theme.COLOR_HR : Theme.COLOR_SKIPPED,
+            setsDone,
+            WatchUi.loadResource(Rez.Strings.FieldSets) as String,
+            Theme.COLOR_TEXT);
+
         if (next == null) {
             return;
         }
-        var h = dc.getHeight();
-        var gap = h / 44;
 
-        // A hairline separates "now" from "next" without costing a text line.
-        var rule = Theme.usableWidth(dc, y);
-        dc.setColor(Theme.COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
-        dc.fillRectangle((dc.getWidth() - rule) / 2, y, rule, 1);
-        y += gap + 1;
-
-        y = Theme.drawFitted(dc, y, WatchUi.loadResource(Rez.Strings.NextLabel) as String,
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
-        y += gap;
-
+        FieldGrid.drawRule(dc, fieldBottom);
+        var y = fieldBottom + h / 80;
         y = Theme.drawFitted(dc, y, next.name, Theme.fontsBody(), Theme.COLOR_TEXT);
-        y += gap;
 
-        var detail = (WatchUi.loadResource(Rez.Strings.SetLabel) as String) + " " +
-            next.currentSetNumber().toString() + "/" + next.targetSets.toString() +
-            "   " + next.plannedReps().toString() + " x " +
+        var detail = next.plannedReps().toString() + " x " +
             Theme.formatWeight(next.plannedWeight()) + " " +
             (WatchUi.loadResource(Rez.Strings.Kg) as String);
         Theme.drawFitted(dc, y, detail,

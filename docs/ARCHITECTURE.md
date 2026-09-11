@@ -94,11 +94,15 @@ started.
 
 ## Why screens are drawn in code
 
-No XML layouts. The screens are simple (a title, one or two big numbers, an
-action label) and `Theme.drawFitted` picks the largest font from a ladder that
-fits the available width. One code path scales from the Fenix 6 Pro's 240×240
-to the Fenix 9 Pro 51 mm's 466×466 without a per-device layout file, which keeps both the
-memory footprint and the device matrix small.
+No XML layouts. Screens are built from `FieldGrid` — Garmin-style bands of big
+value plus small caption — and sized at runtime against the actual display, so
+one code path covers the Fenix 6 Pro's 260×260 and the Fenix 9 Pro 51 mm's
+466×466 without 33 per-device layout files.
+
+Two constraints shape every screen, both because the display is a **circle**:
+only the middle band is split into columns, and wide values take a full-width
+band. `FieldGrid.bandWidth` uses the chord at a band's narrowest edge so nothing
+clips the bezel. See `docs/DEVELOPMENT.md` for the detail.
 
 `WatchUi.Menu2` is used for the overview and the action menus so scrolling,
 touch and button input behave exactly like the rest of the watch.

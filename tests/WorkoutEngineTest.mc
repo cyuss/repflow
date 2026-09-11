@@ -546,7 +546,7 @@ function testReselectingFinishedExerciseKeepsWorkoutComplete(logger as Test.Logg
 
 (:test)
 function testPickFontRespectsHeightBudget(logger as Test.Logger) as Boolean {
-    var dc = TestSupport.offscreenDc(260);
+    var dc = TestSupport.screenDc();
     if (dc == null) {
         return true;   // device without buffered bitmaps: nothing to assert
     }
@@ -574,11 +574,12 @@ function testPickFontRespectsHeightBudget(logger as Test.Logger) as Boolean {
 //! usableWidth must stay positive and never exceed the display, at any height.
 (:test)
 function testUsableWidthStaysOnScreen(logger as Test.Logger) as Boolean {
-    var dc = TestSupport.offscreenDc(260);
+    var dc = TestSupport.screenDc();
     if (dc == null) {
         return true;
     }
-    for (var y = 0; y <= 260; y += 20) {
+    var size = TestSupport.screenSize();
+    for (var y = 0; y <= size; y += size / 13) {
         var w = Theme.usableWidth(dc, y);
         Test.assert(w > 0);
         Test.assert(w <= dc.getWidth());
@@ -601,5 +602,108 @@ function testFormatting(logger as Test.Logger) as Boolean {
     // Volume switches to tonnes so the number stays short on a small screen.
     Test.assertEqual(Theme.formatVolume(960.0), "960 kg");
     Test.assertEqual(Theme.formatVolume(2970.0), "3.0 t");
+    return true;
+}
+
+// ----------------------------------------------------------------------
+// The data field grid, on a round display.
+//
+// Measured against THIS device's screen size and font metrics. Pairing one
+// device's fonts with another device's screen size proves nothing about either,
+// so the suite is meant to be run on each target — `make test DEVICE=<id>`.
+// ----------------------------------------------------------------------
+
+//! The SET page is what the athlete reads mid-set, so its two cells must carry
+//! a genuinely large number — not merely a font that technically fits.
+//!
+//! The geometry mirrors ExerciseView._drawSetPage: header, action bar, and one
+//! split band filling everything between them.
+(:test)
+function testSetPageFieldsAreLarge(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+    var size = TestSupport.screenSize();
+
+    var top = (size * 30) / 100;          // below the header rule
+    var bottom = (size * 76) / 100;       // above the action bar
+    var height = bottom - top;
+    var half = FieldGrid.bandWidth(dc, top, height) / 2;
+    var area = FieldGrid.valueArea(dc, height);
+
+    // A five-character weight in half a cell is the worst case. A seventh of the
+    // screen is what the geometry of a circle allows there, and it still reads
+    // as a data field at arm's length.
+    var values = ["55", "10", "137.5", "12"] as Array<String>;
+    for (var i = 0; i < values.size(); i++) {
+        TestSupport.assertCellFits(dc, values[i], half, area, size / 7);
+    }
+    return true;
+}
+
+//! The four-field layout packs more in, so its cells are necessarily smaller —
+//! exactly as a native Garmin four-field screen is. What must still hold is
+//! that every value fits the cell it was given.
+//!
+//! This is the case that forced the cell font ladder to continue past the big
+//! number fonts into the text fonts: on a 260x260 screen a four-field band is
+//! shorter than the smallest number font, and a value overflowing its cell is
+//! worse than a smaller one.
+(:test)
+function testFourFieldLayoutCellsFit(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+    var size = TestSupport.screenSize();
+
+    var top = (size * 26) / 100;
+    var bottom = size - size / 11;
+    var edge = FieldGrid.edgeHeight(top, bottom);
+    var middleTop = top + edge;
+    var middleHeight = (bottom - edge) - middleTop;
+
+    // Full-width edge bands carry the wide values.
+    var edgeWidth = FieldGrid.bandWidth(dc, top, edge);
+    var edgeArea = FieldGrid.valueArea(dc, edge);
+    var wide = ["1:02:34", "3.2 t", "132", "2/4", "--"] as Array<String>;
+    for (var i = 0; i < wide.size(); i++) {
+        TestSupport.assertCellFits(dc, wide[i], edgeWidth, edgeArea, 1);
+    }
+
+    // The split middle carries short values only.
+    var halfWidth = FieldGrid.bandWidth(dc, middleTop, middleHeight) / 2;
+    var middleArea = FieldGrid.valueArea(dc, middleHeight);
+    var shortValues = ["128", "210", "84", "12", "--"] as Array<String>;
+    for (var j = 0; j < shortValues.size(); j++) {
+        TestSupport.assertCellFits(dc, shortValues[j], halfWidth, middleArea, 1);
+    }
+    return true;
+}
+
+//! A band's width must be the chord at its NARROWEST edge, never wider. That is
+//! what keeps a cell inside the glass near the top and bottom of a circle, and
+//! it is why only the middle band is ever split into columns.
+(:test)
+function testBandWidthStaysInsideTheGlass(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+    var size = TestSupport.screenSize();
+    var height = size / 6;
+
+    for (var top = 0; top + height < size; top += size / 12) {
+        var width = FieldGrid.bandWidth(dc, top, height);
+        Test.assert(width > 0);
+        Test.assert(width <= Theme.usableWidth(dc, top));
+        Test.assert(width <= Theme.usableWidth(dc, top + height));
+    }
+
+    // A band near the top of the circle must be narrower than one across the
+    // middle, or the geometry is not being respected at all.
+    Test.assert(FieldGrid.bandWidth(dc, size / 20, height)
+        < FieldGrid.bandWidth(dc, size / 2 - height / 2, height));
     return true;
 }

@@ -113,16 +113,51 @@ activity behaves — that is the muscle memory RepFlow should not fight:
 
 | Page | Shows |
 |---|---|
-| **SET** | Exercise, set X/Y, progress dots, load in kg, reps, `COMPLETE SET` |
-| **BODY** | Live heart rate (hero), elapsed timer, average HR, calories |
-| **WORKOUT** | Training volume (hero), exercises done, sets, reps |
+| **SET** | Exercise, set X/Y, load in kg, reps, `COMPLETE SET` |
+| **BODY** | Heart rate, average HR, calories, elapsed timer |
+| **WORKOUT** | Training volume, sets, reps, exercises done |
 
 Because UP/DOWN pages rather than adjusts, **weight and reps are edited from the
 MENU** — "Edit weight" is deliberately the first item, so it sits under the
 cursor the instant the menu opens. That is the right trade: the load changes
 roughly once per exercise, while a set is completed several times per exercise
-and still takes a single press. On touch devices, tapping the weight or the reps
-on the SET page opens the same editor directly.
+and still takes a single press. On touch devices, tapping the left or right
+field on the SET page opens the same editor directly.
+
+### The field grid, and the round screen
+
+Screens are built from `source/FieldGrid.mc`: horizontal bands, each holding one
+or two cells, every cell a big value with a small caption under it, separated by
+hairlines. That is what Garmin's own activity screens do, and it is what makes a
+watch readable mid-effort.
+
+Two rules come straight from the display being a **circle**, and both are
+enforced by tests:
+
+**Only the middle band is ever split into columns.** The top and bottom of a
+circle are narrow, so a half-width cell up there has almost no usable width.
+`FieldGrid.bandWidth` returns the chord at the band's *narrowest* edge — not its
+centre — so a cell can never spill past the bezel.
+
+**Wide values need a full-width band.** `1:02:34`, `137.5`, `3.2 t` simply do not
+fit half a cell on a round screen; short values (`55`, `10`, `132`) are what
+belong side by side. Each page picks its bands accordingly — see the layout
+diagrams at the top of `ExerciseView.mc`.
+
+`FieldGrid.drawCell` sizes the value to the cell it was given, in both width and
+height, using `Theme.fontsCell()` — a ladder that starts at the big number fonts
+and continues down into the text fonts. That tail matters: in a four-field
+layout on a 260x260 Fenix 6 Pro, a band is shorter than the smallest *number*
+font, and a value overflowing its cell is worse than a smaller one.
+
+The layout tests (`testSetPageFieldsAreLarge`, `testFourFieldLayoutCellsFit`,
+`testBandWidthStaysInsideTheGlass`) measure against **the running device's own
+screen size and font metrics**, so run them per target:
+
+```sh
+make test DEVICE=fenix6pro
+make test DEVICE=fenix9pro51mm
+```
 
 Live metrics come from `source/LiveMetrics.mc`, the only place RepFlow reads
 `Activity.getActivityInfo()`. Every field is nullable and renders as `--` rather
