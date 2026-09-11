@@ -128,6 +128,11 @@ An empty log after the run means the app did not crash. The log is also where
 the real stack trace lives when it *did* — `monkeydo`'s own output often shows
 an empty `Stack:`.
 
+`scripts/run-simulator.sh` now does this for you: it clears the log before
+pushing and reports only what that run recorded, so it can say
+"no crash recorded" and mean it. `scripts/lib.sh` exposes `clear_ciq_log` and
+`report_ciq_crash` if you need the same guarantee elsewhere.
+
 ## Rules
 
 - Tests describe intended product behaviour. If a test fails, the first

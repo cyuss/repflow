@@ -37,20 +37,30 @@ fi
 # to this terminal. That is what you want interactively — press Ctrl-C to detach
 # (the app keeps running in the simulator). Set REPFLOW_DETACH=1 to return to the
 # shell immediately instead.
+# Clear the shared crash log so anything found afterwards belongs to THIS run.
+clear_ciq_log
+
 info "Pushing RepFlow to the simulator..."
 if [ -n "${REPFLOW_DETACH:-}" ]; then
-  if monkeydo_retry "$BUILD_DIR/sim-$DEVICE.log" "$PRG" "$DEVICE" >/dev/null; then
-    ok "RepFlow pushed to the simulator on $DEVICE (detached)."
-    info "App output: $BUILD_DIR/sim-$DEVICE.log"
-    exit 0
+  # monkeydo stays attached for as long as the app runs, so detaching means
+  # backgrounding it and then checking what the run recorded.
+  monkeydo "$PRG" "$DEVICE" > "$BUILD_DIR/sim-$DEVICE.log" 2>&1 &
+  sleep 8
+  if grep -q "Unable to connect to simulator" "$BUILD_DIR/sim-$DEVICE.log" 2>/dev/null; then
+    fail "Could not reach the simulator."
+    info "Output: $BUILD_DIR/sim-$DEVICE.log"
+    exit 1
   fi
-  fail "Could not reach the simulator."
-  exit 1
+  report_ciq_crash || exit 1
+  ok "RepFlow is running in the simulator on $DEVICE (detached), no crash recorded."
+  info "App output: $BUILD_DIR/sim-$DEVICE.log"
+  exit 0
 fi
 
 info "monkeydo stays attached while the app runs — Ctrl-C to detach."
 if monkeydo "$PRG" "$DEVICE"; then
-  ok "RepFlow session on $DEVICE ended."
+  report_ciq_crash || exit 1
+  ok "RepFlow session on $DEVICE ended with no crash recorded."
 else
   fail "monkeydo could not reach the simulator."
   info "Make sure the simulator window is open, then run:"

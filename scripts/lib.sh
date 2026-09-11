@@ -145,3 +145,39 @@ monkeydo_retry() {
   cat "$log"
   return 1
 }
+
+# ---------------------------------------------------------------------------
+# Simulator crash log
+#
+# monkeydo reports "Encountered an app crash" by reading the simulator's shared
+# crash log, which EVERY binary writes to — the -test build included, and
+# sometimes only flushed after the run that produced it has ended. A record left
+# by an earlier run is therefore reported against a later, healthy one.
+#
+# These helpers make the signal deterministic: clear the log before a run, and
+# read back only what that run actually wrote.
+# ---------------------------------------------------------------------------
+
+ciq_log_path() {
+  printf '%s' "${TMPDIR:-/tmp}/com.garmin.connectiq/GARMIN/APPS/LOGS/CIQ_LOG.YML"
+}
+
+clear_ciq_log() {
+  local log
+  log="$(ciq_log_path)"
+  [ -f "$log" ] && : > "$log"
+  return 0
+}
+
+# Print any crash recorded since clear_ciq_log, and return 1 when there was one.
+report_ciq_crash() {
+  local log
+  log="$(ciq_log_path)"
+  if [ ! -s "$log" ]; then
+    return 0
+  fi
+  fail "The simulator recorded a crash:"
+  sed 's/^/       /' "$log"
+  info "Full log: $log"
+  return 1
+}
