@@ -1,6 +1,7 @@
 import Toybox.Lang;
 import Toybox.System;
 import Toybox.WatchUi;
+import Toybox.Math;
 
 //! Kilograms or pounds, decided once and applied everywhere.
 //!
@@ -55,6 +56,27 @@ module Units {
     //! One press of UP or DOWN, in the displayed unit.
     public function step() as Float {
         return Settings.weightStepTenths().toFloat() / 10.0;
+    }
+
+    //! Snap a load to the step grid of whatever unit is being read.
+    //!
+    //! A template default of 55 kg is 121.3 lb, and a plan that opens on 121.3
+    //! looks like a measurement rather than a suggestion. Snapping makes it 121.
+    //!
+    //! Only ever applied to a **planned** load. A load that was actually lifted
+    //! is reported exactly as it was recorded, in kilograms, whatever unit the
+    //! screen happens to be in.
+    public function snap(kg as Float) as Float {
+        var s = step();
+        if (s <= 0.0) {
+            return kg;
+        }
+        var shown = fromKg(kg);
+        var snapped = Math.round(shown / s) * s;
+        if (snapped < 0.0) {
+            snapped = 0.0;
+        }
+        return toKg(snapped.toFloat());
     }
 
     //! The same step expressed in kilograms, since that is what gets added to

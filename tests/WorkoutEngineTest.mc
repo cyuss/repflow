@@ -1529,3 +1529,39 @@ function testAnimatorIsAlwaysSafeToMultiplyBy(logger as Test.Logger) as Boolean 
     Animator.stop();
     return true;
 }
+
+//! A planned load lands on a round number in whatever unit is being read.
+//!
+//! A 55 kg template default is 121.3 lb, and a plan that opens on 121.3 looks
+//! like a measurement rather than a suggestion. What was actually lifted is
+//! never snapped — only what is about to be.
+(:test)
+function testPlannedLoadSnapsToTheStepGrid(logger as Test.Logger) as Boolean {
+    var step = Units.step();
+    Test.assert(step > 0.0);
+
+    var values = [0.0, 20.0, 55.0, 57.5, 100.0, 137.5] as Array<Float>;
+    for (var i = 0; i < values.size(); i++) {
+        var snapped = Units.snap(values[i]);
+        var shown = Units.fromKg(snapped);
+
+        // On the step grid, to within floating-point noise.
+        // Rounded without Math: every value here is non-negative, so adding a
+        // half and truncating is the same thing and keeps the type plain Float.
+        var steps = (shown / step + 0.5).toNumber();
+        var grid = steps.toFloat() * step;
+        var offGrid = shown - grid;
+        if (offGrid < 0.0) { offGrid = -offGrid; }
+        Test.assert(offGrid < 0.01);
+
+        // And never moved by more than half a step, so it is still the same
+        // suggestion the catalogue made.
+        var moved = Units.fromKg(values[i]) - shown;
+        if (moved < 0.0) { moved = -moved; }
+        Test.assert(moved <= step / 2.0 + 0.01);
+    }
+
+    // Negative input cannot produce a negative load.
+    Test.assert(Units.snap(-10.0) >= 0.0);
+    return true;
+}

@@ -290,8 +290,14 @@ class AppController {
     }
 
     //! Pre-fill the editable weight/reps from the exercise's inheritance rules.
+    //! Pre-fill the editable weight/reps from the exercise's inheritance rules.
+    //!
+    //! The load is snapped to the step grid of whatever unit the athlete reads.
+    //! A 55 kg template default is 121.3 lb, and a plan that opens on 121.3
+    //! looks like a measurement rather than a suggestion. What was actually
+    //! lifted is never snapped — only what is about to be.
     public function syncPendingValues(exercise as Exercise) as Void {
-        _pendingWeight = exercise.plannedWeight();
+        _pendingWeight = Units.snap(exercise.plannedWeight());
         _pendingReps = exercise.plannedReps();
     }
 
