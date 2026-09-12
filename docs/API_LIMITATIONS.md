@@ -93,41 +93,44 @@ than hidden.
 
 ## 4. Garmin Connect workouts: names only, never contents
 
-This one was recorded wrongly at first — "cannot be introspected" — and the
-correction matters, so here is what the SDK actually offers.
+**Verified against SDK 9.2.0**, twice, because it is the most commonly asked-for
+feature and the answer is unwelcome.
 
-`Toybox.PersistedContent` **does** expose the workouts synced onto the watch
-from Garmin Connect:
-
-```
-PersistedContent.getWorkouts()  -> Iterator of PersistedContent.Workout
-```
-
-But `PersistedContent.Workout`'s entire interface is:
+`Toybox.PersistedContent` lists what is installed on the watch:
 
 ```
-getId()      getName()      toIntent()      remove()
+getWorkouts()      getCourses()     getRoutes()    getTracks()    getWaypoints()
+getAppWorkouts()   ... and the same, restricted to this app's own content
 ```
 
-There is **no API for a workout's contents**: no exercises, no sets, no reps, no
-weights. A name, an id, and an intent that hands the workout to Garmin's own
-player.
+Each entry is a `PersistedContent.Workout`, and it exposes **exactly four
+methods**:
 
-`Activity.getCurrentWorkoutStep()` and `getNextWorkoutStep()` do expose step
-detail, but only while *Garmin's* workout player is running the workout — which
-is mutually exclusive with RepFlow running its own session.
+```
+getId()      a unique serializable id
+getName()    a readable name
+toIntent()   a system intent that launches it in Garmin's own player
+remove()     delete it
+```
 
-**Consequence:** RepFlow can list which workouts are on the watch, and can hand
-one to Garmin to run, but it cannot import one and drive it itself. Anything
-that claimed to would be inventing the exercises.
+There is **no API of any kind** for the contents: no exercises, no steps, no
+sets, no repetitions, no loads, no rest. The workout an athlete built in Garmin
+Connect is, to a Connect IQ app, a name and a handle.
 
-Listing them also costs a `PersistedContent` permission at install, for names
-alone — which is why RepFlow does not ask for it today.
+`Activity.getCurrentWorkoutStep()` does report step detail — but only while
+**Garmin's own workout player** is the thing running the activity. An app
+cannot start that player and stay in control: `toIntent()` hands the watch over
+to Garmin's activity, and RepFlow is no longer on screen.
 
-**What RepFlow does:** ships a built-in workout catalogue
-(`source/WorkoutRepository.mc`). Editable workouts are a roadmap item (V0.2),
-and a companion app that pushes real workout definitions is V0.4 — that is the
-route to "my own workouts", because Garmin does not provide one.
+**Consequence:** RepFlow cannot import, read, mirror or execute a workout
+created in Garmin Connect. Listing the names would cost a `PersistedContent`
+permission — which costs installs and invites review questions — to display a
+list that could not be opened. So it is not done.
+
+**What RepFlow does instead:** builds workouts on the watch. The catalogue is
+82 movements across ten muscle groups, a workout is assembled in under a
+minute, and it is stored on the watch permanently — see `source/WorkoutEditor.mc`
+and `source/ExerciseCatalogue.mc`. Built once, it is there every session.
 
 ## 5. Storage is limited and per-value bounded
 

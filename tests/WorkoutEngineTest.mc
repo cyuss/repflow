@@ -788,9 +788,17 @@ function testGridPrimitivesDraw(logger as Test.Logger) as Boolean {
     // The heart rate zone gauge, at every zone and with no zone at all. The
     // simulator never reports a heart rate, so this is the only place the
     // filled states are exercised at all.
-    Theme.drawZoneBar(dc, size / 4, size / 3, size / 2, size / 20, null);
+    Theme.drawZoneBar(dc, size / 4, size / 3, size / 2, size / 20, null, null);
     for (var zone = 1; zone <= 5; zone++) {
-        Theme.drawZoneBar(dc, size / 4, size / 3, size / 2, size / 20, zone);
+        // Every zone, at the bottom, the middle and the top of it, plus the
+        // case where the profile gives a zone but no position inside it.
+        Theme.drawZoneBar(dc, size / 4, size / 3, size / 2, size / 20, zone, 0.0);
+        Theme.drawZoneBar(dc, size / 4, size / 3, size / 2, size / 20, zone, 0.5);
+        Theme.drawZoneBar(dc, size / 4, size / 3, size / 2, size / 20, zone, 1.0);
+        Theme.drawZoneBar(dc, size / 4, size / 3, size / 2, size / 20, zone, null);
+        // Out-of-range progress must be clamped, not drawn past the segment.
+        Theme.drawZoneBar(dc, size / 4, size / 3, size / 2, size / 20, zone, 1.8);
+        Theme.drawZoneBar(dc, size / 4, size / 3, size / 2, size / 20, zone, -0.4);
         Theme.zoneColor(zone);
     }
     Theme.drawHeartRateGauge(dc, size / 8);
@@ -1676,5 +1684,36 @@ function testLongCatalogueNamesScroll(logger as Test.Logger) as Boolean {
     // all-scrolling would mean the screen never holds anything at rest.
     Test.assert(still > scrolled);
     Test.assert(still > 0);
+    return true;
+}
+
+//! Where a reading sits inside its zone — the arithmetic that turns five lit
+//! blocks into a gauge.
+//!
+//! "Zone 3" covers a wide span of effort, and the bottom of it is a different
+//! workout from the top. The number alone never says which end you are at.
+(:test)
+function testZoneProgressArithmetic(logger as Test.Logger) as Boolean {
+    // A zone from 130 to 150.
+    Test.assertEqual(LiveMetrics.progressIn(130, 130, 150), 0.0);
+    Test.assertEqual(LiveMetrics.progressIn(140, 130, 150), 0.5);
+    Test.assertEqual(LiveMetrics.progressIn(150, 130, 150), 1.0);
+
+    // Outside the bounds clamps rather than running past the segment.
+    Test.assertEqual(LiveMetrics.progressIn(100, 130, 150), 0.0);
+    Test.assertEqual(LiveMetrics.progressIn(200, 130, 150), 1.0);
+
+    // A zone with no width is one you are at the top of, not a division by zero.
+    Test.assertEqual(LiveMetrics.progressIn(140, 150, 150), 1.0);
+    Test.assertEqual(LiveMetrics.progressIn(140, 160, 150), 1.0);
+
+    // And it is monotonic across the span, which is what makes a bar readable.
+    var previous = -1.0;
+    for (var hr = 128; hr <= 152; hr++) {
+        var p = LiveMetrics.progressIn(hr, 130, 150);
+        Test.assert(p >= previous);
+        Test.assert(p >= 0.0 && p <= 1.0);
+        previous = p;
+    }
     return true;
 }

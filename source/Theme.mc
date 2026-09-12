@@ -405,7 +405,8 @@ module Theme {
         top as Number,
         width as Number,
         height as Number,
-        zone as Number?
+        zone as Number?,
+        progress as Float?
     ) as Void {
         var segments = 5;
         var gap = width / 24;
@@ -420,15 +421,38 @@ module Theme {
         if (rest < 2) {
             rest = 2;
         }
+
         for (var i = 0; i < segments; i++) {
             var x = left + i * (segWidth + gap);
-            if (zone != null && i < zone) {
-                dc.setColor(zoneColor(i + 1), Graphics.COLOR_TRANSPARENT);
-                dc.fillRectangle(x, top, segWidth, height);
-            } else {
+            if (zone == null || i > (zone as Number) - 1) {
+                // Not reached: a thin baseline, so the scale keeps its length.
                 dc.setColor(COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
                 dc.fillRectangle(x, top + height - rest, segWidth, rest);
+                continue;
             }
+
+            if (i < (zone as Number) - 1) {
+                dc.setColor(zoneColor(i + 1), Graphics.COLOR_TRANSPARENT);
+                dc.fillRectangle(x, top, segWidth, height);
+                continue;
+            }
+
+            // The zone the athlete is actually in, filled as far through it as
+            // they are. "Zone 3" spans a wide range of effort and the bottom of
+            // it is a different workout from the top; a block that is either on
+            // or off cannot say which end you are at.
+            var full = progress == null ? 1.0 : progress as Float;
+            if (full > 1.0) { full = 1.0; }
+            if (full < 0.0) { full = 0.0; }
+            var filled = (segWidth.toFloat() * full).toNumber();
+            if (filled < 2) {
+                filled = 2;      // always visibly in this zone, even at its floor
+            }
+
+            dc.setColor(COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+            dc.fillRectangle(x, top + height - rest, segWidth, rest);
+            dc.setColor(zoneColor(i + 1), Graphics.COLOR_TRANSPARENT);
+            dc.fillRectangle(x, top, filled, height);
         }
     }
 
@@ -439,28 +463,42 @@ module Theme {
     //! Used as a header on the screens whose subject is something else.
     public function drawHeartRateGauge(dc as Graphics.Dc, top as Number) as Number {
         var hr = LiveMetrics.heartRate();
-        var zone = LiveMetrics.heartRateZone();
+        var zone = LiveMetrics.zoneFor(hr);
+        var progress = LiveMetrics.zoneProgressFor(hr);
         var font = Graphics.FONT_XTINY;
         var fontHeight = dc.getFontHeight(font);
         var text = LiveMetrics.format(hr);
 
+        // The heart takes the zone's colour. It is the largest coloured thing
+        // on the row, so it says how hard you are working before the eye has
+        // reached the number — which is the whole point of a glance.
+        var tint = hr == null ? COLOR_SKIPPED : (zone == null ? COLOR_HR : zoneColor(zone));
+
         var heartSize = (fontHeight * 70) / 100;
         var gap = heartSize / 2;
         var textWidth = dc.getTextWidthInPixels(text, font);
+        var zoneText = zone == null ? "" : "Z" + zone.toString();
+        var zoneWidth = zone == null ? 0 : dc.getTextWidthInPixels(zoneText, font) + gap;
         var barWidth = fontHeight * 3;
 
-        var total = heartSize + gap + textWidth + gap * 2 + barWidth;
+        var total = heartSize + gap + textWidth + gap * 2 + barWidth + zoneWidth;
         var left = (dc.getWidth() - total) / 2;
 
-        drawHeart(dc, left + heartSize / 2, top + fontHeight / 2, heartSize,
-            hr != null ? COLOR_HR : COLOR_SKIPPED);
+        drawHeart(dc, left + heartSize / 2, top + fontHeight / 2, heartSize, tint);
 
         dc.setColor(hr != null ? COLOR_TEXT : COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
         dc.drawText(left + heartSize + gap, top, font, text, Graphics.TEXT_JUSTIFY_LEFT);
 
+        var barLeft = left + heartSize + gap + textWidth + gap * 2;
         var barHeight = (fontHeight * 45) / 100;
-        drawZoneBar(dc, left + heartSize + gap + textWidth + gap * 2,
-            top + (fontHeight - barHeight) / 2, barWidth, barHeight, zone);
+        drawZoneBar(dc, barLeft, top + (fontHeight - barHeight) / 2,
+            barWidth, barHeight, zone, progress);
+
+        if (zone != null) {
+            dc.setColor(tint, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(barLeft + barWidth + gap, top, font, zoneText,
+                Graphics.TEXT_JUSTIFY_LEFT);
+        }
         return top + fontHeight;
     }
 
@@ -482,7 +520,8 @@ module Theme {
         caption as String
     ) as Void {
         var hr = LiveMetrics.heartRate();
-        var zone = LiveMetrics.heartRateZone();
+        var zone = LiveMetrics.zoneFor(hr);
+        var progress = LiveMetrics.zoneProgressFor(hr);
         var text = LiveMetrics.format(hr);
         var color = hr == null
             ? COLOR_SKIPPED
@@ -513,7 +552,7 @@ module Theme {
 
         var barWidth = (width * 62) / 100;
         drawZoneBar(dc, (dc.getWidth() - barWidth) / 2, top + valueArea + gap,
-            barWidth, barHeight, zone);
+            barWidth, barHeight, zone, progress);
 
         var label = zone != null ? caption + "   Z" + zone.toString() : caption;
         dc.setColor(COLOR_DIM, Graphics.COLOR_TRANSPARENT);

@@ -61,11 +61,35 @@ module LiveMetrics {
         return ms / 1000;
     }
 
-    //! Which heart rate zone the athlete is in: 1..5, or null.
+    //! The athlete's own heart rate zone thresholds, read once.
     //!
-    //! UserProfile.getHeartRateZones returns six thresholds — the floor of zone
-    //! 1 followed by the ceiling of each zone — so the zone is the first
-    //! ceiling the reading falls under.
+    //! Six numbers: the floor of zone 1, then the ceiling of each of the five
+    //! zones. They come from the watch's profile and cannot change while a
+    //! workout runs, so reading them on every frame — which the gauge would
+    //! otherwise do — is pure waste.
+    var _zones as Array<Number>? = null;
+    var _zonesRead as Boolean = false;
+
+    public function zones() as Array<Number>? {
+        if (_zonesRead) {
+            return _zones;
+        }
+        _zonesRead = true;
+        if (!(UserProfile has :getHeartRateZones)) {
+            return null;
+        }
+        try {
+            var z = UserProfile.getHeartRateZones(UserProfile.HR_ZONE_SPORT_GENERIC);
+            if (z != null && z.size() >= 6) {
+                _zones = z;
+            }
+        } catch (e) {
+            _zones = null;
+        }
+        return _zones;
+    }
+
+    //! Which heart rate zone the athlete is in: 1..5, or null.
     public function heartRateZone() as Number? {
         return zoneFor(heartRate());
     }
@@ -77,23 +101,54 @@ module LiveMetrics {
         if (hr == null) {
             return null;
         }
-        if (!(UserProfile has :getHeartRateZones)) {
+        var z = zones();
+        if (z == null) {
             return null;
         }
-        try {
-            var zones = UserProfile.getHeartRateZones(UserProfile.HR_ZONE_SPORT_GENERIC);
-            if (zones == null || zones.size() < 6) {
-                return null;
+        for (var i = 1; i <= 5; i++) {
+            if (hr <= z[i]) {
+                return i;
             }
-            for (var i = 1; i <= 5; i++) {
-                if (hr <= zones[i]) {
-                    return i;
-                }
-            }
-            return 5;   // above the top threshold is still zone 5
-        } catch (e) {
+        }
+        return 5;   // above the top threshold is still zone 5
+    }
+
+    //! How far through its own zone a reading sits, from 0.0 to 1.0.
+    //!
+    //! This is what turns five lit blocks into a gauge. "Zone 3" covers a wide
+    //! span of effort — the bottom of it and the top of it are different
+    //! workouts — and the number alone never says which end you are at.
+    //!
+    //! Null when there is no reading or no profile, never a guessed 0.5.
+    public function zoneProgressFor(hr as Number?) as Float? {
+        if (hr == null) {
             return null;
         }
+        var z = zones();
+        var zone = zoneFor(hr);
+        if (z == null || zone == null) {
+            return null;
+        }
+        return progressIn(hr as Number, z[(zone as Number) - 1], z[zone as Number]);
+    }
+
+    //! Where `hr` sits between two thresholds, 0.0 to 1.0.
+    //!
+    //! Split out from zoneProgressFor because this half is arithmetic and the
+    //! other half reads a profile the tests cannot set. Degenerate bounds give
+    //! a full bar rather than a division by zero: a zone with no width is one
+    //! the athlete is at the top of.
+    public function progressIn(hr as Number, floor as Number, ceiling as Number) as Float {
+        if (ceiling <= floor) {
+            return 1.0;
+        }
+        if (hr >= ceiling) {
+            return 1.0;
+        }
+        if (hr <= floor) {
+            return 0.0;
+        }
+        return (hr - floor).toFloat() / (ceiling - floor).toFloat();
     }
 
     //! The wearer's current Body Battery, 0-100, or null.
