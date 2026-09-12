@@ -13,7 +13,7 @@ Every command works through `make` or `just`.
 | Build | `make build` | `just build` |
 | Build every device | `make build-all` | `just build-all` |
 | Run tests | `make test` | `just test` |
-| Run in simulator | `make sim` | `just sim` |
+| Run in simulator | `make sim` (asks which device) | `just sim` |
 | Run from a clean session | `make sim-fresh` | `just sim-fresh` |
 | Run and stream app output | `make sim-attach` | `just sim-attach` |
 | Screenshot the simulator | `make shot` | `just shot` |
@@ -264,8 +264,15 @@ scripts/press.sh down down start       # a sequence
 scripts/press.sh menu                  # long UP, via cliclick
 ```
 
-`press.sh` focuses the window and paces the presses, which matters: fired too
-quickly after a launch they are simply dropped.
+`press.sh` raises the window, **clicks it**, and paces the presses. All three
+matter: raising alone does not take keyboard focus, and a key sent before the
+window has it is silently dropped.
+
+That dropped-key behaviour is worth knowing because of how it misleads. A
+dropped START leaves the app on the workout picker, where the BACK that follows
+exits the app — and an exited app looks exactly like a crashed one. It cost a
+long detour through git bisect in this project, chasing a crash that never
+happened. **Screenshot between steps rather than trusting a sequence.**
 
 **Look at the screen before believing a layout is right.** Three separate bugs
 in this app were invisible to the compiler and to the unit tests, and obvious in

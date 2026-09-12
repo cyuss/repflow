@@ -78,7 +78,7 @@ class SetEditorView extends WatchUi.View {
         var h = dc.getHeight();
         var confirming = _mode == Tuning.EDITOR_CONFIRM_LOG;
 
-        var y = Theme.drawFitted(dc, h / 14, _exercise.name,
+        var y = Theme.drawFitted(dc, h / 12, _exercise.name,
             [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
 
         var title = confirming
@@ -86,45 +86,30 @@ class SetEditorView extends WatchUi.View {
                 _exercise.currentSetNumber().toString() + " / " +
                 _exercise.targetSets.toString()
             : WatchUi.loadResource(Rez.Strings.NextSet) as String;
-        y = Theme.drawFitted(dc, y + h / 90, title,
+        y = Theme.drawFitted(dc, y + h / 80, title,
             [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_ACCENT);
 
-        var bottom = h;
-        if (confirming) {
-            // One press logs it; the pill says so.
-            bottom = Theme.drawActionBar(
-                dc, WatchUi.loadResource(Rez.Strings.LogSet) as String, Theme.COLOR_DONE);
-            bottom -= h / 50;
-        }
-
+        // Two hint lines at the bottom: what UP/DOWN is worth, then the buttons.
+        // No action pill — START already does the obvious thing, and the space
+        // is better spent giving the values room.
         var hintFont = Graphics.FONT_XTINY;
         var hintHeight = dc.getFontHeight(hintFont);
-        var hintTop = confirming
-            ? bottom - hintHeight - h / 60
-            : h - hintHeight * 2 - h / 10;
+        var hintTop = h - hintHeight * 2 - h / 9;
 
-        _drawCells(dc, y + h / 40, hintTop - h / 50, controller);
+        _drawCells(dc, y + h / 30, hintTop - h / 30, controller);
 
         var step = _focus == Tuning.FOCUS_REPS
             ? "- 1 +"
             : "- " + Theme.formatWeight(Tuning.WEIGHT_STEP) + " +";
+        var buttons = confirming
+            ? WatchUi.loadResource(Rez.Strings.HintLogSwap) as String
+            : (_focus == Tuning.FOCUS_REPS
+                ? WatchUi.loadResource(Rez.Strings.HintConfirm) as String
+                : WatchUi.loadResource(Rez.Strings.HintNextReps) as String);
 
-        if (confirming) {
-            // BACK swaps the field being edited here, because START is spent on
-            // logging — that is what keeps a set to a single press when nothing
-            // needs changing.
-            Theme.drawFitted(dc, hintTop,
-                step + "   " + (WatchUi.loadResource(Rez.Strings.HintSwap) as String),
-                [hintFont] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
-            return;
-        }
-
-        var next = _focus == Tuning.FOCUS_REPS
-            ? WatchUi.loadResource(Rez.Strings.HintConfirm) as String
-            : WatchUi.loadResource(Rez.Strings.HintNextReps) as String;
         var hintY = Theme.drawFitted(dc, hintTop, step,
             [hintFont] as Array<Graphics.FontDefinition>, Theme.COLOR_TEXT);
-        Theme.drawFitted(dc, hintY, next,
+        Theme.drawFitted(dc, hintY + h / 90, buttons,
             [hintFont] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
     }
 

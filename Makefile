@@ -7,6 +7,14 @@ DEVICE ?= fenix6pro
 # monkeyc type-check level: 0=off 1=gradual 2=informative 3=strict
 TYPECHECK ?= 3
 
+# The simulator targets ask which device to run when you do not name one.
+# Passing DEVICE=<id> on the command line skips the question.
+ifeq ($(origin DEVICE), command line)
+SIM_DEVICE := $(DEVICE)
+else
+SIM_DEVICE :=
+endif
+
 export DEVICE
 export TYPECHECK
 
@@ -53,14 +61,14 @@ build-all: ## Build every device declared in manifest.xml and installed locally
 test: ## Run the unit tests in the simulator
 	@scripts/test.sh $(DEVICE)
 
-sim: ## Build and launch RepFlow in the simulator (returns to the prompt)
-	@REPFLOW_DETACH=1 scripts/run-simulator.sh $(DEVICE)
+sim: ## Pick a device and launch RepFlow in the simulator
+	@REPFLOW_DETACH=1 scripts/run-simulator.sh $(SIM_DEVICE)
 
 sim-fresh: ## Same, but clear the app's stored session first
-	@REPFLOW_DETACH=1 REPFLOW_RESET=1 scripts/run-simulator.sh $(DEVICE)
+	@REPFLOW_DETACH=1 REPFLOW_RESET=1 scripts/run-simulator.sh $(SIM_DEVICE)
 
 sim-attach: ## Launch and stay attached, streaming the app's println output
-	@scripts/run-simulator.sh $(DEVICE)
+	@scripts/run-simulator.sh $(SIM_DEVICE)
 
 shot: ## Screenshot the simulator's watch face to build/sim-shot.png
 	@scripts/shot.sh

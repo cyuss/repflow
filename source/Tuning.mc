@@ -7,8 +7,8 @@ import Toybox.Math;
 //! not expose class-level `const` through the class name.
 module Tuning {
 
-    //! Weight adjustment step, in kg. 2.5 is one small plate per side.
-    const WEIGHT_STEP = 2.5;
+    //! Weight adjustment step, in kg.
+    const WEIGHT_STEP = 1.0;
 
     //! Seconds added or removed by UP/DOWN on the rest screen.
     const REST_STEP = 15;

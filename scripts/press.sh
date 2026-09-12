@@ -13,9 +13,24 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
 simulator_running || die "The simulator is not running. Try: make sim"
 
+# Raising the window is not enough: the first key after a launch is dropped
+# unless the window has actually taken keyboard focus, which a click guarantees.
 focus() {
   osascript -e 'tell application "System Events" to tell process "simulator" to set frontmost to true' >/dev/null 2>&1 || true
-  sleep 0.4
+  sleep 0.6
+  if command -v cliclick >/dev/null 2>&1; then
+    local geometry wx wy ww wh
+    geometry="$(osascript -e '
+      tell application "System Events" to tell process "simulator"
+        get {position, size} of window 1
+      end tell' 2>/dev/null || true)"
+    if [ -n "$geometry" ]; then
+      read -r wx wy ww wh <<<"$(printf '%s' "$geometry" | tr -d ' ' | tr ',' ' ')"
+      # Low in the window, clear of the watch face and its buttons.
+      cliclick "c:$((wx + ww / 2)),$((wy + wh * 92 / 100))" >/dev/null 2>&1 || true
+      sleep 0.5
+    fi
+  fi
 }
 
 key() {

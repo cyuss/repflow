@@ -63,23 +63,43 @@ than hidden.
 
 ---
 
-## 4. Garmin Connect workouts cannot be introspected or reordered
+## 4. Garmin Connect workouts: names only, never contents
 
-There is no public Connect IQ API to read the athlete's Garmin Connect workout
-library, nor to reorder a downloaded structured workout. The
-`Toybox.Application` and `Toybox.PersistedContent` modules expose no workout
-type.
+This one was recorded wrongly at first — "cannot be introspected" — and the
+correction matters, so here is what the SDK actually offers.
 
-**Consequence:** RepFlow cannot import your existing Garmin Connect workouts in
-V0.1. This is *why* RepFlow owns its own workout engine rather than driving
-Garmin's — and it is exactly the flexibility Garmin's structured workouts do
-not offer.
+`Toybox.PersistedContent` **does** expose the workouts synced onto the watch
+from Garmin Connect:
+
+```
+PersistedContent.getWorkouts()  -> Iterator of PersistedContent.Workout
+```
+
+But `PersistedContent.Workout`'s entire interface is:
+
+```
+getId()      getName()      toIntent()      remove()
+```
+
+There is **no API for a workout's contents**: no exercises, no sets, no reps, no
+weights. A name, an id, and an intent that hands the workout to Garmin's own
+player.
+
+`Activity.getCurrentWorkoutStep()` and `getNextWorkoutStep()` do expose step
+detail, but only while *Garmin's* workout player is running the workout — which
+is mutually exclusive with RepFlow running its own session.
+
+**Consequence:** RepFlow can list which workouts are on the watch, and can hand
+one to Garmin to run, but it cannot import one and drive it itself. Anything
+that claimed to would be inventing the exercises.
+
+Listing them also costs a `PersistedContent` permission at install, for names
+alone — which is why RepFlow does not ask for it today.
 
 **What RepFlow does:** ships a built-in workout catalogue
-(`source/WorkoutRepository.mc`). Editable and synced workouts are roadmap items
-(V0.2 / V0.4), not fake ones.
-
----
+(`source/WorkoutRepository.mc`). Editable workouts are a roadmap item (V0.2),
+and a companion app that pushes real workout definitions is V0.4 — that is the
+route to "my own workouts", because Garmin does not provide one.
 
 ## 5. Storage is limited and per-value bounded
 

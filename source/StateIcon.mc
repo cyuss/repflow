@@ -41,7 +41,8 @@ class StateIcon extends WatchUi.Drawable {
 
         var cx = x + w / 2;
         var cy = y + h / 2;
-        var r = (w < h ? w : h) / 2 - 1;
+        // The canvas matches the menu's icon area; the dot stays a dot.
+        var r = ((w < h ? w : h) * 30) / 100;
         if (r < 3) {
             return;
         }

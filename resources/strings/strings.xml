@@ -34,7 +34,7 @@
     <string id="EditSet">Edit next set</string>
     <string id="HintNextReps">START = REPS</string>
     <string id="HintConfirm">START = OK</string>
-    <string id="HintSwap">BACK = SWAP</string>
+    <string id="HintLogSwap">START LOG  ·  BACK SWAP</string>
 
     <!-- Rest -->
     <string id="Rest">REST</string>

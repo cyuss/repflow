@@ -206,3 +206,66 @@ clear_sim_app_data() {
   done
   return 0
 }
+
+# ---------------------------------------------------------------------------
+# Interactive device picker
+# ---------------------------------------------------------------------------
+
+# Print a numbered list of buildable devices and read a choice on stdin.
+# The chosen id goes to stdout; everything the human reads goes to stderr, so
+# the caller can use this in a $(...).
+choose_device() {
+  local devices=()
+  local line
+  while IFS= read -r line; do
+    [ -n "$line" ] && devices+=("$line")
+  done < <(buildable_devices)
+
+  if [ "${#devices[@]}" -eq 0 ]; then
+    die "No devices installed. See docs/ENVIRONMENT.md."
+  fi
+
+  # Remember the last choice, so the common case is one keypress.
+  local last_file="$BUILD_DIR/.last-device"
+  local last=""
+  [ -f "$last_file" ] && last="$(cat "$last_file")"
+
+  printf '\n%sChoose a device%s\n\n' "$C_BOLD" "$C_OFF" >&2
+  local i
+  for i in "${!devices[@]}"; do
+    local marker="  "
+    [ "${devices[$i]}" = "$last" ] && marker="${C_GREEN}*${C_OFF} "
+    printf '  %s%2d) %s\n' "$marker" "$((i + 1))" "${devices[$i]}" >&2
+  done
+
+  local prompt="number"
+  if [ -n "$last" ]; then
+    prompt="number, or Enter for $last"
+  fi
+
+  local choice
+  while true; do
+    printf '\n  %s: ' "$prompt" >&2
+    read -r choice || choice=""
+
+    if [ -z "$choice" ] && [ -n "$last" ]; then
+      printf '%s' "$last"
+      return 0
+    fi
+    # A device id typed in full is fine too.
+    if [ -f "$DEVICES_DIR/$choice/compiler.json" ]; then
+      printf '%s' "$choice" > "$last_file" 2>/dev/null || true
+      printf '%s' "$choice"
+      return 0
+    fi
+    if printf '%s' "$choice" | grep -qE '^[0-9]+$' \
+       && [ "$choice" -ge 1 ] && [ "$choice" -le "${#devices[@]}" ]; then
+      local picked="${devices[$((choice - 1))]}"
+      mkdir -p "$BUILD_DIR"
+      printf '%s' "$picked" > "$last_file" 2>/dev/null || true
+      printf '%s' "$picked"
+      return 0
+    fi
+    printf '  %sNot a choice on the list.%s\n' "$C_YELLOW" "$C_OFF" >&2
+  done
+}

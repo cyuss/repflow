@@ -24,7 +24,7 @@
     <string id="EditSet">Modifier la serie</string>
     <string id="HintNextReps">START = REPS</string>
     <string id="HintConfirm">START = OK</string>
-    <string id="HintSwap">BACK = CHANGER</string>
+    <string id="HintLogSwap">START OK  .  BACK CHANGER</string>
     <string id="Rest">REPOS</string>
     <string id="NextLabel">Suite</string>
     <string id="SkipRest">Passer repos</string>

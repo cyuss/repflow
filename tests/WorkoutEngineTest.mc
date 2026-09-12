@@ -783,16 +783,20 @@ function testActiveSetIsAlwaysTheNextIncompleteOne(logger as Test.Logger) as Boo
     return true;
 }
 
-//! Weights go through WatchUi.Picker as tenths of a kilogram, because a
-//! PickerFactory deals in Numbers and 2.5 kg steps are not integers. The
-//! conversion has to survive the values a gym actually uses.
+//! Weights are carried as tenths of a kilogram so the editor can step in whole
+//! kilograms without floating-point drift. The conversion has to survive the
+//! values a gym actually uses, half-kilo plates included.
 (:test)
 function testWeightTenthsRoundTrip(logger as Test.Logger) as Boolean {
-    var weights = [0.0, 2.5, 20.0, 57.5, 100.0, 137.5, 300.0] as Array<Float>;
+    var weights = [0.0, 1.0, 2.5, 20.0, 57.5, 100.0, 137.5, 300.0] as Array<Float>;
     for (var i = 0; i < weights.size(); i++) {
-        var tenths = Tuning.toTenths(weights[i]);
-        Test.assertEqual(tenths % 25, 0);          // lands on a 2.5 kg step
-        Test.assertEqual(tenths / 10.0, weights[i]);
+        Test.assertEqual(Tuning.toTenths(weights[i]) / 10.0, weights[i]);
     }
+
+    // A whole-kilogram step is what the editor applies, so stepping up and back
+    // down has to land exactly where it started.
+    var start = 57.5;
+    Test.assertEqual(start + Tuning.WEIGHT_STEP, 58.5);
+    Test.assertEqual((start + Tuning.WEIGHT_STEP) - Tuning.WEIGHT_STEP, start);
     return true;
 }

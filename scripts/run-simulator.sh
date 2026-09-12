@@ -13,7 +13,15 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
 activate_sdk
 
-DEVICE="${1:-$DEFAULT_DEVICE}"
+# No device named? Ask, when there is someone to ask.
+DEVICE="${1:-}"
+if [ -z "$DEVICE" ]; then
+  if [ -t 0 ]; then
+    DEVICE="$(choose_device)"
+  else
+    DEVICE="$DEFAULT_DEVICE"
+  fi
+fi
 require_device_installed "$DEVICE"
 
 # 1. Compile

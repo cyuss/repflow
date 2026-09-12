@@ -32,10 +32,14 @@ class WorkoutOverviewView extends WatchUi.Menu2 {
         // Icon size is chosen from the device's screen rather than hard-coded,
         // so the dots keep their proportions from a 260px Fenix 6 to a 466px
         // Fenix 9 Pro.
+        // Menu2 anchors an icon Drawable at its reserved area's origin rather
+        // than centring it inside, so a drawable much smaller than that area
+        // sits high and to the left. Declaring roughly the area's own size and
+        // drawing the dot in the middle of it is what centres it.
         var settings = System.getDeviceSettings();
-        var iconSize = settings.screenHeight / 9;
-        if (iconSize < 14) {
-            iconSize = 14;
+        var iconSize = settings.screenHeight / 5;
+        if (iconSize < 20) {
+            iconSize = 20;
         }
 
         var list = engine.getWorkout().exercises;

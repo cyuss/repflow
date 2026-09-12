@@ -141,7 +141,8 @@ module Theme {
             dy = 0.92;
         }
         var chord = w * Math.sqrt(1.0 - dy * dy);
-        return (chord * 0.92).toNumber();
+        // 0.88, not 0.92: at 0.92 text sat right against the curve of the glass.
+        return (chord * 0.88).toNumber();
     }
 
     //! Usable width of a horizontal BAND, as opposed to a single line.

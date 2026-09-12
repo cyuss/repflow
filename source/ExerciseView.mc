@@ -105,31 +105,30 @@ class ExerciseView extends WatchUi.View {
             target > 0 ? done.toFloat() / target.toFloat() : 0.0,
             Theme.COLOR_DONE);
 
-        var actionTop = Theme.drawActionBar(
-            dc, WatchUi.loadResource(Rez.Strings.LogSet) as String, Theme.COLOR_ACCENT);
-        Theme.drawClock(dc, h - dc.getFontHeight(Graphics.FONT_XTINY) - h / 40);
+        // No action button. START logs the set, and a button saying so was only
+        // repeating what the athlete already knows while eating the space the
+        // readouts and the load needed.
+        var clockHeight = dc.getFontHeight(Graphics.FONT_XTINY);
+        var clockTop = h - clockHeight - h / 22;
+        Theme.drawClock(dc, clockTop);
 
-        var top = _drawHeartRate(dc, h / 18);
-        top = Theme.drawFitted(dc, top + h / 90, exercise.name,
+        var top = _drawHeartRate(dc, h / 14);
+        top = Theme.drawFitted(dc, top + h / 80, exercise.name,
             [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
             Theme.COLOR_TEXT);
-        top += h / 55;
+        top += h / 44;
         FieldGrid.drawRule(dc, top);
         top += 1;
 
-        var bandTop = _drawSecondaryBand(dc, actionTop, controller, exercise);
-        _drawLoad(dc, top, bandTop - h / 60, controller);
+        var bandTop = _drawSecondaryBand(dc, clockTop - h / 60, controller, exercise);
+        _drawLoad(dc, top, bandTop - h / 50, controller);
     }
 
-    //! The secondary readouts: exercise timer and set counter.
-    //!
-    //! Captioned data fields on a screen with room, a single compact line on one
-    //! without. A 260x260 Fenix 6 Pro simply cannot spend 45px on secondary
-    //! information and still give the load a number worth glancing at — so it
-    //! does not. Returns the y where this band starts.
+    //! The secondary readouts: exercise timer and set counter, as captioned
+    //! data fields. Returns the y where this band starts.
     private function _drawSecondaryBand(
         dc as Graphics.Dc,
-        actionTop as Number,
+        bottom as Number,
         controller as AppController,
         exercise as Exercise
     ) as Number {
@@ -138,35 +137,18 @@ class ExerciseView extends WatchUi.View {
         var sets = exercise.currentSetNumber().toString() + "/" +
             exercise.targetSets.toString();
 
-        if (h < 330) {
-            // Compact: one line, no captions.
-            var font = Graphics.FONT_XTINY;
-            var bandTop = actionTop - dc.getFontHeight(font) - h / 40;
-            var width = Theme.bandWidth(dc, bandTop, dc.getFontHeight(font));
-            var left = (dc.getWidth() - width) / 2;
-            FieldGrid.drawRule(dc, bandTop - h / 70);
-
-            dc.setColor(Theme.COLOR_TEXT, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(left + width / 4, bandTop, font, timer, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.setColor(Theme.COLOR_ACCENT, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(left + (width * 3) / 4, bandTop, font,
-                (WatchUi.loadResource(Rez.Strings.SetLabel) as String).toUpper() + " " + sets,
-                Graphics.TEXT_JUSTIFY_CENTER);
-            return bandTop - h / 70;
-        }
-
         var bandHeight = Theme.miniFieldHeight(dc);
-        var top = actionTop - bandHeight - h / 50;
+        var top = bottom - bandHeight;
         var bandWidth = Theme.bandWidth(dc, top, bandHeight);
         var bandLeft = (dc.getWidth() - bandWidth) / 2;
-        FieldGrid.drawRule(dc, top - h / 60);
+        FieldGrid.drawRule(dc, top - h / 50);
 
         Theme.drawMiniField(dc, bandLeft + bandWidth / 4, top, timer,
             WatchUi.loadResource(Rez.Strings.FieldTimer) as String, Theme.COLOR_TEXT);
         Theme.drawMiniField(dc, bandLeft + (bandWidth * 3) / 4, top, sets,
             (WatchUi.loadResource(Rez.Strings.SetLabel) as String).toUpper(),
             Theme.COLOR_ACCENT);
-        return top - h / 60;
+        return top - h / 50;
     }
 
     //! Heart rate behind a heart, centred, the way a native Garmin activity
