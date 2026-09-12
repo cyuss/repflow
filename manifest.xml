@@ -16,7 +16,8 @@
         name="@Strings.AppName"
         entry="RepFlowApp"
         launcherIcon="@Drawables.LauncherIcon"
-        minApiLevel="3.1.0">
+        minApiLevel="3.1.0"
+        version="1.0.0">
 
         <iq:products>
             <!-- Primary targets: current-generation Fenix 9 Pro -->

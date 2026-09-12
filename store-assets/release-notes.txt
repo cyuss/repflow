@@ -1,10 +1,14 @@
-v0.1.0 — first release
+v1.0.0 — first release
 
-- Flexible workout engine: select any exercise at any time
-- Skip occupied machines and resume them later with all sets intact
-- Alternate exercises freely for supersets and circuits
-- Weight and rep inheritance from your last performed set
-- Rest timer with haptic alert
-- Strength training activity recording to Garmin Connect
-- Workout summary with sets, reps and training volume
-- Three built-in workouts
+- Select any exercise at any time. Skip an occupied machine, come back to it
+  later with every set intact.
+- Build and edit workouts on the watch: 82 movements across ten muscle groups,
+  no phone needed.
+- Start from an empty workout and add exercises as you go.
+- Add, substitute or add a set to any exercise mid-session.
+- Personal records, with their own alert the moment one falls.
+- Weekly training volume per muscle group.
+- Live heart rate with a zone gauge, and time in zone at the end.
+- Heart rate recovery between sets, and Body Battery before and after.
+- Optional automatic rep counting from the wrist.
+- Kilograms or pounds, following your watch.

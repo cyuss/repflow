@@ -11,20 +11,46 @@ written. Real gyms disagree: the machine is taken, you want to superset, you
 want to come back to something later. RepFlow lets you move freely without
 losing a single set.
 
-FEATURES
+ON THE GYM FLOOR
 - Select any exercise at any time from a one-press workout overview
 - "Skip for now" marks an occupied machine as pending, never as completed or
   skipped, and it resumes exactly where you left it
-- Alternate between partially completed exercises for supersets and circuits
+- Substitute an exercise when the machine is taken for good — the sets you
+  already did are kept, not deleted
+- Add an unplanned exercise, or one more set than you planned, mid-session
 - The next set is pre-filled with the weight and reps you actually performed
-- One press of START completes a set
-- Rest timer with haptic alert, skip and extend
-- Workout summary: duration, sets, reps and training volume
-- Records a real strength training activity that syncs to Garmin Connect
+- One press of START completes a set, then you correct the reps if they came
+  out differently
+
+BUILD YOUR OWN, ON THE WATCH
+- 82 movements across ten muscle groups
+- Start from an empty workout and add exercises as you go
+- Edit sets, reps, load, rest and order without touching a phone
+- Custom workouts name themselves after what is in them
+
+WHAT YOU GET BACK
+- Last time's numbers for every movement, before you decide the load
+- Personal records — heaviest set, best estimated maximum, best volume — with
+  their own alert the moment one falls
+- Weekly training volume per muscle group, so you can see what you are
+  neglecting
+- Live heart rate with a five-segment zone gauge, and time in zone at the end
+- Heart rate recovery between sets
+- Body Battery before and after the session
+- Optional automatic rep counting from the wrist, which suggests a number and
+  never logs one on its own
+
+DETAILS
+- Records a real strength training activity that syncs to Garmin Connect, with
+  one lap per set carrying the exercise, reps and load
+- Kilograms or pounds, following your watch, with an override in the settings
 - Works fully offline: no phone, no internet, no account
+- Survives an interrupted workout: your session is restored with every set
 
 PLEASE NOTE
 Garmin's Connect IQ platform does not allow third-party apps to write native
 per-set data into the FIT file. RepFlow records a genuine strength training
 activity and marks one lap per set, and keeps the full set-by-set detail on the
-watch. Garmin Connect's built-in per-set breakdown will not be populated.
+watch. Garmin Connect's built-in per-set breakdown will not be populated, and
+the session does not contribute to Training Effect or recovery time, which the
+watch computes itself and does not expose to apps.
