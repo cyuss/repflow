@@ -1,11 +1,35 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <!-- RepFlow launcher icon: a dumbbell, drawn on transparent background so the
-       watch's own launcher frame shows through. -->
+  <!--
+    RepFlow launcher icon.
+
+    Garmin's own activity icons are one bold silhouette and, at most, one accent
+    colour, on a transparent ground so the watch's launcher frame shows through.
+    This follows that: a barbell in white, inside the progress ring RepFlow draws
+    around the rim of every exercise screen.
+
+    The ring is not decoration — it is the app's own signature, the one thing
+    that is on screen for the whole workout, and it is what separates this from
+    every other dumbbell icon in the store.
+
+    Everything is sized as a fraction of a 512 grid and kept inside a 24 px
+    margin, because the launcher renders this between 33 and 80 pixels wide on
+    the supported devices and anything thinner than about 5% of the width
+    disappears there.
+  -->
+
+  <!-- Progress ring: 300 degrees, opening at the top-left the way the ring on
+       the exercise screen does. Stroke is 6% of the icon so it survives 33 px. -->
+  <path d="M 256 50
+           A 206 206 0 1 1 153.0 78.6"
+        fill="none" stroke="#00AAFF" stroke-width="32" stroke-linecap="round"/>
+
+  <!-- Barbell. Two plates a side: the outer one short, the inner one tall, which
+       is what makes it read as a bar and not as a dumbbell-shaped blob. -->
   <g fill="#FFFFFF">
-    <rect x="18"  y="196" width="46"  height="120" rx="16"/>
-    <rect x="70"  y="150" width="58"  height="212" rx="22"/>
-    <rect x="384" y="150" width="58"  height="212" rx="22"/>
-    <rect x="448" y="196" width="46"  height="120" rx="16"/>
+    <rect x="112" y="214" width="34"  height="84"  rx="11"/>
+    <rect x="158" y="183" width="48"  height="146" rx="17"/>
+    <rect x="306" y="183" width="48"  height="146" rx="17"/>
+    <rect x="366" y="214" width="34"  height="84"  rx="11"/>
+    <rect x="196" y="237" width="120" height="38"  rx="13"/>
   </g>
-  <rect x="128" y="228" width="256" height="56" rx="10" fill="#00A8E8"/>
 </svg>

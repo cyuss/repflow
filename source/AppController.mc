@@ -345,8 +345,11 @@ class AppController {
         var at = now();
         var reps = _pendingReps;
         var weight = _pendingWeight;
+        var setNumber = exercise.completedSetCount() + 1;
         engine.completeCurrentSet(reps, weight, at);
-        _recorder.markSet();
+        // The lap carries what the set was, so Garmin Connect's lap table reads
+        // as a set list rather than as a row of anonymous split times.
+        _recorder.markSet(exercise.name, setNumber, reps, weight);
         _recorder.updateTotals(engine.summary(at));
         syncPendingValues(exercise);
         _persist();

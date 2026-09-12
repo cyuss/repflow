@@ -34,7 +34,35 @@ native Gym Activity app.
   of a set boundary, giving a per-set lap breakdown.
 - Writes three developer FIT fields on the session message: `repflow_sets`,
   `repflow_reps`, `repflow_volume`.
+- Writes four developer FIT fields on **every lap**: `exercise` (string),
+  `set`, `reps` and `weight`. This is what turns Garmin Connect's lap table
+  from "lap 7, 0:42" into "Bench Press, set 3, 8 reps at 70 kg". Developer
+  fields are displayed by Garmin Connect and by the Connect phone app alongside
+  Garmin's own metrics.
 - Keeps the authoritative set-by-set detail in RepFlow's own storage.
+
+### `:nativeNum` — available, deliberately unused
+
+`Session.createField()` accepts a `:nativeNum` option, which maps a developer
+field onto a **native** FIT field number so Garmin Connect treats it as its own
+rather than as an add-on. That would be the closest thing to native per-set
+data that Connect IQ offers.
+
+It is not used, because the FIT profile that defines those field numbers **does
+not ship with the Connect IQ SDK** — using it today would mean inventing a
+number and hoping. Per the project's no-fake-API rule, it stays unused until
+the number for a lap's repetition/weight field can be read out of Garmin's
+published FIT profile and confirmed on a physical watch.
+
+### What *is* fully compatible
+
+A saved RepFlow activity is an ordinary FIT activity file. It syncs to Garmin
+Connect over Bluetooth like any other, appears in the activity feed and in the
+phone app, and contributes its duration, heart rate, calories and intensity
+minutes to Garmin's weekly totals exactly as a native strength session does.
+Training Effect, recovery time and training status contribution are computed by
+the device firmware and are **not** exposed to Connect IQ (see §11), so those
+specific figures are the ones a RepFlow activity will not carry.
 
 ---
 
@@ -187,3 +215,23 @@ Worth recording because it is commonly believed otherwise: `monkeyc -e`
 **Monkey C: Export Project**, and it produces the `.iq` Store bundle.
 `scripts/package.sh` uses it. It requires every product declared in
 `manifest.xml` to have its device definition installed locally.
+
+---
+
+## 11. Firmware-computed training metrics are not exposed
+
+**Verified:** the SDK exposes no API for Training Effect (aerobic or
+anaerobic), recovery time, training status, training load, or VO2 max
+contribution. `Toybox.UserProfile` reports the *stored profile* — heart rate
+zones, age, weight — and `Toybox.ActivityMonitor` reports steps and intensity
+minutes, but none of the coaching figures.
+
+**Consequence:** a Connect IQ app cannot display them, and cannot make an
+activity contribute to them beyond what the firmware infers from the FIT file
+it records.
+
+**What RepFlow does:** shows what it can actually measure — heart rate and its
+zones, time in zone, calories, Body Battery before and after — and does not
+show an invented Training Effect. A fabricated coaching number would be worse
+than none, because the athlete cannot tell it apart from the watch's own until
+they compare the two screens.

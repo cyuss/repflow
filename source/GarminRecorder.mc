@@ -15,17 +15,47 @@ import Toybox.System;
 //! docs/API_LIMITATIONS.md — in short: RepFlow can record a genuine
 //! strength-training activity and attach developer FIT fields to it, but it
 //! cannot write Garmin's native per-set `set` FIT messages.
+//!
+//! So the activity that reaches Garmin Connect is built from two things:
+//!
+//!   * **One lap per set**, which is the closest supported equivalent to a
+//!     native set message. Garmin Connect shows laps in a table with their own
+//!     duration and heart rate, so the shape of the session is already there.
+//!   * **Developer fields on every lap** — exercise, set number, reps, load —
+//!     which is what turns that table from "lap 7, 0:42" into "Bench Press,
+//!     set 3, 8 reps at 70 kg". Developer fields are shown by Garmin Connect
+//!     and by the phone app alongside Garmin's own.
+//!
+//! `createField` also takes a `:nativeNum`, which would map a developer field
+//! onto a native FIT field and make Garmin Connect treat it as its own. The FIT
+//! profile that defines those numbers does not ship with the Connect IQ SDK, so
+//! using it would mean guessing a field number. It stays unused until the
+//! number can be verified against Garmin's published FIT profile on a real
+//! device. See docs/API_LIMITATIONS.md.
 class GarminRecorder {
 
-    // Developer FIT field ids. Stable — changing them breaks historical activities.
+    // Developer FIT field ids. Stable — changing them breaks historical
+    // activities, because Garmin Connect keys a field's history by this number.
     private const FIELD_SETS = 0;
     private const FIELD_REPS = 1;
     private const FIELD_VOLUME = 2;
+    private const FIELD_LAP_EXERCISE = 10;
+    private const FIELD_LAP_SET = 11;
+    private const FIELD_LAP_REPS = 12;
+    private const FIELD_LAP_WEIGHT = 13;
+
+    //! Longest exercise name written to a lap. The catalogue's longest is
+    //! "Bulgarian Split Squat" at 21; a string field has to declare a size.
+    private const EXERCISE_NAME_MAX = 24;
 
     private var _session as ActivityRecording.Session?;
     private var _setsField as FitContributor.Field?;
     private var _repsField as FitContributor.Field?;
     private var _volumeField as FitContributor.Field?;
+    private var _lapExerciseField as FitContributor.Field?;
+    private var _lapSetField as FitContributor.Field?;
+    private var _lapRepsField as FitContributor.Field?;
+    private var _lapWeightField as FitContributor.Field?;
     private var _started as Boolean;
 
     public function initialize() {
@@ -33,6 +63,10 @@ class GarminRecorder {
         _setsField = null;
         _repsField = null;
         _volumeField = null;
+        _lapExerciseField = null;
+        _lapSetField = null;
+        _lapRepsField = null;
+        _lapWeightField = null;
         _started = false;
     }
 
@@ -80,11 +114,33 @@ class GarminRecorder {
                 "repflow_volume", FIELD_VOLUME, FitContributor.DATA_TYPE_FLOAT,
                 { :mesgType => FitContributor.MESG_TYPE_SESSION, :units => "kg" }
             );
+
+            // Per-lap, so the lap table in Garmin Connect reads as a set list.
+            _lapExerciseField = session.createField(
+                "exercise", FIELD_LAP_EXERCISE, FitContributor.DATA_TYPE_STRING,
+                { :mesgType => FitContributor.MESG_TYPE_LAP, :count => EXERCISE_NAME_MAX }
+            );
+            _lapSetField = session.createField(
+                "set", FIELD_LAP_SET, FitContributor.DATA_TYPE_UINT16,
+                { :mesgType => FitContributor.MESG_TYPE_LAP }
+            );
+            _lapRepsField = session.createField(
+                "reps", FIELD_LAP_REPS, FitContributor.DATA_TYPE_UINT16,
+                { :mesgType => FitContributor.MESG_TYPE_LAP, :units => "reps" }
+            );
+            _lapWeightField = session.createField(
+                "weight", FIELD_LAP_WEIGHT, FitContributor.DATA_TYPE_FLOAT,
+                { :mesgType => FitContributor.MESG_TYPE_LAP, :units => "kg" }
+            );
         } catch (e) {
             // Developer fields are a bonus; the activity itself still records.
             _setsField = null;
             _repsField = null;
             _volumeField = null;
+            _lapExerciseField = null;
+            _lapSetField = null;
+            _lapRepsField = null;
+            _lapWeightField = null;
         }
     }
 
@@ -105,12 +161,45 @@ class GarminRecorder {
         }
     }
 
-    //! Mark a lap. RepFlow uses one lap per completed set, which is the closest
-    //! supported equivalent to a native strength "set" message.
-    public function markSet() as Boolean {
+    //! Close a lap for the set that was just performed, carrying what it was.
+    //!
+    //! The values are written **before** `addLap`, because a lap-scoped
+    //! developer field is recorded into the lap message at the moment the lap
+    //! is closed. The name is truncated rather than rejected: a lap that says
+    //! "Bulgarian Split Squa" is better than one that says nothing.
+    //!
+    //! The whole thing is best-effort. A failure here must never cost the
+    //! athlete the set — RepFlow's own record of it has already been written.
+    public function markSet(
+        exerciseName as String,
+        setNumber as Number,
+        reps as Number,
+        weightKg as Float
+    ) as Boolean {
         var session = _session;
         if (session == null || !_started) {
             return false;
+        }
+        try {
+            if (_lapExerciseField != null) {
+                var name = exerciseName;
+                if (name.length() > EXERCISE_NAME_MAX) {
+                    var cut = name.substring(0, EXERCISE_NAME_MAX);
+                    name = cut == null ? "" : cut;
+                }
+                (_lapExerciseField as FitContributor.Field).setData(name);
+            }
+            if (_lapSetField != null) {
+                (_lapSetField as FitContributor.Field).setData(setNumber);
+            }
+            if (_lapRepsField != null) {
+                (_lapRepsField as FitContributor.Field).setData(reps);
+            }
+            if (_lapWeightField != null) {
+                (_lapWeightField as FitContributor.Field).setData(weightKg);
+            }
+        } catch (e) {
+            // Carry on: the lap itself is worth more than the labels on it.
         }
         try {
             return session.addLap();
@@ -200,6 +289,10 @@ class GarminRecorder {
         _setsField = null;
         _repsField = null;
         _volumeField = null;
+        _lapExerciseField = null;
+        _lapSetField = null;
+        _lapRepsField = null;
+        _lapWeightField = null;
         _started = false;
     }
 }
