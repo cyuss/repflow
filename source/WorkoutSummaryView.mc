@@ -183,15 +183,17 @@ class WorkoutSummaryView extends WatchUi.View {
         var used = rowHeight * ZoneTracker.ZONE_COUNT;
 
         var available = bottom - top;
-        var y = top + (available - used) / 2;
+        var visible = used - lineHeight / 5;   // the last row's trailing gap
+        var y = top + (available - visible) / 2;
         if (y < top) {
             y = top;
         }
 
-        // One margin for the block, measured at its narrowest row, minus the
-        // column the page dots live in.
-        var width = Theme.bandWidth(dc, y, used) - dc.getWidth() / 14;
-        var left = (dc.getWidth() - width - dc.getWidth() / 14) / 2;
+        // One margin for the block, measured at its narrowest row, with the
+        // page-dot gutter taken off both sides so the chart stays centred.
+        var gutter = dc.getWidth() / 14;
+        var width = Theme.bandWidth(dc, y, used) - gutter;
+        var left = (dc.getWidth() - width) / 2;
 
         var labelWidth = dc.getTextWidthInPixels("Z5", font);
         var timeWidth = dc.getTextWidthInPixels("00:00", font);
@@ -277,8 +279,13 @@ class WorkoutSummaryView extends WatchUi.View {
 
         // Centre on the rows actually drawn, not on the rows that would fit:
         // four exercises in a five-row space belong in the middle of it.
+        //
+        // The last row's trailing gap is spacing *between* rows, not part of
+        // what you see, so centring the raw block height left the list sitting
+        // high by half of it.
         var used = (shown + (truncated ? 1 : 0)) * rowHeight;
-        var y = top + (available - used) / 2;
+        var visible = used - lineHeight / 3;
+        var y = top + (available - visible) / 2;
         if (y < top) {
             y = top;
         }
@@ -289,8 +296,13 @@ class WorkoutSummaryView extends WatchUi.View {
         // looks wrong: the circle narrows as the list descends, so every name
         // started a little further in than the one above it and the left edge
         // came out as a staircase. A list wants a straight margin.
-        var width = Theme.bandWidth(dc, y, used) - dc.getWidth() / 14;
-        var left = (dc.getWidth() - width - dc.getWidth() / 14) / 2;
+        //
+        // The page-dot gutter comes off *both* sides. Taking it off the right
+        // alone kept the rows clear of the dots and pushed the whole block off
+        // centre by half a gutter, which is exactly as visible as a collision.
+        var gutter = dc.getWidth() / 14;
+        var width = Theme.bandWidth(dc, y, used) - gutter;
+        var left = (dc.getWidth() - width) / 2;
 
         for (var i = 0; i < shown; i++) {
             var ex = list[i];
