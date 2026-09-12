@@ -46,6 +46,34 @@ native Gym Activity app.
   Garmin's own metrics.
 - Keeps the authoritative set-by-set detail in RepFlow's own storage.
 
+### The muscle map and the set table: not reachable, and here is the proof
+
+Garmin Connect's strength view has two parts the athlete cares about: a **body
+diagram with the trained muscles highlighted**, and a **set table** — set
+number, exercise, reps, load.
+
+Both are drawn from FIT **`set` messages**. A set message carries the exercise
+`category` (an enum of Garmin's own movement catalogue), `repetitions` and
+`weight`. The muscle map is derived from that `category` — Garmin maps its
+catalogue to muscle groups. No category, no diagram.
+
+A Connect IQ developer field can target **exactly three message types**, and
+this is the complete list from `Toybox.FitContributor`:
+
+```
+MESG_TYPE_RECORD     MESG_TYPE_LAP     MESG_TYPE_SESSION
+```
+
+There is no `MESG_TYPE_SET`. Not undocumented, not permission-gated — it does
+not exist. A Connect IQ app therefore cannot write the message both the muscle
+map and the set table are built from, by any route.
+
+Searched exhaustively before writing this: every method in the SDK's method
+list, every symbol containing "repetition", "set" or "exercise", the eight
+methods on `ActivityRecording.Session`, and the release notes. The only
+`repetitionNumber` in the whole API belongs to workout *interval* steps and has
+nothing to do with strength.
+
 ### `:nativeNum` — available, deliberately unused
 
 `Session.createField()` accepts a `:nativeNum` option, which maps a developer
@@ -254,9 +282,25 @@ contribution. `Toybox.UserProfile` reports the *stored profile* — heart rate
 zones, age, weight — and `Toybox.ActivityMonitor` reports steps and intensity
 minutes, but none of the coaching figures.
 
-**Consequence:** a Connect IQ app cannot display them, and cannot make an
-activity contribute to them beyond what the firmware infers from the FIT file
-it records.
+**Consequence:** a Connect IQ app cannot *display* them and cannot *set* them.
+
+**What it does NOT mean — a correction.** An earlier version of this document,
+and RepFlow's store description, said a RepFlow session "does not contribute to
+Training Effect or recovery time". **That was asserted without evidence and is
+probably wrong.**
+
+Those figures are computed by the firmware from a recorded activity's heart rate
+and duration. A Connect IQ `ActivityRecording` session *is* a recorded activity
+— the same FIT pipeline, the same sport and sub-sport. There is no reason the
+firmware would exclude it, and a shipping competitor (Rack) states plainly in
+its store listing that its Connect IQ recording "counts toward Training Load,
+Training Effect, and Training Readiness".
+
+The distinction that matters: **the app cannot read or write those numbers; the
+watch can still compute them from what the app recorded.** Those are different
+claims, and only the first is verified here. The second needs one real session
+on a physical watch to confirm, and until then RepFlow's own materials should
+not assert either direction.
 
 **What RepFlow does:** shows what it can actually measure — heart rate and its
 zones, time in zone, calories, Body Battery before and after — and does not

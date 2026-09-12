@@ -340,7 +340,14 @@ class ExerciseEditorDelegate extends WatchUi.Menu2InputDelegate {
         }
         if (id.equals(WorkoutEditor.ACT_WEIGHT)) {
             // Edited in the athlete's own unit, stored in kilograms.
-            var shown = Math.round(Units.fromKg(ex.defaultWeight) * 10.0).toNumber();
+            //
+            // Zero means "no target load", the way a routine leaves the weight
+            // blank for a pull-up. A target of zero kilograms is not a thing
+            // anyone means, so the editor's floor doubles as the way to clear it.
+            var current = ex.defaultWeight;
+            var shown = current == null
+                ? 0
+                : Math.round(Units.fromKg(current as Float) * 10.0).toNumber();
             var step = Settings.weightStepTenths();
             _number(WatchUi.loadResource(Rez.Strings.WeightLabel) as String,
                 Units.label().toUpper(), shown, 0, 10000, step, true, method(:onWeight));
@@ -406,7 +413,9 @@ class ExerciseEditorDelegate extends WatchUi.Menu2InputDelegate {
     public function onWeight(value as Number) as Void {
         var ex = WorkoutEditor.editing();
         if (ex != null) {
-            ex.defaultWeight = Units.toKg(value.toFloat() / 10.0);
+            ex.defaultWeight = value <= 0
+                ? null
+                : Units.toKg(value.toFloat() / 10.0);
         }
         _back();
     }

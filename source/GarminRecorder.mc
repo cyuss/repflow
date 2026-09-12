@@ -174,7 +174,7 @@ class GarminRecorder {
         exerciseName as String,
         setNumber as Number,
         reps as Number,
-        weightKg as Float
+        weightKg as Float?
     ) as Boolean {
         var session = _session;
         if (session == null || !_started) {
@@ -195,8 +195,10 @@ class GarminRecorder {
             if (_lapRepsField != null) {
                 (_lapRepsField as FitContributor.Field).setData(reps);
             }
-            if (_lapWeightField != null) {
-                (_lapWeightField as FitContributor.Field).setData(weightKg);
+            // A set with no load leaves the field unwritten rather than
+            // recording a zero, which would read as "lifted nothing".
+            if (_lapWeightField != null && weightKg != null) {
+                (_lapWeightField as FitContributor.Field).setData(weightKg as Float);
             }
         } catch (e) {
             // Carry on: the lap itself is worth more than the labels on it.

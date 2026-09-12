@@ -145,7 +145,7 @@ function testPendingRemainsResumable(logger as Test.Logger) as Boolean {
     Test.assertEqual(c.completedSetCount(), 1);
     Test.assertEqual(c.currentSetNumber(), 2);
     // The values performed before deferring are still the ones inherited.
-    Test.assertEqual(c.plannedWeight(), 62.5);
+    Test.assert(c.plannedWeight() == 62.5);
     Test.assertEqual(c.plannedReps(), 8);
     return true;
 }
@@ -160,18 +160,18 @@ function testWeightAndRepInheritance(logger as Test.Logger) as Boolean {
     var a = TestSupport.exerciseOf(engine, "A");
 
     // Set 1 starts from the exercise defaults.
-    Test.assertEqual(a.plannedWeight(), 50.0);
+    Test.assert(a.plannedWeight() == 50.0);
     Test.assertEqual(a.plannedReps(), 10);
 
     engine.completeCurrentSet(10, 55.0, TestSupport.T0);
     // Set 2 inherits what was actually performed, not the template values.
-    Test.assertEqual(a.plannedWeight(), 55.0);
+    Test.assert(a.plannedWeight() == 55.0);
     Test.assertEqual(a.plannedReps(), 10);
 
     // Change the load on set 2 ...
     engine.completeCurrentSet(8, 57.5, TestSupport.T0 + 60);
     // ... and set 3 follows the change.
-    Test.assertEqual(a.plannedWeight(), 57.5);
+    Test.assert(a.plannedWeight() == 57.5);
     Test.assertEqual(a.plannedReps(), 8);
     return true;
 }
@@ -188,7 +188,7 @@ function testInheritanceSurvivesNavigation(logger as Test.Logger) as Boolean {
 
     engine.selectExercise("A");
     var a = TestSupport.exerciseOf(engine, "A");
-    Test.assertEqual(a.plannedWeight(), 62.5);
+    Test.assert(a.plannedWeight() == 62.5);
     Test.assertEqual(a.plannedReps(), 9);
     return true;
 }
@@ -310,7 +310,7 @@ function testSessionSerializationRoundTrip(logger as Test.Logger) as Boolean {
     Test.assertEqual(a.sets[0].actualWeight as Float, 57.5);
     Test.assertEqual(a.sets[0].completedAt as Number, TestSupport.T0 + 10);
     // Inheritance still works after a restore — this is what makes resume useful.
-    Test.assertEqual(a.plannedWeight(), 57.5);
+    Test.assert(a.plannedWeight() == 57.5);
     Test.assertEqual(a.plannedReps(), 9);
 
     Test.assertEqual((restored.workout.findExercise("B") as Exercise).state, EX_PENDING);
@@ -454,7 +454,7 @@ function testSmokeTestScenario(logger as Test.Logger) as Boolean {
     Test.assert(engine.selectExercise("A"));
     engine.completeCurrentSet(10, 50.0, TestSupport.T0);
     var a = TestSupport.exerciseOf(engine, "A");
-    Test.assertEqual(a.plannedWeight(), 50.0);      // set 2 inherits set 1
+    Test.assert(a.plannedWeight() == 50.0);      // set 2 inherits set 1
     engine.completeCurrentSet(10, 55.0, TestSupport.T0 + 120);
 
     // Step 6: the overview shows A worked but not finished (target is 2... so
@@ -484,13 +484,13 @@ function testSmokeTestScenario(logger as Test.Logger) as Boolean {
     var b = TestSupport.exerciseOf(engine, "B");
     Test.assertEqual(b.completedSetCount(), 0);
     Test.assertEqual(b.currentSetNumber(), 1);
-    Test.assertEqual(b.plannedWeight(), 40.0);    // untouched template default
+    Test.assert(b.plannedWeight() == 40.0);       // untouched template default
     TestSupport.completeSets(engine, 2);
     Test.assertEqual(TestSupport.stateOf(engine, "B"), EX_COMPLETED);
 
     // Step 14: returning to A inherits the raised weight from step 5.
     Test.assert(engine.selectExercise("A"));
-    Test.assertEqual(a.plannedWeight(), 55.0);
+    Test.assert(a.plannedWeight() == 55.0);
     Test.assertEqual(a.plannedReps(), 10);
 
     // Steps 16-18: everything done, so ending needs no confirmation, and the
@@ -1810,7 +1810,9 @@ function testShippedRoutinesAreCoherent(logger as Test.Logger) as Boolean {
             Test.assert(ex.targetSets > 0 && ex.targetSets <= 10);
             Test.assert(ex.targetReps > 0 && ex.targetReps <= 30);
             Test.assert(ex.restDuration >= 30 && ex.restDuration <= 300);
-            Test.assert(ex.defaultWeight >= 0.0);
+            // A routine may legitimately set no target load at all.
+            var load = ex.defaultWeight;
+            Test.assert(load == null || (load as Float) >= 0.0);
         }
     }
     return true;
@@ -1840,13 +1842,13 @@ function testLastSessionsLoadFillsABlankRoutine(logger as Test.Logger) as Boolea
     var fresh = TestSupport.newEngine();
     var a = TestSupport.exerciseOf(fresh, "A");
     Test.assertEqual(a.completedSetCount(), 0);
-    Test.assertEqual(a.plannedWeight(), 50.0);          // the template's value
+    Test.assert(a.plannedWeight() == 50.0);             // the template's value
 
     // Once a set is performed this session, the session's own number wins —
     // history describes last week, not what is happening now.
     fresh.selectExercise("A");
     fresh.completeCurrentSet(8, 47.5, TestSupport.T0 + 1000);
-    Test.assertEqual(a.plannedWeight(), 47.5);
+    Test.assert(a.plannedWeight() == 47.5);
     Test.assert(a.completedSetCount() > 0);
     return true;
 }
@@ -1869,7 +1871,7 @@ function testInheritedLoadIsNotRounded(logger as Test.Logger) as Boolean {
     for (var i = 0; i < awkward.size(); i++) {
         var ex = new Exercise("x", "Test", 3, 10, awkward[i], 60);
         controller.syncPendingValues(ex);
-        Test.assertEqual(controller.pendingWeight(), awkward[i]);
+        Test.assert(controller.pendingWeight() == awkward[i]);
     }
 
     // What the athlete dials *is* rounded — that value is their choice, and it
@@ -1878,10 +1880,197 @@ function testInheritedLoadIsNotRounded(logger as Test.Logger) as Boolean {
     controller.syncPendingValues(ex2);
     controller.adjustWeight(1);
     var step = Units.step();
-    var shown = Units.fromKg(controller.pendingWeight());
+    var shown = Units.fromKg(controller.pendingWeight() as Float);
     var grid = ((shown / step + 0.5).toNumber()).toFloat() * step;
     var off = shown - grid;
     if (off < 0.0) { off = -off; }
     Test.assert(off < 0.01);
+    return true;
+}
+
+//! A Hevy routine becomes a RepFlow workout.
+//!
+//! The payload is shaped exactly as Hevy's OpenAPI spec declares it, including
+//! the parts that make it awkward: a null weight (the normal case — most
+//! routines leave the load blank), `rest_seconds` declared as a string but sent
+//! as a number, a rep range instead of a rep count, and the same movement twice.
+(:test)
+function testHevyRoutineMaps(logger as Test.Logger) as Boolean {
+    var routine = {
+        "id" => "b459cba5-cd6d-463c-abd6-54f8eafcadcb",
+        "title" => "Dos + Triceps",
+        "folder_id" => 42,
+        "exercises" => [
+            {
+                "index" => 0,
+                "title" => "Lat Pulldown (Cable)",
+                "rest_seconds" => 120,
+                "exercise_template_id" => "05293BCA",
+                "superset_id" => null,
+                "sets" => [
+                    { "index" => 0, "type" => "normal", "weight_kg" => null, "reps" => 8 },
+                    { "index" => 1, "type" => "normal", "weight_kg" => null, "reps" => 8 },
+                    { "index" => 2, "type" => "normal", "weight_kg" => null, "reps" => 8 },
+                    { "index" => 3, "type" => "normal", "weight_kg" => null, "reps" => 8 }
+                ]
+            },
+            {
+                "index" => 1,
+                "title" => "Bench Press (Barbell)",
+                "rest_seconds" => "150",
+                "exercise_template_id" => "D04AC939",
+                "sets" => [
+                    { "type" => "normal", "weight_kg" => 20, "reps" => 12 },
+                    { "type" => "normal", "weight_kg" => 30, "reps" => 12 }
+                ]
+            },
+            {
+                "index" => 2,
+                "title" => "Triceps Pushdown",
+                "rest_seconds" => 75,
+                "exercise_template_id" => "ABC12345",
+                "sets" => [
+                    { "type" => "normal", "weight_kg" => null,
+                      "reps" => null, "rep_range" => { "start" => 10, "end" => 12 } }
+                ]
+            },
+            {
+                "index" => 3,
+                "title" => "Triceps Pushdown",
+                "rest_seconds" => 60,
+                "exercise_template_id" => "ABC12345",
+                "sets" => [{ "type" => "normal", "weight_kg" => null, "reps" => 12 }]
+            }
+        ]
+    } as Dictionary;
+
+    var workout = HevyMap.routineToWorkout(routine as Object?);
+    Test.assert(workout != null);
+    var w = workout as Workout;
+    Test.assertEqual(w.name, "Dos + Triceps");
+    Test.assertEqual(w.exercises.size(), 4);
+
+    // Four set rows become four sets; a null load stays null, never zero.
+    var lat = w.exercises[0];
+    Test.assertEqual(lat.name, "Lat Pulldown (Cable)");
+    Test.assertEqual(lat.targetSets, 4);
+    Test.assertEqual(lat.targetReps, 8);
+    Test.assertEqual(lat.restDuration, 120);
+    Test.assert(lat.defaultWeight == null);
+    Test.assert(lat.hevyId != null);
+    Test.assert((lat.hevyId as String).equals("05293BCA"));
+    Test.assertEqual(lat.muscle, Muscle.BACK);
+
+    // A ramp offers its opening load; rest_seconds as a string still parses.
+    var bench = w.exercises[1];
+    Test.assertEqual(bench.targetSets, 2);
+    Test.assert(bench.defaultWeight == 20.0);
+    Test.assertEqual(bench.restDuration, 150);
+    Test.assertEqual(bench.muscle, Muscle.CHEST);
+
+    // A rep range asks for its low end.
+    Test.assertEqual(w.exercises[2].targetReps, 10);
+
+    // The same movement twice keeps one Hevy id and two distinct RepFlow ids,
+    // or "select any exercise at any time" could not tell them apart.
+    Test.assert(!w.exercises[2].id.equals(w.exercises[3].id));
+    Test.assert((w.exercises[2].hevyId as String).equals(w.exercises[3].hevyId as String));
+    Test.assert(w.findExercise(w.exercises[3].id) != null);
+    return true;
+}
+
+//! Nothing a web service can send may crash the import.
+(:test)
+function testHevyRoutineRejectsRubbish(logger as Test.Logger) as Boolean {
+    Test.assert(HevyMap.routineToWorkout(null) == null);
+    Test.assert(HevyMap.routineToWorkout("not a routine" as Object?) == null);
+    Test.assert(HevyMap.routineToWorkout(42 as Object?) == null);
+    Test.assert(HevyMap.routineToWorkout({} as Object?) == null);
+
+    // Title present, exercises missing.
+    Test.assert(HevyMap.routineToWorkout({ "id" => "a", "title" => "T" } as Object?) == null);
+    // Exercises present but empty, or all unusable.
+    Test.assert(HevyMap.routineToWorkout(
+        { "id" => "a", "title" => "T", "exercises" => [] } as Object?) == null);
+    Test.assert(HevyMap.routineToWorkout(
+        { "id" => "a", "title" => "T", "exercises" => [null, 7, "x"] } as Object?) == null);
+    // An exercise with no sets at all is still an exercise to perform.
+    var w = HevyMap.routineToWorkout({
+        "id" => "a", "title" => "T",
+        "exercises" => [{ "title" => "Plank", "exercise_template_id" => "P1" }]
+    } as Object?);
+    Test.assert(w != null);
+    Test.assertEqual((w as Workout).exercises[0].targetSets, 1);
+    return true;
+}
+
+//! A finished session becomes the body of POST /v1/workouts.
+(:test)
+function testHevyPayloadFromSession(logger as Test.Logger) as Boolean {
+    var bench = new Exercise("h_D04AC939", "Bench Press", 3, 10, 60.0, 120);
+    bench.hevyId = "D04AC939";
+    var pullup = new Exercise("h_PULLUP", "Pull-Up", 3, 8, null, 120);
+    pullup.hevyId = "PULLUP";
+    var orphan = new Exercise("e_local", "Something Local", 3, 10, 20.0, 60);
+
+    var workout = new Workout("h_r1", "Push", [bench, pullup, orphan] as Array<Exercise>);
+    var engine = new WorkoutEngine(new WorkoutSession(workout, TestSupport.T0));
+
+    engine.selectExercise("h_D04AC939");
+    engine.completeCurrentSet(10, 60.0, TestSupport.T0 + 60);
+    engine.completeCurrentSet(8, 65.0, TestSupport.T0 + 200);
+    engine.selectExercise("h_PULLUP");
+    engine.completeCurrentSet(8, null, TestSupport.T0 + 400);   // bodyweight
+    engine.selectExercise("e_local");
+    engine.completeCurrentSet(10, 20.0, TestSupport.T0 + 600);  // no Hevy id
+
+    var payload = HevyMap.sessionToPayload(workout, TestSupport.T0,
+        TestSupport.T0 + 3600, true);
+    Test.assert(payload != null);
+    var body = (payload as Dictionary)["workout"] as Dictionary;
+
+    Test.assertEqual(body["title"] as String, "Push");
+    Test.assertEqual(body["is_private"] as Boolean, true);
+    Test.assert((body["start_time"] as String).length() == 20);   // ...T..:..:..Z
+    Test.assert((body["end_time"] as String).find("T") != null);
+    Test.assert((body["end_time"] as String).find("Z") != null);
+
+    // The exercise with no Hevy id is dropped: there is nothing honest to file
+    // it against, and Hevy keys every set by exercise_template_id.
+    var exercises = body["exercises"] as Array;
+    Test.assertEqual(exercises.size(), 2);
+
+    var first = exercises[0] as Dictionary;
+    Test.assertEqual(first["exercise_template_id"] as String, "D04AC939");
+    var sets = first["sets"] as Array;
+    Test.assertEqual(sets.size(), 2);
+    Test.assertEqual((sets[0] as Dictionary)["reps"] as Number, 10);
+    Test.assert(((sets[0] as Dictionary)["weight_kg"] as Float) == 60.0);
+    Test.assertEqual((sets[0] as Dictionary)["type"] as String, "normal");
+
+    // A bodyweight set sends null, not zero. Hevy's weight_kg is nullable for
+    // exactly this reason, and a zero would be a fabricated load.
+    var second = exercises[1] as Dictionary;
+    var bodyweightSet = ((second["sets"] as Array)[0]) as Dictionary;
+    Test.assert((bodyweightSet["weight_kg"] as Object?) == null);
+    Test.assertEqual(bodyweightSet["reps"] as Number, 8);
+
+    // A session where nothing was performed has nothing to post.
+    var emptyWorkout = TestSupport.abcWorkout();
+    Test.assert(HevyMap.sessionToPayload(emptyWorkout, TestSupport.T0,
+        TestSupport.T0 + 60, false) == null);
+    return true;
+}
+
+//! ISO 8601, which Hevy requires and Monkey C has no formatter for.
+(:test)
+function testIso8601(logger as Test.Logger) as Boolean {
+    // 2024-08-14T12:00:00Z
+    var stamp = HevyApi.iso8601(1723636800);
+    Test.assertEqual(stamp.length(), 20);
+    Test.assertEqual(stamp.substring(4, 5) as String, "-");
+    Test.assertEqual(stamp.substring(10, 11) as String, "T");
+    Test.assertEqual(stamp.substring(19, 20) as String, "Z");
+    Test.assertEqual(stamp, "2024-08-14T12:00:00Z");
     return true;
 }

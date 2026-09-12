@@ -113,4 +113,24 @@
     <string id="EditWorkoutItem">Edit workout</string>
     <string id="SettingOn">On</string>
     <string id="SettingOff">Off</string>
+
+    <!-- Hevy -->
+    <string id="HevyErrKey">API key rejected</string>
+    <string id="HevyErrRate">Too many requests</string>
+    <string id="HevyErrServer">Hevy is unavailable</string>
+    <string id="HevyErrPhone">Phone not reachable</string>
+    <string id="HevyErrGeneric">Failed</string>
+    <string id="HevyImport">Import from Hevy</string>
+    <string id="HevyImporting">Importing...</string>
+    <string id="HevyImported">Imported</string>
+    <string id="HevyNoKey">No API key</string>
+    <string id="HevySending">Sending to Hevy...</string>
+    <string id="HevySent">Sent to Hevy</string>
+    <string id="HevyQueued">Saved, will send later</string>
+    <string id="HevyPending">Unsent workout</string>
+    <string id="HevySendNow">Send now</string>
+    <string id="HevyDiscard">Discard</string>
+    <string id="HevyDiscardSure">Discard for good?</string>
+    <string id="HevyRoutines">routines</string>
+    <string id="HevyLastTime">Fetching last time...</string>
 </strings>

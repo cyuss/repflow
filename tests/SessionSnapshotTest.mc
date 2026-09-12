@@ -27,7 +27,7 @@ function testRoundTripSnapshotIsValid(logger as Test.Logger) as Boolean {
     // And it must still parse back to the same thing.
     var restored = WorkoutSession.fromStorage(raw);
     Test.assertEqual(restored.workout.exercises.size(), 3);
-    Test.assertEqual((restored.workout.findExercise("A") as Exercise).plannedWeight(), 57.5);
+    Test.assert((restored.workout.findExercise("A") as Exercise).plannedWeight() == 57.5);
     return true;
 }
 
@@ -179,7 +179,7 @@ function testIntegerWeightsAreAccepted(logger as Test.Logger) as Boolean {
     // And parsing must still yield usable Floats, not crash.
     var restored = WorkoutSession.fromStorage(raw);
     var a = restored.workout.findExercise("A") as Exercise;
-    Test.assertEqual(a.plannedWeight(), 50.0);
+    Test.assert(a.plannedWeight() == 50.0);
     Test.assertEqual(a.totalVolume(), 500.0);
     return true;
 }
@@ -215,7 +215,7 @@ function testV1SnapshotMigratesForward(logger as Test.Logger) as Boolean {
     var restored = WorkoutSession.fromStorage(migrated as Dictionary);
     Test.assertEqual(restored.workout.exercises.size(), 3);
     var a = restored.workout.findExercise("A") as Exercise;
-    Test.assertEqual(a.plannedWeight(), 57.5);       // the work survived
+    Test.assert(a.plannedWeight() == 57.5);          // the work survived
     Test.assertEqual(a.completedSetCount(), 1);
     Test.assertEqual(a.muscle, Muscle.OTHER);        // and only this is unknown
     Test.assertEqual(TestSupport.stateOf(engine, "B"), EX_PENDING);

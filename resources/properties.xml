@@ -17,6 +17,8 @@
         <property id="repCounter"        type="boolean">false</property>
         <property id="animations"        type="number">0</property>
         <property id="theme"             type="number">0</property>
+        <property id="hevyApiKey"        type="string"></property>
+        <property id="privateWorkouts"   type="boolean">true</property>
     </properties>
 
     <strings>
@@ -35,6 +37,8 @@
         <string id="SetTheme">Background</string>
         <string id="SetThemeDark">Black</string>
         <string id="SetThemeLight">White</string>
+        <string id="SetHevyKey">Hevy API key (hevy.com/settings?developer)</string>
+        <string id="SetPrivate">Post workouts privately to Hevy</string>
     </strings>
 
     <settings>
@@ -75,6 +79,14 @@
                 <listEntry value="0">@Strings.SetThemeDark</listEntry>
                 <listEntry value="1">@Strings.SetThemeLight</listEntry>
             </settingConfig>
+        </setting>
+
+        <setting propertyKey="@Properties.hevyApiKey" title="@Strings.SetHevyKey">
+            <settingConfig type="alphaNumeric" />
+        </setting>
+
+        <setting propertyKey="@Properties.privateWorkouts" title="@Strings.SetPrivate">
+            <settingConfig type="boolean" />
         </setting>
     </settings>
 </resources>

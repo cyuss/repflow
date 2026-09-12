@@ -50,7 +50,6 @@ DETAILS
 PLEASE NOTE
 Garmin's Connect IQ platform does not allow third-party apps to write native
 per-set data into the FIT file. RepFlow records a genuine strength training
-activity and marks one lap per set, and keeps the full set-by-set detail on the
-watch. Garmin Connect's built-in per-set breakdown will not be populated, and
-the session does not contribute to Training Effect or recovery time, which the
-watch computes itself and does not expose to apps.
+activity, marks one lap per set, and labels every lap with the exercise, set
+number, reps and load — so the detail is there in the activity, in Garmin
+Connect's Connect IQ section rather than in Garmin's own per-set view.

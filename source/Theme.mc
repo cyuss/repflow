@@ -821,8 +821,13 @@ module Theme {
     //! a measurement rather than a suggestion. Separate from formatWeight
     //! because the distinction is the whole point: a plan may be rounded to
     //! something sensible, a record may not be touched.
-    public function formatPlannedWeight(weight as Float) as String {
-        return formatNumber(Units.fromKg(Units.snap(weight)));
+    //! Null means the routine sets no target load, and that is worth saying
+    //! rather than hiding behind a zero: "--" is a question, "0" is an answer.
+    public function formatPlannedWeight(weight as Float?) as String {
+        if (weight == null) {
+            return LiveMetrics.NO_VALUE;
+        }
+        return formatNumber(Units.fromKg(weight as Float));
     }
 
     //! "1:05:23" or "42:07"

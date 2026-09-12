@@ -24,7 +24,9 @@ module SessionSnapshot {
     //!
     //!   v1  the original layout
     //!   v2  exercises carry a muscle group ("m"), for weekly volume
-    const SCHEMA_VERSION = 2;
+    //!   v3  the target weight may be null ("no target load"), and exercises
+    //!       carry Hevy's own movement id ("h") when they came from a routine
+    const SCHEMA_VERSION = 3;
 
     //! The oldest layout this build can still bring forward.
     const OLDEST_MIGRATABLE = 1;
@@ -61,7 +63,7 @@ module SessionSnapshot {
         // one, so they become OTHER — the session keeps every set it had, and
         // only the muscle breakdown of this one workout is unknown.
         if (v == 1) {
-            if (!_isValidV1(data)) {
+            if (!_isValidShape(data, false)) {
                 return null;
             }
             var workout = data["w"] as Dictionary;
@@ -70,17 +72,22 @@ module SessionSnapshot {
                 var ex = exercises[i] as Dictionary;
                 ex["m"] = Muscle.OTHER;
             }
+            data["v"] = 2;
+            v = 2;
+        }
+
+        // v2 -> v3: nothing has to be added. A v2 exercise has no Hevy id,
+        // which is exactly what "was not imported from Hevy" looks like, and
+        // its weight is a number, which v3 still accepts. The version is the
+        // only thing that moves.
+        if (v == 2) {
+            if (!_isValidShape(data, true)) {
+                return null;
+            }
             data["v"] = SCHEMA_VERSION;
-            v = SCHEMA_VERSION;
         }
 
         return isValid(data) ? data : null;
-    }
-
-    //! v1 differed from v2 only by the absent muscle tag, so it validates with
-    //! the current rules minus that one field.
-    function _isValidV1(raw as Object?) as Boolean {
-        return _isValidShape(raw, false);
     }
 
     //! True when `raw` is a snapshot this build can safely parse.
@@ -158,7 +165,12 @@ module SessionSnapshot {
         if (!_isNumber(data["st"] as Object?) || !(data["fc"] instanceof Boolean)) {
             return false;
         }
-        if (!_isFloat(data["w"] as Object?)) {
+        // The target load is legitimately absent: a pull-up has none. Present
+        // means it must be a number; absent means absent, not zero.
+        if (data["w"] != null && !_isFloat(data["w"] as Object?)) {
+            return false;
+        }
+        if (data["h"] != null && !(data["h"] instanceof String)) {
             return false;
         }
         if (requireMuscle) {
@@ -189,7 +201,10 @@ module SessionSnapshot {
         if (set.size() != 7) {
             return false;
         }
-        if (!_isNumber(set[0] as Object?) || !_isNumber(set[1] as Object?) || !_isFloat(set[2] as Object?)) {
+        if (!_isNumber(set[0] as Object?) || !_isNumber(set[1] as Object?)) {
+            return false;
+        }
+        if (set[2] != null && !_isFloat(set[2] as Object?)) {
             return false;
         }
         // actualReps / actualWeight / completedAt are null until the set is done.

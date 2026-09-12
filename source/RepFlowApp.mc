@@ -12,7 +12,13 @@ class RepFlowApp extends Application.AppBase {
         AppBase.initialize();
     }
 
+    //! Anything Hevy has not confirmed gets another try, quietly.
+    //!
+    //! The gym case is a phone in a locker: the send fails, the workout stays
+    //! queued, and the next time the app opens — which is the next session, with
+    //! the phone in a pocket — it goes. The athlete is never asked to remember.
     public function onStart(state as Dictionary?) as Void {
+        HevySync.sendOldestPending();
     }
 
     //! The phone wrote new settings. Drop the cached copies so the next read

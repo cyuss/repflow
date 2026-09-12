@@ -9,14 +9,15 @@ class WorkoutSet {
 
     public var index as Number;
     public var targetReps as Number;
-    public var targetWeight as Float;
+    //! Planned load, or null when the routine sets none.
+    public var targetWeight as Float?;
     public var actualReps as Number?;
     public var actualWeight as Float?;
     public var completed as Boolean;
     //! Epoch seconds, or null while the set is not completed.
     public var completedAt as Number?;
 
-    public function initialize(index as Number, targetReps as Number, targetWeight as Float) {
+    public function initialize(index as Number, targetReps as Number, targetWeight as Float?) {
         me.index = index;
         me.targetReps = targetReps;
         me.targetWeight = targetWeight;
@@ -27,7 +28,7 @@ class WorkoutSet {
     }
 
     //! Mark this set done with the values the athlete actually performed.
-    public function complete(reps as Number, weight as Float, at as Number) as Void {
+    public function complete(reps as Number, weight as Float?, at as Number) as Void {
         actualReps = reps;
         actualWeight = weight;
         completed = true;

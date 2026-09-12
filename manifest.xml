@@ -77,6 +77,10 @@
                  Registered only while the set screen is showing, and only when
                  the athlete has switched it on: 25 Hz costs battery. -->
             <iq:uses-permission id="Sensor"/>
+            <!-- The Hevy API: importing routines and logging finished workouts.
+                 Every request is proxied through Garmin Connect Mobile, so it
+                 only works with the phone in Bluetooth range. -->
+            <iq:uses-permission id="Communications"/>
         </iq:permissions>
 
         <iq:languages>

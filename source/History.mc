@@ -195,9 +195,11 @@ module History {
         bests as Dictionary,
         exerciseId as String,
         reps as Number,
-        weightKg as Float
+        weightKg as Float?
     ) as Number {
-        if (reps <= 0 || weightKg <= 0.0) {
+        // A bodyweight set has no load to beat. Counting it as a record would
+        // announce one on every push-up.
+        if (weightKg == null || reps <= 0 || (weightKg as Float) <= 0.0) {
             return RECORD_NONE;
         }
         var row = rowFor(bests, ExerciseCatalogue.movementId(exerciseId));
@@ -205,13 +207,14 @@ module History {
             // A movement's first ever set is not a record. Everything would be.
             return RECORD_NONE;
         }
-        if (_tenths(weightKg) > (row[B_BEST_WEIGHT] as Number)) {
+        var kg = weightKg as Float;
+        if (_tenths(kg) > (row[B_BEST_WEIGHT] as Number)) {
             return RECORD_WEIGHT;
         }
-        if (_tenths(estimated1RM(reps, weightKg)) > (row[B_BEST_1RM] as Number)) {
+        if (_tenths(estimated1RM(reps, kg)) > (row[B_BEST_1RM] as Number)) {
             return RECORD_1RM;
         }
-        if (Math.round(weightKg * reps).toNumber() > (row[B_BEST_VOLUME] as Number)) {
+        if (Math.round(kg * reps).toNumber() > (row[B_BEST_VOLUME] as Number)) {
             return RECORD_VOLUME;
         }
         return RECORD_NONE;
@@ -222,18 +225,22 @@ module History {
         bests as Dictionary,
         exerciseId as String,
         reps as Number,
-        weightKg as Float,
+        weightKg as Float?,
         at as Number
     ) as Number {
-        var movement = ExerciseCatalogue.movementId(exerciseId);
         var kind = classify(bests, exerciseId, reps, weightKg);
+        if (weightKg == null) {
+            return kind;      // nothing to fold in; bodyweight leaves no best
+        }
+        var movement = ExerciseCatalogue.movementId(exerciseId);
         var row = rowFor(bests, movement);
         if (row == null) {
             row = [0, 0, 0, 0, 0, 0, 0] as Array;
         }
-        var w = _tenths(weightKg);
-        var e1rm = _tenths(estimated1RM(reps, weightKg));
-        var volume = Math.round(weightKg * reps).toNumber();
+        var kg = weightKg as Float;
+        var w = _tenths(kg);
+        var e1rm = _tenths(estimated1RM(reps, kg));
+        var volume = Math.round(kg * reps).toNumber();
 
         if (w > (row[B_BEST_WEIGHT] as Number)) { row[B_BEST_WEIGHT] = w; }
         if (e1rm > (row[B_BEST_1RM] as Number)) { row[B_BEST_1RM] = e1rm; }

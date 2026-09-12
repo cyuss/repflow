@@ -141,6 +141,12 @@ class WorkoutListDelegate extends WatchUi.BehaviorDelegate {
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.NewWorkout) as String, null, ITEM_NEW, {}));
         menu.addItem(new WatchUi.MenuItem(
+            WatchUi.loadResource(Rez.Strings.HevyImport) as String,
+            HevyApi.hasKey()
+                ? null
+                : WatchUi.loadResource(Rez.Strings.HevyNoKey) as String,
+            ITEM_HEVY, {}));
+        menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.AppSettings) as String, null, ITEM_SETTINGS, {}));
         WatchUi.switchToView(menu, new WorkoutListMenuDelegate(_view), WatchUi.SLIDE_UP);
         return true;
@@ -149,6 +155,7 @@ class WorkoutListDelegate extends WatchUi.BehaviorDelegate {
     public static const ITEM_EDIT = "edit";
     public static const ITEM_NEW = "new";
     public static const ITEM_SETTINGS = "settings";
+    public static const ITEM_HEVY = "hevy";
 
 
     //! START — begin the highlighted workout on its first exercise, or open the
@@ -186,6 +193,10 @@ class WorkoutListMenuDelegate extends WatchUi.Menu2InputDelegate {
         var id = item.getId() as String;
         if (id.equals(WorkoutListDelegate.ITEM_SETTINGS)) {
             AppSettingsMenu.show();
+            return;
+        }
+        if (id.equals(WorkoutListDelegate.ITEM_HEVY)) {
+            HevySync.importRoutines();
             return;
         }
         if (id.equals(WorkoutListDelegate.ITEM_NEW)) {

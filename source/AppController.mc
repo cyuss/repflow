@@ -42,7 +42,11 @@ class AppController {
     private var _bestRecord as Number;
     private var _recordCount as Number;
     //! Weight/reps the athlete has dialled in for the set about to be performed.
-    private var _pendingWeight as Float;
+    //!
+    //! The weight is nullable, and null is not zero: it means the routine sets
+    //! no target and the athlete has not touched the stepper. Logging a zero
+    //! there would write a fabricated load into their history.
+    private var _pendingWeight as Float?;
     private var _pendingReps as Number;
     //! Which data screen the exercise view is showing. Lives here rather than on
     //! the view so it survives rest screens and menu round-trips.
@@ -69,7 +73,7 @@ class AppController {
         _bests = {} as Dictionary;
         _bestRecord = History.RECORD_NONE;
         _recordCount = 0;
-        _pendingWeight = 0.0;
+        _pendingWeight = null;
         _pendingReps = 0;
         _exercisePage = 0;
         _restPage = 0;
@@ -227,7 +231,8 @@ class AppController {
         return _recorder;
     }
 
-    public function pendingWeight() as Float {
+    //! The load about to be logged, or null when the athlete has not set one.
+    public function pendingWeight() as Float? {
         return _pendingWeight;
     }
 
@@ -328,6 +333,19 @@ class AppController {
             var last = History.lastPerformance(_bests, exercise.id);
             if (last != null) {
                 weight = (last as Array)[0] as Float;
+            } else {
+                // Nothing on this watch yet — the first session after an
+                // import, or the first on a new watch. Hevy remembers even
+                // then, and it is the same athlete's own number.
+                var fromHevy = HevySync.lastFromHevy(exercise.hevyId);
+                if (fromHevy != null) {
+                    var w = (fromHevy as Array)[0];
+                    if (w instanceof Float) {
+                        weight = w as Float;
+                    } else if (w instanceof Number) {
+                        weight = (w as Number).toFloat();
+                    }
+                }
             }
         }
 
@@ -372,7 +390,10 @@ class AppController {
         if (step <= 0.0) {
             step = 1.0;
         }
-        var shown = Units.fromKg(_pendingWeight) + deltaSteps * step;
+        // Touching the stepper is what turns "no target" into a number. Until
+        // then it stays null; from here on it is the athlete's own value.
+        var current = _pendingWeight == null ? 0.0 : _pendingWeight as Float;
+        var shown = Units.fromKg(current) + deltaSteps * step;
         var snapped = Math.round(shown / step) * step;
         if (snapped < 0.0) {
             snapped = 0.0;
@@ -380,8 +401,12 @@ class AppController {
         _pendingWeight = Units.toKg(snapped.toFloat());
     }
 
-    public function setWeight(weight as Float) as Void {
-        _pendingWeight = weight < 0.0 ? 0.0 : weight;
+    public function setWeight(weight as Float?) as Void {
+        if (weight == null) {
+            _pendingWeight = null;
+            return;
+        }
+        _pendingWeight = (weight as Float) < 0.0 ? 0.0 : weight;
     }
 
     public function adjustReps(delta as Number) as Void {
@@ -622,6 +647,13 @@ class AppController {
         } else {
             _recorder.stopAndDiscard();
         }
+
+        // Discarding is about the Garmin recording, not about the training.
+        // A session the athlete performed is logged to Hevy either way — it is
+        // queued first, so a phone in a locker costs nothing.
+        var startedAt = engine.getSession().startedAt;
+        HevySync.sendSession(workout, startedAt, finishedAt);
+
         _engine = null;
 
         // Read once, here, rather than from a draw call: the recap pages are

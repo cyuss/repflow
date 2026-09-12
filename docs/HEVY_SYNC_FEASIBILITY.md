@@ -290,6 +290,79 @@ history is empty.
 reason to exist — selecting any exercise at any time, deferring an occupied
 machine — is not something their flow does.
 
+## How the others do it — Rack and LiftSync
+
+Two shipping products were put forward as the target. Both are real, both work,
+and neither is built the way RepFlow is. The difference is worth understanding
+before copying anything.
+
+### Rack — a watch companion to a phone app
+
+Rack's Connect IQ app is a **companion**. Its store listing is explicit: create
+the routine in the Rack iOS app, open Rack on the watch, "your watch syncs
+automatically over Bluetooth", and "log sets from your phone **or** confirm them
+on your watch".
+
+The transport is not the Hevy-style cloud API. It is the Connect IQ phone
+messaging channel — `Communications.transmit`,
+`Communications.registerForPhoneAppMessages`, `PhoneAppMessage`, all present in
+SDK 9.2.0 — paired with a phone app built on Garmin's Mobile SDK for iOS. That
+is what LiftSync's own write-up calls "FIT-over-BLE", and what it correctly
+identifies as the dividing line between apps that log on the watch and apps
+that only sync a summary afterwards.
+
+**What that buys them:** live two-way sync. Hot-swap an exercise on the phone
+and the watch updates without restarting the activity.
+
+**What it costs:** an iOS app. A second thing to install, a second thing to
+keep, an App Store account, and a Swift codebase beside the Monkey C one.
+
+**RepFlow reaches the same place without one, because Hevy already is the phone
+app.** Routines come from Hevy's cloud API instead of from a companion over BLE,
+and the finished session goes back the same way. Nothing extra to install, and
+it works with the app the athlete already keeps their training in.
+
+What RepFlow does not get, and does not want: logging a set on the phone and
+watching the wrist update. The whole point here is not touching the phone.
+
+### LiftSync — and the claim about `addSet()`
+
+LiftSync's write-up says Garmin closed its `addSet()` cloud API to third
+parties, so a cloud app like Hevy can no longer push a native strength activity
+into Garmin Connect.
+
+That is about a **different API from the one this document covers**: Garmin's
+cloud-to-cloud partner API, not Connect IQ. It is consistent with everything
+verified here, and it explains why Hevy's own Garmin integration can only ever
+produce a summary. It does not change what a Connect IQ app on the watch can do.
+
+### The claim worth being careful about
+
+Rack's listing says its recording "counts toward Training Load, Training Effect,
+and Training Readiness".
+
+That is very likely true, and **it contradicts something this project asserted
+earlier**. Those figures are computed by the firmware from a recorded activity's
+heart rate and duration; a Connect IQ recording is a recorded activity, through
+the same FIT pipeline with the same sport and sub-sport. The claim RepFlow made
+— that its sessions do not contribute — was a negative asserted without
+evidence. It has been withdrawn from the store description and from
+`API_LIMITATIONS.md` §11.
+
+What stays verified: a Connect IQ app cannot **read** or **set** those numbers.
+Whether the watch derives them from what the app recorded is firmware behaviour,
+and it needs one real session on a physical watch to settle.
+
+Rack's "native Garmin activity with per-exercise breakdown" is the other half of
+that listing, and it should be read carefully. The activity really is native —
+any Connect IQ recording is. The per-exercise breakdown is what developer FIT
+fields on laps produce, in Garmin Connect's Connect IQ section. Nothing in SDK
+9.2.0 writes a FIT `set` message, and this was searched exhaustively: the entire
+method list, every symbol containing "repetition", "set" or "exercise", and the
+eight methods `ActivityRecording.Session` exposes. The only `repetitionNumber`
+in the API belongs to workout *interval* steps and has nothing to do with
+strength.
+
 ## What it would take to build
 
 | Piece | Where | Size |

@@ -10,7 +10,13 @@ class Exercise {
     public var name as String;
     public var targetSets as Number;
     public var targetReps as Number;
-    public var defaultWeight as Float;
+    //! Target load in kilograms, or **null when the routine sets none**.
+    //!
+    //! Null is not zero. A pull-up, a dip, a push-up and half of every routine
+    //! ever written have no target weight, and logging a fabricated zero writes
+    //! a lie into the athlete's history — and posts one to Hevy, whose own
+    //! weight field is nullable for exactly this reason.
+    public var defaultWeight as Float?;
     //! Rest between sets, in seconds.
     public var restDuration as Number;
     public var sets as Array<WorkoutSet>;
@@ -22,13 +28,18 @@ class Exercise {
     //! rather than looked up, because a workout outlives the catalogue entry it
     //! was built from and weekly volume has to keep adding up.
     public var muscle as Number;
+    //! Hevy's own id for this movement, when the exercise came from a Hevy
+    //! routine. It is what makes a session posted back land on the same
+    //! movement it would have if it had been logged in the phone app, rather
+    //! than on a near-match found by name.
+    public var hevyId as String?;
 
     public function initialize(
         id as String,
         name as String,
         targetSets as Number,
         targetReps as Number,
-        defaultWeight as Float,
+        defaultWeight as Float?,
         restDuration as Number
     ) {
         me.id = id;
@@ -41,6 +52,7 @@ class Exercise {
         me.state = EX_NOT_STARTED;
         me.forcedComplete = false;
         me.muscle = Muscle.OTHER;
+        me.hevyId = null;
     }
 
     public function completedSetCount() as Number {
@@ -89,7 +101,11 @@ class Exercise {
     }
 
     //! Weight the next set should be pre-filled with — same inheritance rule.
-    public function plannedWeight() as Float {
+    //! The load to offer for the next set, or null when there is none to offer.
+    //!
+    //! Null propagates deliberately: "no target weight" has to survive all the
+    //! way to the screen, which shows a dash, and to Hevy, which takes null.
+    public function plannedWeight() as Float? {
         var last = lastCompletedSet();
         if (last != null) {
             var weight = last.actualWeight;
@@ -101,7 +117,7 @@ class Exercise {
     }
 
     //! Record a performed set. Returns the set that was created.
-    public function recordSet(reps as Number, weight as Float, at as Number) as WorkoutSet {
+    public function recordSet(reps as Number, weight as Float?, at as Number) as WorkoutSet {
         var set = new WorkoutSet(sets.size(), reps, weight);
         set.complete(reps, weight, at);
         sets.add(set);
@@ -139,6 +155,7 @@ class Exercise {
             "tr" => targetReps,
             "w" => defaultWeight,
             "r" => restDuration,
+            "h" => hevyId,
             "st" => state as Number,
             "fc" => forcedComplete,
             "m" => muscle,
@@ -147,15 +164,15 @@ class Exercise {
     }
 
     //! Storage can hand a whole number back as a Number even though it was
-    //! written as a Float.
-    private static function _toFloat(value as Object?) as Float {
+    //! written as a Float. Null stays null — it means "no target weight".
+    private static function _toFloat(value as Object?) as Float? {
         if (value instanceof Float) {
             return value as Float;
         }
         if (value instanceof Number) {
             return (value as Number).toFloat();
         }
-        return 0.0;
+        return null;
     }
 
     public static function fromStorage(data as Dictionary) as Exercise {
@@ -175,6 +192,8 @@ class Exercise {
         ex.muscle = (m instanceof Number) && Muscle.isValid(m as Number)
             ? m as Number
             : Muscle.OTHER;
+        var h = data["h"];
+        ex.hevyId = (h instanceof String) ? h as String : null;
         var rawSets = data["s"] as Array;
         for (var i = 0; i < rawSets.size(); i++) {
             ex.sets.add(WorkoutSet.fromStorage(rawSets[i] as Array));

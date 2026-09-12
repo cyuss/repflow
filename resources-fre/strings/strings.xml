@@ -109,4 +109,26 @@
     <string id="EditWorkoutItem">Modifier la seance</string>
     <string id="SettingOn">Active</string>
     <string id="SettingOff">Desactive</string>
+
+    <!-- Hevy -->
+    <string id="HevyErrKey">Cle API refusee</string>
+    <string id="HevyErrRate">Trop de requetes</string>
+    <string id="HevyErrServer">Hevy indisponible</string>
+    <string id="HevyErrPhone">Telephone injoignable</string>
+    <string id="HevyErrGeneric">Echec</string>
+    <string id="HevyImport">Importer depuis Hevy</string>
+    <string id="HevyImporting">Import en cours...</string>
+    <string id="HevyImported">Importe</string>
+    <string id="HevyNoKey">Pas de cle API</string>
+    <string id="HevySending">Envoi vers Hevy...</string>
+    <string id="HevySent">Envoye a Hevy</string>
+    <string id="HevyQueued">Enregistre, envoi plus tard</string>
+    <string id="HevyPending">Seance non envoyee</string>
+    <string id="HevySendNow">Envoyer maintenant</string>
+    <string id="HevyDiscard">Supprimer</string>
+    <string id="HevyDiscardSure">Supprimer definitivement ?</string>
+    <string id="HevyRoutines">seances</string>
+    <string id="HevyLastTime">Recuperation...</string>
+    <string id="SetHevyKey">Cle API Hevy (hevy.com/settings?developer)</string>
+    <string id="SetPrivate">Publier les seances en prive sur Hevy</string>
 </strings>

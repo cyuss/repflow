@@ -156,7 +156,7 @@ class SetEditorView extends WatchUi.View {
         var half = width / 2;
 
         _drawCell(dc, left, top, half, height,
-            Theme.formatWeight(controller.pendingWeight()),
+            Theme.formatPlannedWeight(controller.pendingWeight()),
             Units.label().toUpper(),
             _focus == Tuning.FOCUS_WEIGHT);
 
