@@ -146,7 +146,8 @@ simulator and on a physical Fenix, store screenshots and icon, and the Connect
 IQ portal submission.
 
 Check `CHANGELOG.md` `## [Unreleased]` and `docs/IMPLEMENTATION_PLAN.md` for the
-live status.
+live status, and `docs/FEATURE_BACKLOG.md` for what is worth building next and
+which asks the platform refuses outright.
 
 ## Do not
 
