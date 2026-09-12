@@ -8,16 +8,16 @@ import Toybox.System;
 //! Laid out as a Garmin data-field grid — bands of big value + small caption,
 //! separated by hairlines — and paged with UP/DOWN like any native activity.
 //!
-//!   SET (the set list)        BODY / WORKOUT (data fields)
+//!   SET                        BODY / WORKOUT (data fields)
 //!   +---------------------+    +---------------------+
-//!   |     Lat Pulldown    |    |         132         |
-//!   | ------------------- |    |          HR         |
-//!   |  + 1      10 x 55   |    +----------+----------+
-//!   |  + 2      10 x 55   |    |   128    |   210    |
-//!   | [3        10 x 57.5]|    |  AVG HR  |   KCAL   |
-//!   |   4       10 x 57.5 |    +----------+----------+
-//!   | ------------------- |    |        12:34        |
-//!   |       LOG SET       |    |         TIME        |
+//!   |      Seated Row     |    |         132         |
+//!   |      SET 4 / 4      |    |          HR         |
+//!   | ------------------- |    +----------+----------+
+//!   |       60 KG         |    |   128    |   210    |
+//!   |        x 10         |    |  AVG HR  |   KCAL   |
+//!   | ------------------- |    +----------+----------+
+//!   |      * * * o        |    |        12:34        |
+//!   |     [ LOG SET ]     |    |         TIME        |
 //!   +---------------------+    +---------------------+
 //!
 //! Only the middle band is ever split into columns, and wide values
@@ -72,41 +72,102 @@ class ExerciseView extends WatchUi.View {
         return y + 1;
     }
 
-    //! Exercise name, then a rule. The set counter that used to live here is
-    //! redundant now that the whole set list is on screen, and the space is
-    //! better spent on rows.
-    private function _drawHeader(dc as Graphics.Dc, exercise as Exercise) as Number {
-        var h = dc.getHeight();
-        var y = Theme.drawFitted(dc, h / 14, exercise.name,
-            Theme.fontsTitle(), Theme.stateColor(exercise.state));
-        y += h / 44;
-        FieldGrid.drawRule(dc, y);
-        return y + 1;
-    }
-
-    //! Page 1 — the exercise as a list of its sets, Hevy-style.
+    //! Page 1 — the set you are about to do.
     //!
-    //! The active set is always the next incomplete one, so there is no cursor
-    //! to manage: START logs it and the list advances by itself.
+    //! Designed for a two-second glance mid-exercise, so it answers, in order of
+    //! size: what am I lifting, how many reps, which set is this, how far in.
+    //! A list of identical "10 x 60" rows answered none of those at a glance —
+    //! everything was the same size, so nothing stood out.
+    //!
+    //!        Seated Row          who
+    //!        SET 4 / 4           where
+    //!      -------------
+    //!          60 KG             WHAT — the hero
+    //!          x 10
+    //!      -------------
+    //!         * * * o            progress
+    //!        [ LOG SET ]
     private function _drawSetPage(
         dc as Graphics.Dc,
         controller as AppController,
         exercise as Exercise
     ) as Void {
-        // How far through this exercise, on the rim — the one part of a round
-        // screen the field grid cannot use.
+        var h = dc.getHeight();
+        var done = exercise.completedSetCount();
         var target = exercise.targetSets;
-        var progress = target > 0
-            ? exercise.completedSetCount().toFloat() / target.toFloat()
-            : 0.0;
-        Theme.drawProgressRing(dc, progress, Theme.COLOR_DONE);
+
+        // Progress on the rim: the one area a round screen gives away free.
+        Theme.drawProgressRing(dc,
+            target > 0 ? done.toFloat() / target.toFloat() : 0.0,
+            Theme.COLOR_DONE);
 
         var actionTop = Theme.drawActionBar(
             dc, WatchUi.loadResource(Rez.Strings.LogSet) as String, Theme.COLOR_ACCENT);
-        var top = _drawHeader(dc, exercise);
 
-        SetListRenderer.draw(dc, top, actionTop - dc.getHeight() / 60, exercise,
-            controller.pendingReps(), controller.pendingWeight());
+        // --- who and where ------------------------------------------------
+        var y = Theme.drawFitted(dc, h / 16, exercise.name,
+            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
+
+        var setLine = (WatchUi.loadResource(Rez.Strings.SetLabel) as String).toUpper() +
+            " " + exercise.currentSetNumber().toString() + " / " + target.toString();
+        y = Theme.drawFitted(dc, y + h / 90, setLine,
+            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_ACCENT);
+
+        y += h / 50;
+        FieldGrid.drawRule(dc, y);
+        y += 1;
+
+        // --- progress dots, anchored just above the action --------------
+        var dotsHeight = h / 18;
+        var dotsTop = actionTop - dotsHeight - h / 50;
+        Theme.drawSetDots(dc, dotsTop, target, done);
+
+        // --- the load: everything left between the rule and the dots -----
+        _drawLoad(dc, y, dotsTop - h / 60, controller);
+    }
+
+    //! The weight, as large as the space allows, with the reps beneath it.
+    private function _drawLoad(
+        dc as Graphics.Dc,
+        top as Number,
+        bottom as Number,
+        controller as AppController
+    ) as Void {
+        var available = bottom - top;
+        var gap = dc.getHeight() / 60;
+
+        var repsText = "x " + controller.pendingReps().toString();
+        var repsFont = Theme.pickFontFitting(dc, repsText, Theme.fontsTitle(),
+            Theme.bandWidth(dc, top, available), (available * 34) / 100);
+        var repsHeight = dc.getFontHeight(repsFont);
+
+        var weightText = Theme.formatWeight(controller.pendingWeight());
+        var weightBudget = available - repsHeight - gap;
+
+        var block = _weightHeight(dc, weightText, weightBudget, top) + gap + repsHeight;
+        var y = top + (available - block) / 2;
+        if (y < top) {
+            y = top;
+        }
+
+        y = Theme.drawValueWithUnitCapped(dc, y, weightText,
+            (WatchUi.loadResource(Rez.Strings.Kg) as String).toUpper(),
+            Theme.fontsHero(), Theme.COLOR_TEXT, Theme.COLOR_DIM, weightBudget);
+
+        dc.setColor(Theme.COLOR_TEXT, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(dc.getWidth() / 2, y + gap, repsFont, repsText,
+            Graphics.TEXT_JUSTIFY_CENTER);
+    }
+
+    private function _weightHeight(
+        dc as Graphics.Dc,
+        text as String,
+        budget as Number,
+        top as Number
+    ) as Number {
+        var font = Theme.pickFontFitting(dc, text, Theme.fontsHero(),
+            (Theme.bandWidth(dc, top, budget) * 70) / 100, budget);
+        return dc.getFontHeight(font);
     }
 
     //! Page 2 — live Garmin metrics, in Garmin's four-field round layout:
@@ -261,7 +322,7 @@ class ExerciseDelegate extends WatchUi.BehaviorDelegate {
             coords[1] > settings.screenHeight * 0.78) {
             return false;
         }
-        SetEditor.open(exercise, false);
+        SetEditor.open(exercise, Tuning.RETURN_EXERCISE);
         return true;
     }
 }

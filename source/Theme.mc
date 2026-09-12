@@ -144,6 +144,18 @@ module Theme {
         return (chord * 0.92).toNumber();
     }
 
+    //! Usable width of a horizontal BAND, as opposed to a single line.
+    //!
+    //! A band spans a range of heights and the circle narrows towards its ends,
+    //! so the safe width is the chord at whichever edge is furthest from the
+    //! vertical centre. Using the chord at the band's middle is what pushed the
+    //! action pill out past the bezel.
+    public function bandWidth(dc as Graphics.Dc, top as Number, height as Number) as Number {
+        var atTop = usableWidth(dc, top);
+        var atBottom = usableWidth(dc, top + height);
+        return atTop < atBottom ? atTop : atBottom;
+    }
+
     //! Pick the largest font from a ladder whose rendering fits `maxWidth`.
     public function pickFont(
         dc as Graphics.Dc,
@@ -281,8 +293,10 @@ module Theme {
         return y + rowHeight;
     }
 
-    //! The one dominant action, in a rounded band across the bottom.
-    //! Returns the y of the top of the band, so callers know where content ends.
+    //! The one dominant action, as a pill across the bottom.
+    //!
+    //! Returns the y of the top of the pill, so callers know where their content
+    //! has to stop.
     public function drawActionBar(dc as Graphics.Dc, text as String, color as Number) as Number {
         var w = dc.getWidth();
         var h = dc.getHeight();
@@ -290,15 +304,29 @@ module Theme {
         var fh = dc.getFontHeight(font);
         var padding = (h / 40) + 4;
         var barHeight = fh + padding * 2;
-        // Sit well clear of the bottom of the glass: at h/16 the pill looked
-        // clipped by the bezel and the label was hard to read.
         var top = h - barHeight - (h * 13) / 100;
-        var barWidth = usableWidth(dc, top + barHeight / 2);
+
+        // Width at the pill's NARROWEST edge — its bottom. Measuring at the
+        // middle let the corners run past the glass.
+        var maxWidth = bandWidth(dc, top, barHeight);
+
+        // Never let the label overflow the pill: shrink it, then the pill hugs
+        // the text rather than spanning the whole chord.
+        var label = text;
+        var textWidth = dc.getTextWidthInPixels(label, font);
+        var hPadding = barHeight / 2;
+        if (textWidth + hPadding * 2 > maxWidth) {
+            label = text;   // FONT_XTINY is already the smallest sensible size
+        }
+        var barWidth = textWidth + hPadding * 2;
+        if (barWidth > maxWidth) {
+            barWidth = maxWidth;
+        }
 
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
         dc.fillRoundedRectangle((w - barWidth) / 2, top, barWidth, barHeight, barHeight / 2);
         dc.setColor(COLOR_BG, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(w / 2, top + padding, font, text, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(w / 2, top + padding, font, label, Graphics.TEXT_JUSTIFY_CENTER);
         return top;
     }
 
@@ -318,7 +346,7 @@ module Theme {
         var cx = w / 2;
         var cy = h / 2;
 
-        dc.setPenWidth(7);
+        dc.setPenWidth(5);
         dc.setColor(COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
         dc.drawCircle(cx, cy, radius);
 

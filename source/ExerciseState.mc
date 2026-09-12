@@ -26,20 +26,23 @@ enum SessionState {
 //! Helpers for rendering and reasoning about exercise state.
 module ExerciseStateUtil {
 
-    //! Single-character glyph used by the workout overview.
-    //! Matches the legend documented in README.md.
+    //! Short marker used by the workout overview.
+    //!
+    //! ASCII only, deliberately: the Fenix 6 Pro's font set has no glyph for
+    //! U+2713 and friends, and renders them as a "?" box. Verified in the
+    //! simulator — the overview was unreadable before this.
     public function glyph(state as ExerciseState) as String {
         switch (state) {
             case EX_COMPLETED:
-                return "✓"; // check mark
+                return "[x]";
             case EX_ACTIVE:
-                return "●"; // filled circle
+                return ">";
             case EX_PENDING:
-                return "!";
+                return "...";
             case EX_SKIPPED:
-                return "✕"; // cross
+                return "-";
             default:
-                return "○"; // hollow circle
+                return "[ ]";
         }
     }
 

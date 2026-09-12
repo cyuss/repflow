@@ -53,7 +53,7 @@ class ExerciseActionsDelegate extends WatchUi.Menu2InputDelegate {
         var id = item.getId() as String;
 
         if (id.equals(ExerciseActionsMenu.ACTION_EDIT_SET)) {
-            SetEditor.open(_exercise, false);
+            SetEditor.open(_exercise, Tuning.RETURN_EXERCISE);
             return;
         }
         if (id.equals(ExerciseActionsMenu.ACTION_SKIP_FOR_NOW)) {

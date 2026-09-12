@@ -100,7 +100,7 @@ Useful simulator menus:
 | Exercise | **log the active set** | **change data screen** | overview | exercise actions (edit set first) |
 | Rest | skip rest | rest ± 15 s | overview | **edit next set** |
 | Overview | select exercise | scroll | back to training | — |
-| Set picker | next column / confirm | change value | previous column | — |
+| Set editor | next field / confirm | change value | previous field / leave | — |
 | Summary | save activity | page metrics | save/discard menu | save/discard menu |
 
 The design rule: completing a set is always one press of START, and the
@@ -146,16 +146,17 @@ UP/DOWN page through data screens, as in every native Garmin activity:
 
 ### Editing a set
 
-**MENU** opens a two-column `WatchUi.Picker` — weight × reps — on both the set
-page and the rest screen. On the rest screen it is a *direct* one-press open,
-because deciding "next one at 57.5" is what a rest is for.
+**MENU** opens `SetEditorView` — weight and reps side by side, the focused one
+outlined in the accent colour. UP/DOWN change it, START advances to the reps and
+confirms on the second, BACK steps back. That is `WatchUi.Picker`'s interaction
+model, which is what a Garmin owner expects.
 
-The Picker is the platform's own two-value editor: UP/DOWN change the
-highlighted column, START advances and confirms on the last column, BACK steps
-back. Every Garmin owner already knows it, which beats anything bespoke.
+It is **not** built on Picker, deliberately: a three-column Picker does not fit a
+260x260 screen — the reps column rendered off the right edge — and its own
+theming painted the background white over ours. Both verified in the simulator.
 
-Weights travel through it as **tenths of a kilogram** — a `PickerFactory` deals
-in Numbers, and 2.5 kg steps are not integers (`Tuning.toTenths`).
+From the rest screen it is a *direct* one-press open, because deciding "next one
+at 57.5" is what a rest is for.
 
 ### The field grid, and the round screen
 
@@ -207,6 +208,32 @@ SDK, and the debugger.
   `make package` does this from the CLI with `monkeyc -e`).
 
 `make bootstrap` installs the extension when the `code` command is available.
+
+## Seeing the screen
+
+The layout work in this project was done blind for far too long, and it showed.
+The simulator has no screenshot CLI, so:
+
+```sh
+scripts/shot.sh /tmp/x.png          # grabs the screen, crops the watch
+```
+
+Crop defaults suit a 3840x1600 display; pass a second argument
+(`460x560+2560+120` style) to adjust. Buttons can be driven too, which makes a
+real feedback loop possible:
+
+```sh
+osascript -e 'tell application "System Events" to key code 36'   # START
+osascript -e 'tell application "System Events" to key code 53'   # BACK
+osascript -e 'tell application "System Events" to key code 126'  # UP
+osascript -e 'tell application "System Events" to key code 125'  # DOWN
+cliclick "dd:2583,343" w:1300 "du:2583,343"                      # long UP = MENU
+```
+
+**Look at the screen before believing a layout is right.** Three separate bugs
+in this app were invisible to the compiler and to the unit tests, and obvious in
+one screenshot: the action pill overflowing the glass, captions sitting on the
+rules beneath them, and Unicode glyphs rendering as "?" boxes.
 
 ## Build warnings
 

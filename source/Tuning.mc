@@ -25,7 +25,20 @@ module Tuning {
     const PAGE_WORKOUT = 2;
     const PAGE_COUNT = 3;
 
-    //! Weights travel through WatchUi.Picker as tenths of a kilogram, because a
+    // ------------------------------------------------------------------
+    // Set editor focus
+    // ------------------------------------------------------------------
+
+    const FOCUS_WEIGHT = 0;
+    const FOCUS_REPS = 1;
+
+    //! Where the set editor should go when it closes. RepFlow keeps a flat view
+    //! stack, so a screen names its destination rather than relying on what
+    //! happens to be underneath it.
+    const RETURN_EXERCISE = 0;
+    const RETURN_REST = 1;
+
+    //! Weights travel through the editor as tenths of a kilogram, because a
     //! PickerFactory deals in Numbers and 2.5 kg steps are not integers.
     public function toTenths(kg as Float) as Number {
         return Math.round(kg * 10.0).toNumber();

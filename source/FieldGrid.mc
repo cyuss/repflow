@@ -34,9 +34,7 @@ module FieldGrid {
     //! so the safe width is the chord at whichever edge is furthest from the
     //! vertical centre — not the chord at the band's middle.
     public function bandWidth(dc as Graphics.Dc, top as Number, height as Number) as Number {
-        var atTop = Theme.usableWidth(dc, top);
-        var atBottom = Theme.usableWidth(dc, top + height);
-        return atTop < atBottom ? atTop : atBottom;
+        return Theme.bandWidth(dc, top, height);
     }
 
     //! Draw one value + caption cell inside the given rectangle.
@@ -49,7 +47,7 @@ module FieldGrid {
     //! arithmetic rather than a copy of it.
     public function valueArea(dc as Graphics.Dc, height as Number) as Number {
         var captionHeight = dc.getFontHeight(Graphics.FONT_XTINY);
-        var area = height - captionHeight - height / 16;
+        var area = height - captionHeight - height / 16 - height / 20;
         if (area < captionHeight) {
             return height;   // no room for a caption; the value takes the cell
         }
@@ -80,8 +78,11 @@ module FieldGrid {
             Graphics.TEXT_JUSTIFY_CENTER);
 
         if (area != height) {
+            // Keep the caption clear of the band's bottom edge; a caption
+            // sitting on the separating rule reads as a collision.
+            var bottomInset = height / 20;
             dc.setColor(Theme.COLOR_DIM, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, y + height - captionHeight, captionFont, caption,
+            dc.drawText(cx, y + height - captionHeight - bottomInset, captionFont, caption,
                 Graphics.TEXT_JUSTIFY_CENTER);
         }
     }

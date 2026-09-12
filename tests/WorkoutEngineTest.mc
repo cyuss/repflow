@@ -796,37 +796,3 @@ function testWeightTenthsRoundTrip(logger as Test.Logger) as Boolean {
     }
     return true;
 }
-
-//! Drawing the set list must survive every shape it can take: no sets done, a
-//! few done, all done, extra sets beyond the target, and a single-set exercise.
-(:test)
-function testSetListDraws(logger as Test.Logger) as Boolean {
-    var dc = TestSupport.screenDc();
-    if (dc == null) {
-        return true;
-    }
-    var size = TestSupport.screenSize();
-    var top = (size * 26) / 100;
-    var bottom = (size * 78) / 100;
-
-    var engine = TestSupport.newEngine();
-    engine.selectExercise("A");
-    var a = TestSupport.exerciseOf(engine, "A");
-
-    SetListRenderer.draw(dc, top, bottom, a, 10, 50.0);        // nothing done
-    engine.completeCurrentSet(10, 50.0, TestSupport.T0);
-    SetListRenderer.draw(dc, top, bottom, a, 10, 55.0);        // part done
-    engine.completeCurrentSet(9, 55.0, TestSupport.T0 + 60);
-    SetListRenderer.draw(dc, top, bottom, a, 9, 55.0);         // all done
-    engine.completeCurrentSet(8, 57.5, TestSupport.T0 + 120);
-    SetListRenderer.draw(dc, top, bottom, a, 8, 57.5);         // beyond target
-
-    // An exercise with many sets has to window rather than overflow.
-    var many = new Exercise("many", "Many Sets", 10, 12, 40.0, 60);
-    SetListRenderer.draw(dc, top, bottom, many, 12, 40.0);
-
-    // And one with a single set.
-    var one = new Exercise("one", "Single", 1, 5, 100.0, 180);
-    SetListRenderer.draw(dc, top, bottom, one, 5, 100.0);
-    return true;
-}

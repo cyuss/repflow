@@ -89,7 +89,7 @@ class RestView extends WatchUi.View {
         }
 
         FieldGrid.drawRule(dc, fieldBottom);
-        var y = fieldBottom + h / 80;
+        var y = fieldBottom + h / 44;
         y = Theme.drawFitted(dc, y, next.name, Theme.fontsBody(), Theme.COLOR_TEXT);
 
         var detail = next.plannedReps().toString() + " x " +
@@ -166,7 +166,7 @@ class RestDelegate extends WatchUi.BehaviorDelegate {
         }
         var exercise = engine.currentExercise();
         if (exercise != null) {
-            SetEditor.open(exercise, true);
+            SetEditor.open(exercise, Tuning.RETURN_REST);
         }
         return true;
     }
