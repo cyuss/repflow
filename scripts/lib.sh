@@ -181,3 +181,28 @@ report_ciq_crash() {
   info "Full log: $log"
   return 1
 }
+
+# ---------------------------------------------------------------------------
+# Simulator app data
+# ---------------------------------------------------------------------------
+
+# Wipe RepFlow's persisted storage in the simulator, so the next launch starts
+# from the workout picker instead of resuming whatever session was left behind.
+#
+# Matched by a RepFlow-prefixed glob rather than the exact PRG name: the
+# simulator does NOT name app storage after the binary you pushed (running
+# RepFlow-fenix6pro.prg writes REPFLOW-TEST-FENIX6PRO.DAT), so an exact match
+# silently does nothing. The glob still never touches another app's data.
+clear_sim_app_data() {
+  local apps="${TMPDIR:-/tmp}/com.garmin.connectiq/GARMIN/APPS"
+  [ -d "$apps" ] || return 0
+
+  local f
+  for f in "$apps"/DATA/[Rr][Ee][Pp][Ff][Ll][Oo][Ww]*; do
+    [ -e "$f" ] && rm -rf "$f"
+  done
+  for f in "$apps"/DATA/MEDIA/OBJSTORE/[Rr][Ee][Pp][Ff][Ll][Oo][Ww]*; do
+    [ -e "$f" ] && rm -rf "$f"
+  done
+  return 0
+}

@@ -14,6 +14,9 @@ Every command works through `make` or `just`.
 | Build every device | `make build-all` | `just build-all` |
 | Run tests | `make test` | `just test` |
 | Run in simulator | `make sim` | `just sim` |
+| Run from a clean session | `make sim-fresh` | `just sim-fresh` |
+| Run and stream app output | `make sim-attach` | `just sim-attach` |
+| Screenshot the simulator | `make shot` | `just shot` |
 | Sideload to a watch | `make sideload` | `just sideload` |
 | Full release build | `make package` | `just package` |
 | Clean | `make clean` | `just clean` |
@@ -77,11 +80,20 @@ tests are for. See `docs/TESTING.md`.
 ## Working on the UI
 
 ```sh
-make sim DEVICE=fenix6pro
+make sim DEVICE=fenix6pro         # build, launch, return to the prompt
+make sim-fresh                    # ...starting from the workout picker
+make shot                         # look at what you just built
 ```
 
-The simulator keeps running between invocations; `make sim` rebuilds and pushes
-a new binary to the already-open window.
+`make sim` detaches, so you get your shell back and the simulator keeps running;
+a second `make sim` rebuilds and pushes into the same window. Use
+`make sim-attach` when you want the app's `println` output streamed.
+
+**`make sim-fresh` restarts the simulator**, because it has to: app storage is
+cached in the simulator's memory and written back when the app starts, so
+deleting the files alone does nothing. Without it the app resumes whatever
+session was left over, which is confusing when you are trying to look at the
+first screen.
 
 Useful simulator menus:
 
@@ -215,12 +227,12 @@ The layout work in this project was done blind for far too long, and it showed.
 The simulator has no screenshot CLI, so:
 
 ```sh
-scripts/shot.sh /tmp/x.png          # grabs the screen, crops the watch
+make shot                           # -> build/sim-shot.png
 ```
 
-Crop defaults suit a 3840x1600 display; pass a second argument
-(`460x560+2560+120` style) to adjust. Buttons can be driven too, which makes a
-real feedback loop possible:
+It finds the simulator window, brings it to the front and crops the watch out of
+a screen grab, so it keeps working when the window moves. Buttons can be driven
+too, which makes a real feedback loop possible:
 
 ```sh
 osascript -e 'tell application "System Events" to key code 36'   # START

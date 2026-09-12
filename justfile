@@ -51,9 +51,21 @@ build-all:
 test target=device:
     TYPECHECK={{typecheck}} scripts/test.sh {{target}}
 
-# Build and run RepFlow in the Connect IQ Simulator
+# Build and launch RepFlow in the simulator (returns to the prompt)
 sim target=device:
+    REPFLOW_DETACH=1 scripts/run-simulator.sh {{target}}
+
+# Same, but clear the app's stored session first
+sim-fresh target=device:
+    REPFLOW_DETACH=1 REPFLOW_RESET=1 scripts/run-simulator.sh {{target}}
+
+# Launch and stay attached, streaming the app's println output
+sim-attach target=device:
     scripts/run-simulator.sh {{target}}
+
+# Screenshot the simulator's watch face to build/sim-shot.png
+shot:
+    scripts/shot.sh
 
 # Build and copy a release PRG to a USB-connected watch
 sideload target=device:

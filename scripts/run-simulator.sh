@@ -21,6 +21,21 @@ info "Building for $DEVICE..."
 "$REPO_ROOT/scripts/build.sh" "$DEVICE"
 PRG="$BUILD_DIR/RepFlow-$DEVICE.prg"
 
+# Optionally start from a clean slate. Without this the app resumes whatever
+# session was stored, which is rarely what you want when you are looking at a
+# screen.
+#
+# The simulator caches app storage in memory and writes it back when the app
+# starts, so deleting the files is not enough on its own — it has to be
+# restarted as well.
+if [ -n "${REPFLOW_RESET:-}" ]; then
+  info "Resetting the app's stored session..."
+  pkill -f "ConnectIQ.app/Contents/MacOS" >/dev/null 2>&1 || true
+  pkill -x simulator >/dev/null 2>&1 || true
+  sleep 3
+  clear_sim_app_data
+fi
+
 # 2. Launch the simulator if it is not already up
 if simulator_running; then
   ok "Connect IQ Simulator already running."

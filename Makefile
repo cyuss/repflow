@@ -11,7 +11,8 @@ export DEVICE
 export TYPECHECK
 
 .PHONY: help doctor bootstrap key devices devices-all devices-missing \
-        build build-all test sim clean package release-check
+        build build-all test sim sim-fresh sim-attach shot sideload \
+        clean package release-check
 
 help: ## Show this help
 	@echo "RepFlow — your workout, your order."
@@ -52,8 +53,17 @@ build-all: ## Build every device declared in manifest.xml and installed locally
 test: ## Run the unit tests in the simulator
 	@scripts/test.sh $(DEVICE)
 
-sim: ## Build and run RepFlow in the Connect IQ Simulator
+sim: ## Build and launch RepFlow in the simulator (returns to the prompt)
+	@REPFLOW_DETACH=1 scripts/run-simulator.sh $(DEVICE)
+
+sim-fresh: ## Same, but clear the app's stored session first
+	@REPFLOW_DETACH=1 REPFLOW_RESET=1 scripts/run-simulator.sh $(DEVICE)
+
+sim-attach: ## Launch and stay attached, streaming the app's println output
 	@scripts/run-simulator.sh $(DEVICE)
+
+shot: ## Screenshot the simulator's watch face to build/sim-shot.png
+	@scripts/shot.sh
 
 sideload: ## Build and copy a release PRG to a USB-connected watch
 	@scripts/sideload.sh $(DEVICE)
