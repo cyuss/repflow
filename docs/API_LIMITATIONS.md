@@ -74,6 +74,41 @@ methods on `ActivityRecording.Session`, and the release notes. The only
 `repetitionNumber` in the whole API belongs to workout *interval* steps and has
 nothing to do with strength.
 
+### Independently confirmed, and what Rack actually does
+
+This was checked against the SDK, and then against people outside this project,
+because a competitor's store listing appeared to claim otherwise.
+
+An analysis of Garmin's strength-app ecosystem
+([the5krunner, March 2026](https://the5krunner.com/2026/03/24/garmin-connect-plus-strength-apps/))
+states it in the same terms this document reached independently:
+
+> *"ConnectIQ — the SDK available to third-party developers — has no mechanism
+> to write Set messages into a FIT file at all."*
+>
+> *"The critical function, `addSet()`, does not exist."*
+>
+> *"A third-party app cannot produce a FIT file that Garmin Connect would
+> recognise as a proper strength session."*
+
+**And Rack's own developer, quoted in the same piece, describes their
+workaround:**
+
+> *"We bypassed the API entirely. The data never touches Garmin's cloud, so we
+> never needed their permission."*
+
+That is the whole answer. Rack moves the set data from the watch to **their own
+iOS app** over Bluetooth, using the Connect IQ phone channel. The muscle map and
+the set table a Rack user sees are **in the Rack app**, not in Garmin Connect.
+Their Connect IQ listing's "native Garmin activity with per-exercise breakdown"
+describes an ordinary recorded activity plus their own developer fields — which
+is exactly what RepFlow writes.
+
+**RepFlow's equivalent of "the Rack app" is Hevy**, which the athlete already
+uses, already has the per-muscle analytics, and already holds the full set
+table. The architecture is the same; the difference is that RepFlow does not
+require a second app to be installed to see the detail.
+
 ### `:nativeNum` — available, deliberately unused
 
 `Session.createField()` accepts a `:nativeNum` option, which maps a developer

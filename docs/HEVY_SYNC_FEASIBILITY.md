@@ -353,6 +353,24 @@ What stays verified: a Connect IQ app cannot **read** or **set** those numbers.
 Whether the watch derives them from what the app recorded is firmware behaviour,
 and it needs one real session on a physical watch to settle.
 
+### Settled: where Rack's muscle map actually lives
+
+Rack's developer, quoted in an analysis of Garmin's strength-app ecosystem
+([the5krunner, March 2026](https://the5krunner.com/2026/03/24/garmin-connect-plus-strength-apps/)):
+
+> *"We bypassed the API entirely. The data never touches Garmin's cloud, so we
+> never needed their permission."*
+
+The same piece states that ConnectIQ *"has no mechanism to write Set messages
+into a FIT file at all"* and that *"the critical function, `addSet()`, does not
+exist"* — reached independently here by listing the three message types
+`FitContributor` can target.
+
+So the muscle diagram and the set table a Rack user sees are **in the Rack iOS
+app**. Garmin Connect gets the recorded activity. That is the same split RepFlow
+has, with Hevy in the place of Rack's own app — and Hevy is one the athlete
+already uses.
+
 Rack's "native Garmin activity with per-exercise breakdown" is the other half of
 that listing, and it should be read carefully. The activity really is native —
 any Connect IQ recording is. The per-exercise breakdown is what developer FIT
