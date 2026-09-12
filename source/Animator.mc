@@ -7,9 +7,9 @@ import Toybox.System;
 //!
 //! **What this deliberately is not.** There is no motion during a set. A screen
 //! that animates while the athlete is under a bar is a screen that stutters at
-//! the moment it matters, and on a 128 KB watch it is also memory the workout
-//! needs. So this runs at exactly two moments — arriving at an exercise, and
-//! opening the recap — and is silent on everything below `Device.TIER_RICH`.
+//! the moment it matters. So this runs at exactly two moments — arriving at an
+//! exercise, and opening the recap — and is silent on everything below
+//! `Device.TIER_RICH`.
 //!
 //! A view asks for `value()` and multiplies whatever it is drawing by it: a
 //! ring sweeps out, bars grow from the left. On a lean device `value()` is

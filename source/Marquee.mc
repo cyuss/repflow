@@ -32,7 +32,7 @@ import Toybox.System;
 //! to move. A workout of short names never starts it at all.
 module Marquee {
 
-    //! 10 fps. Enough for legible motion, cheap enough for a 128 KB watch.
+    //! 10 fps. Enough for legible motion, cheap enough for the slowest target.
     const FRAME_MS = 100;
     //! Rest at each end, in milliseconds.
     const PAUSE_MS = 1400;

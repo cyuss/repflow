@@ -1,0 +1,17 @@
+<resources xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+    <!-- Labels only. The fitField block itself is declared once, in
+         resources/fit_contributions.xml; only the strings are translated. -->
+    <strings>
+        <string id="fit_sets_label">Series</string>
+        <string id="fit_sets_units">series</string>
+        <string id="fit_reps_label">Repetitions</string>
+        <string id="fit_reps_units">reps</string>
+        <string id="fit_volume_label">Volume</string>
+        <string id="fit_volume_units">kg</string>
+        <string id="fit_exercise_label">Exercice</string>
+        <string id="fit_set_label">Serie</string>
+        <string id="fit_lap_reps_label">Repetitions</string>
+        <string id="fit_lap_weight_label">Charge</string>
+        <string id="fit_no_units">-</string>
+    </strings>
+</resources>

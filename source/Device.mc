@@ -3,9 +3,20 @@ import Toybox.System;
 
 //! What this particular watch can afford.
 //!
-//! RepFlow runs on 33 products, from a 260x260 Fenix 6 Pro with 128 KB of app
-//! memory to a 454x454 Fenix 9 Pro with several times that. Drawing the same
-//! thing on both wastes the newer watch and strangles the older one.
+//! RepFlow runs on 33 products, from a 260x260 Fenix 6 Pro to a 454x454 Fenix
+//! 9 Pro. Drawing the same thing on both wastes the newer watch and strangles
+//! the older one.
+//!
+//! **Memory is not the axis you would expect.** A watch app gets 1,310,720
+//! bytes on the Fenix 6 Pro and 786,432 on the Fenix 9 Pro 51mm — the older
+//! watch has more. The 128 KB figure that gets quoted for a Fenix 6 is the
+//! *data field* limit, which RepFlow is not. So neither of these devices is
+//! memory-constrained for a watch app, and the tier below sorts by memory only
+//! to catch the genuinely small products in the matrix.
+//!
+//! The one place memory really bites is a **background service**: 32,768 bytes
+//! on the Fenix 6 Pro, 65,536 on the newer ones. Anything that syncs has to
+//! live inside that.
 //!
 //! Two questions get asked, and they are different:
 //!

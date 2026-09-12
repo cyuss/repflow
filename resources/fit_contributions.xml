@@ -1,0 +1,85 @@
+<resources xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+
+    <!--
+      What Garmin Connect is told about RepFlow's developer FIT fields.
+
+      Without this block the fields are written into the FIT file and Garmin
+      Connect renders none of them. The SDK is explicit: "Field id _must_ match
+      the fitField id in resources or your data will not display!"
+
+      RepFlow shipped without it. Every developer field written so far — the
+      session totals and the per-lap set detail — was invisible in Garmin
+      Connect and in the phone app. The FIT files were correct; nothing was
+      asked to draw them.
+
+      The ids here must stay in step with GarminRecorder's constants, and must
+      never change once activities exist: Garmin Connect keys a field's history
+      by this number.
+
+          0   repflow_sets      session
+          1   repflow_reps      session
+          2   repflow_volume    session
+         10   exercise          lap   (string)
+         11   set               lap
+         12   reps              lap
+         13   weight            lap
+
+      displayInChart is false throughout. A chart is record-level and numeric,
+      and RepFlow writes nothing per second worth plotting that Garmin does not
+      already plot itself.
+    -->
+
+    <strings>
+        <string id="fit_sets_label">Sets</string>
+        <string id="fit_sets_units">sets</string>
+        <string id="fit_reps_label">Reps</string>
+        <string id="fit_reps_units">reps</string>
+        <string id="fit_volume_label">Volume</string>
+        <string id="fit_volume_units">kg</string>
+        <string id="fit_exercise_label">Exercise</string>
+        <string id="fit_set_label">Set</string>
+        <string id="fit_lap_reps_label">Reps</string>
+        <string id="fit_lap_weight_label">Weight</string>
+        <string id="fit_no_units">-</string>
+    </strings>
+
+    <fitContributions>
+        <!-- Session totals, shown in the Activity Summary. -->
+        <fitField id="0" sortOrder="0" displayInChart="false"
+                  displayInActivitySummary="true" displayInActivityLaps="false"
+                  precision="0"
+                  dataLabel="@Strings.fit_sets_label"
+                  unitLabel="@Strings.fit_sets_units" />
+        <fitField id="1" sortOrder="1" displayInChart="false"
+                  displayInActivitySummary="true" displayInActivityLaps="false"
+                  precision="0"
+                  dataLabel="@Strings.fit_reps_label"
+                  unitLabel="@Strings.fit_reps_units" />
+        <fitField id="2" sortOrder="2" displayInChart="false"
+                  displayInActivitySummary="true" displayInActivityLaps="false"
+                  precision="1"
+                  dataLabel="@Strings.fit_volume_label"
+                  unitLabel="@Strings.fit_volume_units" />
+
+        <!-- One lap per set, so these turn the lap table into a set list. -->
+        <fitField id="10" sortOrder="3" displayInChart="false"
+                  displayInActivitySummary="false" displayInActivityLaps="true"
+                  dataLabel="@Strings.fit_exercise_label"
+                  unitLabel="@Strings.fit_no_units" />
+        <fitField id="11" sortOrder="4" displayInChart="false"
+                  displayInActivitySummary="false" displayInActivityLaps="true"
+                  precision="0"
+                  dataLabel="@Strings.fit_set_label"
+                  unitLabel="@Strings.fit_no_units" />
+        <fitField id="12" sortOrder="5" displayInChart="false"
+                  displayInActivitySummary="false" displayInActivityLaps="true"
+                  precision="0"
+                  dataLabel="@Strings.fit_lap_reps_label"
+                  unitLabel="@Strings.fit_reps_units" />
+        <fitField id="13" sortOrder="6" displayInChart="false"
+                  displayInActivitySummary="false" displayInActivityLaps="true"
+                  precision="1"
+                  dataLabel="@Strings.fit_lap_weight_label"
+                  unitLabel="@Strings.fit_volume_units" />
+    </fitContributions>
+</resources>

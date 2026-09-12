@@ -3,7 +3,8 @@ import Toybox.Lang;
 //! The movements RepFlow knows about, grouped by muscle.
 //!
 //! Eighty-two entries, enough that an unplanned exercise is almost always in
-//! here, and small enough to keep in the code section of a 128 KB watch app.
+//! here, and cheap enough to keep in the code section of the tightest device
+//! RepFlow supports.
 //!
 //! **Memory shape matters more than the count.** Each group is built only when
 //! the athlete opens it, as an array of flat arrays of primitives:

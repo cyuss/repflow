@@ -165,4 +165,8 @@ No modern-device behaviour is compromised for legacy compatibility.
 Release builds (`monkeyc -r`) are around **35 KB**; debug builds are ~150 KB
 because of the embedded symbol information. Only the release size matters for
 the device memory budget — this is what makes `fenix6` / `fenix6s`, with a
-128 KB watch-app limit, comfortably viable.
+watch-app limits are far larger than the figure usually quoted for these
+devices: 1,310,720 bytes on the Fenix 6 Pro, 786,432 on the Fenix 9 Pro 51mm.
+The 128 KB number is the **data field** limit and does not apply to RepFlow.
+The real constraint is the **background service**, at 32,768 bytes on the
+Fenix 6 Pro — see docs/HEVY_SYNC_FEASIBILITY.md.

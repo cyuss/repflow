@@ -34,6 +34,11 @@ native Gym Activity app.
   of a set boundary, giving a per-set lap breakdown.
 - Writes three developer FIT fields on the session message: `repflow_sets`,
   `repflow_reps`, `repflow_volume`.
+- Declares those fields in `resources/fit_contributions.xml`. **Without that
+  block Garmin Connect displays none of them** — the SDK is explicit that a
+  field id must match a `fitField` id in resources or the data will not
+  display. RepFlow shipped without it once; the FIT files were correct and
+  nothing was ever asked to draw them.
 - Writes four developer FIT fields on **every lap**: `exercise` (string),
   `set`, `reps` and `weight`. This is what turns Garmin Connect's lap table
   from "lap 7, 0:42" into "Bench Press, set 3, 8 reps at 70 kg". Developer
