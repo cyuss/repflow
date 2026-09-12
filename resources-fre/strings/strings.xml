@@ -4,6 +4,7 @@
     <string id="ChooseWorkout">Choisir seance</string>
     <string id="SetLabel">Serie</string>
     <string id="CompleteSet">VALIDER SERIE</string>
+    <string id="LogSet">VALIDER SERIE</string>
     <string id="Reps">reps</string>
     <string id="FieldWeight">POIDS</string>
     <string id="FieldReps">REPS</string>
@@ -18,6 +19,9 @@
     <string id="PageBody">CORPS</string>
     <string id="PageWorkout">SEANCE</string>
     <string id="Bpm">bpm</string>
+    <string id="NextSet">SERIE SUIVANTE</string>
+    <string id="EditSet">Modifier la serie</string>
+    <string id="HintEditSet">MENU . MODIFIER</string>
     <string id="Rest">REPOS</string>
     <string id="NextLabel">Suite</string>
     <string id="SkipRest">Passer repos</string>

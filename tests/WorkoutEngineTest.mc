@@ -752,3 +752,81 @@ function testGridPrimitivesDraw(logger as Test.Logger) as Boolean {
     Theme.drawMetricRow(dc, size / 2, "VOLUME", "3.2 t", Theme.COLOR_ACCENT);
     return true;
 }
+
+//! The set list has no cursor: the active set is always the next incomplete
+//! one. That is what keeps logging a set to a single press, so it is worth
+//! pinning down.
+(:test)
+function testActiveSetIsAlwaysTheNextIncompleteOne(logger as Test.Logger) as Boolean {
+    var engine = TestSupport.newEngine();
+    engine.selectExercise("A");
+    var a = TestSupport.exerciseOf(engine, "A");
+
+    Test.assertEqual(a.completedSetCount(), 0);
+    Test.assertEqual(a.currentSetNumber(), 1);
+
+    engine.completeCurrentSet(10, 50.0, TestSupport.T0);
+    Test.assertEqual(a.completedSetCount(), 1);
+    Test.assertEqual(a.currentSetNumber(), 2);
+
+    engine.completeCurrentSet(10, 55.0, TestSupport.T0 + 60);
+    Test.assertEqual(a.completedSetCount(), 2);
+    Test.assert(a.hasReachedTargetSets());
+
+    // Undo reopens the row that was just closed, and nothing else moves.
+    engine.undoLastSet();
+    Test.assertEqual(a.completedSetCount(), 1);
+    Test.assertEqual(a.currentSetNumber(), 2);
+    // The first row still holds what was actually lifted.
+    Test.assertEqual(a.sets[0].actualReps as Number, 10);
+    Test.assertEqual(a.sets[0].actualWeight as Float, 50.0);
+    return true;
+}
+
+//! Weights go through WatchUi.Picker as tenths of a kilogram, because a
+//! PickerFactory deals in Numbers and 2.5 kg steps are not integers. The
+//! conversion has to survive the values a gym actually uses.
+(:test)
+function testWeightTenthsRoundTrip(logger as Test.Logger) as Boolean {
+    var weights = [0.0, 2.5, 20.0, 57.5, 100.0, 137.5, 300.0] as Array<Float>;
+    for (var i = 0; i < weights.size(); i++) {
+        var tenths = Tuning.toTenths(weights[i]);
+        Test.assertEqual(tenths % 25, 0);          // lands on a 2.5 kg step
+        Test.assertEqual(tenths / 10.0, weights[i]);
+    }
+    return true;
+}
+
+//! Drawing the set list must survive every shape it can take: no sets done, a
+//! few done, all done, extra sets beyond the target, and a single-set exercise.
+(:test)
+function testSetListDraws(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+    var size = TestSupport.screenSize();
+    var top = (size * 26) / 100;
+    var bottom = (size * 78) / 100;
+
+    var engine = TestSupport.newEngine();
+    engine.selectExercise("A");
+    var a = TestSupport.exerciseOf(engine, "A");
+
+    SetListRenderer.draw(dc, top, bottom, a, 10, 50.0);        // nothing done
+    engine.completeCurrentSet(10, 50.0, TestSupport.T0);
+    SetListRenderer.draw(dc, top, bottom, a, 10, 55.0);        // part done
+    engine.completeCurrentSet(9, 55.0, TestSupport.T0 + 60);
+    SetListRenderer.draw(dc, top, bottom, a, 9, 55.0);         // all done
+    engine.completeCurrentSet(8, 57.5, TestSupport.T0 + 120);
+    SetListRenderer.draw(dc, top, bottom, a, 8, 57.5);         // beyond target
+
+    // An exercise with many sets has to window rather than overflow.
+    var many = new Exercise("many", "Many Sets", 10, 12, 40.0, 60);
+    SetListRenderer.draw(dc, top, bottom, many, 12, 40.0);
+
+    // And one with a single set.
+    var one = new Exercise("one", "Single", 1, 5, 100.0, 180);
+    SetListRenderer.draw(dc, top, bottom, one, 5, 100.0);
+    return true;
+}

@@ -69,7 +69,7 @@ class WorkoutSummaryView extends WatchUi.View {
         FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
             _summary.completedSets.toString(),
             WatchUi.loadResource(Rez.Strings.FieldSets) as String,
-            Theme.COLOR_TEXT,
+            Theme.COLOR_DONE,
             _summary.totalReps.toString(),
             WatchUi.loadResource(Rez.Strings.FieldReps) as String,
             Theme.COLOR_TEXT);
@@ -90,7 +90,7 @@ class WorkoutSummaryView extends WatchUi.View {
         FieldGrid.drawSingle(dc, top, edge,
             LiveMetrics.format(LiveMetrics.calories()),
             WatchUi.loadResource(Rez.Strings.FieldKcal) as String,
-            Theme.COLOR_TEXT);
+            Theme.COLOR_WARM);
 
         FieldGrid.drawRule(dc, middleTop);
         FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
@@ -105,7 +105,7 @@ class WorkoutSummaryView extends WatchUi.View {
         FieldGrid.drawSingle(dc, bottomTop, edge,
             _summary.exercisesWorked.toString() + "/" + _summary.exerciseCount.toString(),
             WatchUi.loadResource(Rez.Strings.FieldExercises) as String,
-            Theme.COLOR_TEXT);
+            Theme.COLOR_DONE);
     }
 }
 

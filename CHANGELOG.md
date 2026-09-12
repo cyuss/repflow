@@ -43,9 +43,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Workout picker, exercise screen, rest screen, workout overview, value editor,
   exercise actions menu and workout summary
+- **Set-list workflow modelled on Hevy's Apple Watch app**: the main screen is
+  the current exercise's list of sets — done, active, upcoming — rather than a
+  single-set panel. No cursor: the active set is always the next incomplete one,
+  so START logs it and the list advances by itself
+- Finishing an exercise moves straight on to the next one after the rest
+- **Two-column set editor** built on `WatchUi.Picker` (weight × reps), the
+  platform's own two-value editor; one press from the rest screen
 - **Multiple data screens during an exercise, paged with UP/DOWN like a native
-  Garmin activity**: SET (load, reps, action), BODY (live heart rate, timer,
+  Garmin activity**: SET (the set list), BODY (live heart rate, timer,
   calories) and WORKOUT (volume, exercises, sets, reps)
+- Progress ring around the rim — the one area of a round display a field grid
+  cannot use — showing how far through the exercise, or the rest, you are
+- Colour used to carry meaning: heart rate red, calories amber, completed work
+  green, the editable load in the accent
 - Live heart rate also shown on the rest screen, where recovery is worth watching
 - Paged workout summary: headline, work done, and Garmin's own body metrics
 - Button-first interaction: one press of START completes a set, one press of

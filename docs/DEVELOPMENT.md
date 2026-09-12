@@ -97,32 +97,65 @@ Useful simulator menus:
 | Screen | START | UP / DOWN | BACK | MENU (long press) |
 |---|---|---|---|---|
 | Workout list | start workout | change workout | exit | — |
-| Exercise | **complete set** | **change data screen** | overview | exercise actions |
-| Rest | skip rest | rest ± 15 s | overview | exercise actions |
+| Exercise | **log the active set** | **change data screen** | overview | exercise actions (edit set first) |
+| Rest | skip rest | rest ± 15 s | overview | **edit next set** |
 | Overview | select exercise | scroll | back to training | — |
-| Value editor | confirm | change value | confirm | — |
+| Set picker | next column / confirm | change value | previous column | — |
 | Summary | save activity | page metrics | save/discard menu | save/discard menu |
 
 The design rule: completing a set is always one press of START, and the
 overview is always one press of BACK.
 
+### The workflow
+
+Modelled on Hevy's Apple Watch app, adapted to buttons and a round screen.
+
+The main screen is the **set list** for the current exercise — not a single
+"current set" panel. It answers the two questions an athlete has mid-exercise
+(what did I just lift, how many sets are left) without pressing anything.
+
+```
+     Lat Pulldown
+ ---------------------
+  + 1        10 x 55        done      green
+  + 2        10 x 55
+ [ 3         10 x 57.5 ]    active    accent, outlined
+    4        10 x 57.5      upcoming  dim
+ ---------------------
+        LOG SET
+```
+
+There is **no cursor**. The active set is always the next incomplete one, so
+START logs it and the list advances by itself — the one-press promise survives.
+Rows are windowed around the active set when an exercise has more than fit.
+
+The rest of the loop follows Hevy too: logging a set starts the rest timer;
+when the last set of an exercise is logged, leaving the rest screen moves
+straight on to the next exercise rather than dropping you back on a finished
+list.
+
 ### Data screens
 
-The exercise screen is **paged with UP/DOWN**, the way every native Garmin
-activity behaves — that is the muscle memory RepFlow should not fight:
+UP/DOWN page through data screens, as in every native Garmin activity:
 
 | Page | Shows |
 |---|---|
-| **SET** | Exercise, set X/Y, load in kg, reps, `COMPLETE SET` |
+| **SET** | The set list, and `LOG SET` |
 | **BODY** | Heart rate, average HR, calories, elapsed timer |
 | **WORKOUT** | Training volume, sets, reps, exercises done |
 
-Because UP/DOWN pages rather than adjusts, **weight and reps are edited from the
-MENU** — "Edit weight" is deliberately the first item, so it sits under the
-cursor the instant the menu opens. That is the right trade: the load changes
-roughly once per exercise, while a set is completed several times per exercise
-and still takes a single press. On touch devices, tapping the left or right
-field on the SET page opens the same editor directly.
+### Editing a set
+
+**MENU** opens a two-column `WatchUi.Picker` — weight × reps — on both the set
+page and the rest screen. On the rest screen it is a *direct* one-press open,
+because deciding "next one at 57.5" is what a rest is for.
+
+The Picker is the platform's own two-value editor: UP/DOWN change the
+highlighted column, START advances and confirms on the last column, BACK steps
+back. Every Garmin owner already knows it, which beats anything bespoke.
+
+Weights travel through it as **tenths of a kilogram** — a `PickerFactory` deals
+in Numbers, and 2.5 kg steps are not integers (`Tuning.toTenths`).
 
 ### The field grid, and the round screen
 

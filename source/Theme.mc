@@ -27,6 +27,10 @@ module Theme {
     const COLOR_SKIPPED = Graphics.COLOR_DK_GRAY;
     //! Also a palette colour, for the same reason.
     const COLOR_HR = 0xFF5555;
+    //! Energy / calories.
+    const COLOR_WARM = 0xFFAA00;
+    //! Completed work.
+    const COLOR_DONE_DIM = 0x00AA55;
 
     //! Colour used for an exercise state in lists and headers.
     public function stateColor(state as ExerciseState) as Number {
@@ -286,7 +290,9 @@ module Theme {
         var fh = dc.getFontHeight(font);
         var padding = (h / 40) + 4;
         var barHeight = fh + padding * 2;
-        var top = h - barHeight - (h / 16);
+        // Sit well clear of the bottom of the glass: at h/16 the pill looked
+        // clipped by the bezel and the label was hard to read.
+        var top = h - barHeight - (h * 13) / 100;
         var barWidth = usableWidth(dc, top + barHeight / 2);
 
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
@@ -294,6 +300,42 @@ module Theme {
         dc.setColor(COLOR_BG, Graphics.COLOR_TRANSPARENT);
         dc.drawText(w / 2, top + padding, font, text, Graphics.TEXT_JUSTIFY_CENTER);
         return top;
+    }
+
+    //! A ring around the rim showing progress from 0.0 to 1.0.
+    //!
+    //! The rim is the one area of a round display a field grid cannot use, so it
+    //! is free real estate for the single most glanceable thing on the screen —
+    //! how far through the exercise, or through the rest, the athlete is.
+    public function drawProgressRing(
+        dc as Graphics.Dc,
+        progress as Float,
+        color as Number
+    ) as Void {
+        var w = dc.getWidth();
+        var h = dc.getHeight();
+        var radius = (w < h ? w : h) / 2 - 5;
+        var cx = w / 2;
+        var cy = h / 2;
+
+        dc.setPenWidth(7);
+        dc.setColor(COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+        dc.drawCircle(cx, cy, radius);
+
+        if (progress <= 0.0) {
+            dc.setPenWidth(1);
+            return;
+        }
+        var capped = progress > 1.0 ? 1.0 : progress;
+        var sweep = (360.0 * capped).toNumber();
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+        if (sweep >= 360) {
+            dc.drawCircle(cx, cy, radius);
+        } else {
+            // Clockwise from 12 o'clock.
+            dc.drawArc(cx, cy, radius, Graphics.ARC_CLOCKWISE, 90, (90 - sweep + 360) % 360);
+        }
+        dc.setPenWidth(1);
     }
 
     //! Garmin-style page indicator down the right edge.

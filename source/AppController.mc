@@ -257,10 +257,25 @@ class AppController {
         WatchUi.requestUpdate();
     }
 
-    //! Leave the rest screen and return to the active exercise.
+    //! Leave the rest screen and get back to work.
+    //!
+    //! If the exercise just finished, move on to whatever is next rather than
+    //! returning to a completed list — that is the flow Hevy has, and it saves
+    //! the athlete a trip through the overview after every exercise.
     public function endRest() as Void {
         _rest.skip();
         stopTicker();
+
+        var engine = _engine;
+        if (engine != null) {
+            var current = engine.currentExercise();
+            if (current != null && current.hasReachedTargetSets()) {
+                var next = engine.suggestNextExercise();
+                if (next != null && !next.id.equals(current.id)) {
+                    selectExercise(next.id);
+                }
+            }
+        }
         WatchUi.switchToView(new ExerciseView(), new ExerciseDelegate(), WatchUi.SLIDE_IMMEDIATE);
     }
 

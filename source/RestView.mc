@@ -157,6 +157,8 @@ class RestDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
+    //! MENU edits the set you are about to do. Deciding "next one at 57.5" is
+    //! what a rest is for, so it costs one press, not two.
     public function onMenu() as Boolean {
         var engine = AppController.instance().engine();
         if (engine == null) {
@@ -164,7 +166,7 @@ class RestDelegate extends WatchUi.BehaviorDelegate {
         }
         var exercise = engine.currentExercise();
         if (exercise != null) {
-            ExerciseActionsMenu.show(exercise);
+            SetEditor.open(exercise, true);
         }
         return true;
     }

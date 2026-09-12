@@ -1,4 +1,5 @@
 import Toybox.Lang;
+import Toybox.Math;
 
 //! Interaction constants shared by the controller and the views.
 //!
@@ -23,4 +24,10 @@ module Tuning {
     //! Session totals: volume, exercises, sets, reps.
     const PAGE_WORKOUT = 2;
     const PAGE_COUNT = 3;
+
+    //! Weights travel through WatchUi.Picker as tenths of a kilogram, because a
+    //! PickerFactory deals in Numbers and 2.5 kg steps are not integers.
+    public function toTenths(kg as Float) as Number {
+        return Math.round(kg * 10.0).toNumber();
+    }
 }

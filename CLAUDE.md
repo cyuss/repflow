@@ -66,6 +66,8 @@ Full detail: `docs/ARCHITECTURE.md`.
 | `source/AppController.mc` | Wiring, transitions, persistence triggers, haptics |
 | `source/GarminRecorder.mc` | All `ActivityRecording` |
 | `source/SessionRepository.mc` | All `Application.Storage` |
+| `source/SetListRenderer.mc` | The Hevy-style set list — the main screen |
+| `source/FieldGrid.mc` | Round-screen data field layout |
 | `tests/WorkoutEngineTest.mc` | The product promise, executable |
 | `manifest.xml` | App UUID and supported products — handle with care |
 

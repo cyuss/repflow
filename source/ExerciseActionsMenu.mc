@@ -7,8 +7,7 @@ import Toybox.WatchUi;
 //! no sub-menus, and the list stays short enough to read mid-set.
 module ExerciseActionsMenu {
 
-    const ACTION_EDIT_REPS = "reps";
-    const ACTION_EDIT_WEIGHT = "weight";
+    const ACTION_EDIT_SET = "set";
     const ACTION_SKIP_FOR_NOW = "defer";
     const ACTION_OVERVIEW = "overview";
     const ACTION_MARK_DONE = "done";
@@ -17,12 +16,14 @@ module ExerciseActionsMenu {
 
     public function show(exercise as Exercise) as Void {
         var menu = new WatchUi.Menu2({ :title => exercise.name });
-        // Weight first: it is the value that changes most often, so it sits
-        // under the cursor the moment the menu opens.
+        // Editing the set is the reason this menu is opened most often, so it
+        // sits under the cursor the moment it appears.
         menu.addItem(new WatchUi.MenuItem(
-            WatchUi.loadResource(Rez.Strings.ActionEditWeight) as String, null, ACTION_EDIT_WEIGHT, {}));
-        menu.addItem(new WatchUi.MenuItem(
-            WatchUi.loadResource(Rez.Strings.ActionEditReps) as String, null, ACTION_EDIT_REPS, {}));
+            WatchUi.loadResource(Rez.Strings.EditSet) as String,
+            exercise.plannedReps().toString() + " x " +
+                Theme.formatWeight(exercise.plannedWeight()) + " " +
+                (WatchUi.loadResource(Rez.Strings.Kg) as String),
+            ACTION_EDIT_SET, {}));
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.ActionSkipForNow) as String, null, ACTION_SKIP_FOR_NOW, {}));
         menu.addItem(new WatchUi.MenuItem(
@@ -51,12 +52,8 @@ class ExerciseActionsDelegate extends WatchUi.Menu2InputDelegate {
         var controller = AppController.instance();
         var id = item.getId() as String;
 
-        if (id.equals(ExerciseActionsMenu.ACTION_EDIT_REPS)) {
-            ValueEditor.editReps(_exercise);
-            return;
-        }
-        if (id.equals(ExerciseActionsMenu.ACTION_EDIT_WEIGHT)) {
-            ValueEditor.editWeight(_exercise);
+        if (id.equals(ExerciseActionsMenu.ACTION_EDIT_SET)) {
+            SetEditor.open(_exercise, false);
             return;
         }
         if (id.equals(ExerciseActionsMenu.ACTION_SKIP_FOR_NOW)) {

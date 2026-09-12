@@ -7,6 +7,7 @@
     <!-- Exercise screen -->
     <string id="SetLabel">Set</string>
     <string id="CompleteSet">COMPLETE SET</string>
+    <string id="LogSet">LOG SET</string>
     <string id="Kg">kg</string>
     <string id="Reps">reps</string>
 
@@ -27,6 +28,10 @@
     <string id="PageBody">BODY</string>
     <string id="PageWorkout">WORKOUT</string>
     <string id="Bpm">bpm</string>
+
+    <string id="NextSet">NEXT SET</string>
+    <string id="EditSet">Edit next set</string>
+    <string id="HintEditSet">MENU · EDIT SET</string>
 
     <!-- Rest -->
     <string id="Rest">REST</string>
