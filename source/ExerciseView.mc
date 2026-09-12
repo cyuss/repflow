@@ -74,19 +74,23 @@ class ExerciseView extends WatchUi.View {
 
     //! Page 1 — the set you are about to do.
     //!
-    //! Designed for a two-second glance mid-exercise, so it answers, in order of
-    //! size: what am I lifting, how many reps, which set is this, how far in.
-    //! A list of identical "10 x 60" rows answered none of those at a glance —
-    //! everything was the same size, so nothing stood out.
+    //! Laid out the way a native Garmin activity screen is: heart rate behind a
+    //! heart at the top, the thing you are actually doing in the middle at full
+    //! size, and small labelled readouts along the bottom.
     //!
-    //!        Seated Row          who
-    //!        SET 4 / 4           where
-    //!      -------------
-    //!          60 KG             WHAT — the hero
-    //!          x 10
-    //!      -------------
-    //!         * * * o            progress
-    //!        [ LOG SET ]
+    //!        (heart) 132        live HR
+    //!        Lat Pulldown
+    //!      ---------------
+    //!           55 KG           the hero
+    //!            x 10
+    //!      ---------------
+    //!       TIMER     SET       secondary readouts
+    //!       0:42      1/4
+    //!       [ LOG SET ]
+    //!
+    //! The set counter lives in the bottom band rather than the header, because
+    //! repeating it in both wasted a line — and on a 260x260 screen a line is
+    //! the difference between a big number and a cramped one.
     private function _drawSetPage(
         dc as Graphics.Dc,
         controller as AppController,
@@ -103,27 +107,92 @@ class ExerciseView extends WatchUi.View {
 
         var actionTop = Theme.drawActionBar(
             dc, WatchUi.loadResource(Rez.Strings.LogSet) as String, Theme.COLOR_ACCENT);
+        Theme.drawClock(dc, h - dc.getFontHeight(Graphics.FONT_XTINY) - h / 40);
 
-        // --- who and where ------------------------------------------------
-        var y = Theme.drawFitted(dc, h / 16, exercise.name,
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
+        var top = _drawHeartRate(dc, h / 18);
+        top = Theme.drawFitted(dc, top + h / 90, exercise.name,
+            [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
+            Theme.COLOR_TEXT);
+        top += h / 55;
+        FieldGrid.drawRule(dc, top);
+        top += 1;
 
-        var setLine = (WatchUi.loadResource(Rez.Strings.SetLabel) as String).toUpper() +
-            " " + exercise.currentSetNumber().toString() + " / " + target.toString();
-        y = Theme.drawFitted(dc, y + h / 90, setLine,
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_ACCENT);
+        var bandTop = _drawSecondaryBand(dc, actionTop, controller, exercise);
+        _drawLoad(dc, top, bandTop - h / 60, controller);
+    }
 
-        y += h / 50;
-        FieldGrid.drawRule(dc, y);
-        y += 1;
+    //! The secondary readouts: exercise timer and set counter.
+    //!
+    //! Captioned data fields on a screen with room, a single compact line on one
+    //! without. A 260x260 Fenix 6 Pro simply cannot spend 45px on secondary
+    //! information and still give the load a number worth glancing at — so it
+    //! does not. Returns the y where this band starts.
+    private function _drawSecondaryBand(
+        dc as Graphics.Dc,
+        actionTop as Number,
+        controller as AppController,
+        exercise as Exercise
+    ) as Number {
+        var h = dc.getHeight();
+        var timer = Theme.formatDuration(controller.exerciseSeconds());
+        var sets = exercise.currentSetNumber().toString() + "/" +
+            exercise.targetSets.toString();
 
-        // --- progress dots, anchored just above the action --------------
-        var dotsHeight = h / 18;
-        var dotsTop = actionTop - dotsHeight - h / 50;
-        Theme.drawSetDots(dc, dotsTop, target, done);
+        if (h < 330) {
+            // Compact: one line, no captions.
+            var font = Graphics.FONT_XTINY;
+            var bandTop = actionTop - dc.getFontHeight(font) - h / 40;
+            var width = Theme.bandWidth(dc, bandTop, dc.getFontHeight(font));
+            var left = (dc.getWidth() - width) / 2;
+            FieldGrid.drawRule(dc, bandTop - h / 70);
 
-        // --- the load: everything left between the rule and the dots -----
-        _drawLoad(dc, y, dotsTop - h / 60, controller);
+            dc.setColor(Theme.COLOR_TEXT, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(left + width / 4, bandTop, font, timer, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.setColor(Theme.COLOR_ACCENT, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(left + (width * 3) / 4, bandTop, font,
+                (WatchUi.loadResource(Rez.Strings.SetLabel) as String).toUpper() + " " + sets,
+                Graphics.TEXT_JUSTIFY_CENTER);
+            return bandTop - h / 70;
+        }
+
+        var bandHeight = Theme.miniFieldHeight(dc);
+        var top = actionTop - bandHeight - h / 50;
+        var bandWidth = Theme.bandWidth(dc, top, bandHeight);
+        var bandLeft = (dc.getWidth() - bandWidth) / 2;
+        FieldGrid.drawRule(dc, top - h / 60);
+
+        Theme.drawMiniField(dc, bandLeft + bandWidth / 4, top, timer,
+            WatchUi.loadResource(Rez.Strings.FieldTimer) as String, Theme.COLOR_TEXT);
+        Theme.drawMiniField(dc, bandLeft + (bandWidth * 3) / 4, top, sets,
+            (WatchUi.loadResource(Rez.Strings.SetLabel) as String).toUpper(),
+            Theme.COLOR_ACCENT);
+        return top - h / 60;
+    }
+
+    //! Heart rate behind a heart, centred, the way a native Garmin activity
+    //! screen leads with it.
+    //!
+    //! Always drawn, showing "--" when the device has no reading: a row that
+    //! comes and goes as the sensor drops in and out would shift everything
+    //! below it mid-set.
+    private function _drawHeartRate(dc as Graphics.Dc, top as Number) as Number {
+        var hr = LiveMetrics.heartRate();
+        var font = Graphics.FONT_XTINY;
+        var text = LiveMetrics.format(hr);
+        var textWidth = dc.getTextWidthInPixels(text, font);
+        var fontHeight = dc.getFontHeight(font);
+        var heartSize = (fontHeight * 70) / 100;
+        var gap = heartSize / 3;
+
+        var totalWidth = heartSize + gap + textWidth;
+        var left = (dc.getWidth() - totalWidth) / 2;
+
+        Theme.drawHeart(dc, left + heartSize / 2, top + fontHeight / 2, heartSize,
+            hr != null ? Theme.COLOR_HR : Theme.COLOR_SKIPPED);
+        dc.setColor(hr != null ? Theme.COLOR_TEXT : Theme.COLOR_SKIPPED,
+            Graphics.COLOR_TRANSPARENT);
+        dc.drawText(left + heartSize + gap, top, font, text, Graphics.TEXT_JUSTIFY_LEFT);
+        return top + fontHeight;
     }
 
     //! The weight, as large as the space allows, with the reps beneath it.
@@ -134,6 +203,9 @@ class ExerciseView extends WatchUi.View {
         controller as AppController
     ) as Void {
         var available = bottom - top;
+        if (available <= 0) {
+            return;
+        }
         var gap = dc.getHeight() / 60;
 
         var repsText = "x " + controller.pendingReps().toString();
@@ -144,7 +216,10 @@ class ExerciseView extends WatchUi.View {
         var weightText = Theme.formatWeight(controller.pendingWeight());
         var weightBudget = available - repsHeight - gap;
 
-        var block = _weightHeight(dc, weightText, weightBudget, top) + gap + repsHeight;
+        var weightFont = Theme.pickFontFitting(dc, weightText, Theme.fontsHero(),
+            (Theme.bandWidth(dc, top, weightBudget) * 70) / 100, weightBudget);
+        var block = dc.getFontHeight(weightFont) + gap + repsHeight;
+
         var y = top + (available - block) / 2;
         if (y < top) {
             y = top;
@@ -159,17 +234,6 @@ class ExerciseView extends WatchUi.View {
             Graphics.TEXT_JUSTIFY_CENTER);
     }
 
-    private function _weightHeight(
-        dc as Graphics.Dc,
-        text as String,
-        budget as Number,
-        top as Number
-    ) as Number {
-        var font = Theme.pickFontFitting(dc, text, Theme.fontsHero(),
-            (Theme.bandWidth(dc, top, budget) * 70) / 100, budget);
-        return dc.getFontHeight(font);
-    }
-
     //! Page 2 — live Garmin metrics, in Garmin's four-field round layout:
     //! a full-width band, a split middle, a full-width band.
     //!
@@ -179,7 +243,7 @@ class ExerciseView extends WatchUi.View {
     private function _drawBodyPage(dc as Graphics.Dc, exercise as Exercise) as Void {
         var h = dc.getHeight();
         var top = _drawCompactHeader(dc, exercise.name);
-        var bottom = h - h / 11;
+        var bottom = h - h / 7;
 
         var hr = LiveMetrics.heartRate();
         var timer = LiveMetrics.timerSeconds();
@@ -226,7 +290,7 @@ class ExerciseView extends WatchUi.View {
             }
         }
 
-        var bottom = h - h / 11;
+        var bottom = h - h / 7;
         var edge = FieldGrid.edgeHeight(top, bottom);
         var middleTop = top + edge;
         var bottomTop = bottom - edge;
@@ -259,10 +323,19 @@ class ExerciseDelegate extends WatchUi.BehaviorDelegate {
         BehaviorDelegate.initialize();
     }
 
-    //! START — one press completes the set, from whichever page is showing.
-    //! This is the hot path and must never grow a confirmation.
+    //! START — the set is done. Hand control back before the rest timer takes
+    //! the screen: the values recorded should be the ones actually performed.
+    //! One more press of START logs them unchanged, so the hot path stays short.
     public function onSelect() as Boolean {
-        AppController.instance().completeSet();
+        var engine = AppController.instance().engine();
+        if (engine == null) {
+            return true;
+        }
+        var exercise = engine.currentExercise();
+        if (exercise == null) {
+            return true;
+        }
+        SetEditor.confirm(exercise);
         return true;
     }
 

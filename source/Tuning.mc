@@ -38,6 +38,15 @@ module Tuning {
     const RETURN_EXERCISE = 0;
     const RETURN_REST = 1;
 
+    //! What the set editor is for.
+    //!
+    //! EDIT_NEXT dials in the set you are about to do. CONFIRM_LOG is shown the
+    //! moment a set is finished, so the numbers recorded are the ones actually
+    //! performed rather than the ones planned — the athlete gets the last word
+    //! before the rest timer takes the screen.
+    const EDITOR_EDIT_NEXT = 0;
+    const EDITOR_CONFIRM_LOG = 1;
+
     //! Weights travel through the editor as tenths of a kilogram, because a
     //! PickerFactory deals in Numbers and 2.5 kg steps are not integers.
     public function toTenths(kg as Float) as Number {

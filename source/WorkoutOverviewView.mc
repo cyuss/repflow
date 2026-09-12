@@ -1,6 +1,7 @@
 import Toybox.Lang;
 import Toybox.Graphics;
 import Toybox.WatchUi;
+import Toybox.System;
 
 //! The heart of "select any exercise at any time".
 //!
@@ -28,13 +29,23 @@ class WorkoutOverviewView extends WatchUi.Menu2 {
         if (engine == null) {
             return;
         }
+        // Icon size is chosen from the device's screen rather than hard-coded,
+        // so the dots keep their proportions from a 260px Fenix 6 to a 466px
+        // Fenix 9 Pro.
+        var settings = System.getDeviceSettings();
+        var iconSize = settings.screenHeight / 9;
+        if (iconSize < 14) {
+            iconSize = 14;
+        }
+
         var list = engine.getWorkout().exercises;
         for (var i = 0; i < list.size(); i++) {
             var ex = list[i];
-            var label = ExerciseStateUtil.glyph(ex.state) + " " + ex.name;
             var sub = ex.completedSetCount().toString() + "/" + ex.targetSets.toString() +
-                "   " + Theme.formatWeight(ex.plannedWeight()) + (WatchUi.loadResource(Rez.Strings.Kg) as String);
-            addItem(new WatchUi.MenuItem(label, sub, ex.id, {}));
+                "   " + Theme.formatWeight(ex.plannedWeight()) +
+                (WatchUi.loadResource(Rez.Strings.Kg) as String);
+            addItem(new WatchUi.IconMenuItem(
+                ex.name, sub, ex.id, new StateIcon(ex.state, iconSize), {}));
         }
         // End the workout from the bottom of the list — no nested menu needed.
         addItem(new WatchUi.MenuItem(

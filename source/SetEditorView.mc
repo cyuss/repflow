@@ -26,12 +26,22 @@ class SetEditorView extends WatchUi.View {
     private var _exercise as Exercise;
     private var _focus as Number;
     private var _returnTo as Number;
+    private var _mode as Number;
 
-    public function initialize(exercise as Exercise, returnTo as Number) {
+    public function initialize(exercise as Exercise, returnTo as Number, mode as Number) {
         View.initialize();
         _exercise = exercise;
-        _focus = Tuning.FOCUS_WEIGHT;
         _returnTo = returnTo;
+        _mode = mode;
+        // Confirming a set starts on the reps: the load is usually what was
+        // planned, the reps are what actually came out.
+        _focus = mode == Tuning.EDITOR_CONFIRM_LOG
+            ? Tuning.FOCUS_REPS
+            : Tuning.FOCUS_WEIGHT;
+    }
+
+    public function mode() as Number {
+        return _mode;
     }
 
     public function returnTo() as Number {
@@ -40,6 +50,10 @@ class SetEditorView extends WatchUi.View {
 
     public function focus() as Number {
         return _focus;
+    }
+
+    public function exercise() as Exercise {
+        return _exercise;
     }
 
     public function setFocus(focus as Number) as Void {
@@ -62,27 +76,52 @@ class SetEditorView extends WatchUi.View {
         Theme.clear(dc);
         var controller = AppController.instance();
         var h = dc.getHeight();
+        var confirming = _mode == Tuning.EDITOR_CONFIRM_LOG;
 
-        var y = Theme.drawFitted(dc, h / 12, _exercise.name,
+        var y = Theme.drawFitted(dc, h / 14, _exercise.name,
             [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
-        y = Theme.drawFitted(dc, y + h / 90,
-            WatchUi.loadResource(Rez.Strings.NextSet) as String,
+
+        var title = confirming
+            ? (WatchUi.loadResource(Rez.Strings.SetLabel) as String).toUpper() + " " +
+                _exercise.currentSetNumber().toString() + " / " +
+                _exercise.targetSets.toString()
+            : WatchUi.loadResource(Rez.Strings.NextSet) as String;
+        y = Theme.drawFitted(dc, y + h / 90, title,
             [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_ACCENT);
 
-        // Hint band at the bottom: the step size, and what START does next.
+        var bottom = h;
+        if (confirming) {
+            // One press logs it; the pill says so.
+            bottom = Theme.drawActionBar(
+                dc, WatchUi.loadResource(Rez.Strings.LogSet) as String, Theme.COLOR_DONE);
+            bottom -= h / 50;
+        }
+
         var hintFont = Graphics.FONT_XTINY;
         var hintHeight = dc.getFontHeight(hintFont);
-        var hintTop = h - hintHeight * 2 - h / 10;
+        var hintTop = confirming
+            ? bottom - hintHeight - h / 60
+            : h - hintHeight * 2 - h / 10;
 
         _drawCells(dc, y + h / 40, hintTop - h / 50, controller);
 
         var step = _focus == Tuning.FOCUS_REPS
             ? "- 1 +"
             : "- " + Theme.formatWeight(Tuning.WEIGHT_STEP) + " +";
+
+        if (confirming) {
+            // BACK swaps the field being edited here, because START is spent on
+            // logging — that is what keeps a set to a single press when nothing
+            // needs changing.
+            Theme.drawFitted(dc, hintTop,
+                step + "   " + (WatchUi.loadResource(Rez.Strings.HintSwap) as String),
+                [hintFont] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
+            return;
+        }
+
         var next = _focus == Tuning.FOCUS_REPS
             ? WatchUi.loadResource(Rez.Strings.HintConfirm) as String
             : WatchUi.loadResource(Rez.Strings.HintNextReps) as String;
-
         var hintY = Theme.drawFitted(dc, hintTop, step,
             [hintFont] as Array<Graphics.FontDefinition>, Theme.COLOR_TEXT);
         Theme.drawFitted(dc, hintY, next,
@@ -200,8 +239,62 @@ class SetEditorDelegate extends WatchUi.BehaviorDelegate {
 //!
 //! `returnTo` says where to go on the way out — see Tuning.RETURN_*.
 module SetEditor {
+    //! Dial in the set that is about to be performed.
     public function open(exercise as Exercise, returnTo as Number) as Void {
-        var view = new SetEditorView(exercise, returnTo);
+        var view = new SetEditorView(exercise, returnTo, Tuning.EDITOR_EDIT_NEXT);
         WatchUi.switchToView(view, new SetEditorDelegate(view), WatchUi.SLIDE_UP);
+    }
+
+    //! Confirm the set that was just performed, then log it.
+    public function confirm(exercise as Exercise) as Void {
+        var view = new SetEditorView(exercise, Tuning.RETURN_EXERCISE,
+            Tuning.EDITOR_CONFIRM_LOG);
+        WatchUi.switchToView(view, new SetConfirmDelegate(view), WatchUi.SLIDE_UP);
+    }
+}
+
+//! The set has been performed; these buttons decide what gets recorded.
+//!
+//!   START      log it and start the rest — one press, nothing to change
+//!   UP / DOWN  adjust the highlighted value
+//!   BACK       swap between reps and weight
+//!   MENU       abandon the set without logging it
+class SetConfirmDelegate extends WatchUi.BehaviorDelegate {
+
+    private var _view as SetEditorView;
+
+    public function initialize(view as SetEditorView) {
+        BehaviorDelegate.initialize();
+        _view = view;
+    }
+
+    public function onPreviousPage() as Boolean {
+        _view.adjust(1);
+        return true;
+    }
+
+    public function onNextPage() as Boolean {
+        _view.adjust(-1);
+        return true;
+    }
+
+    public function onSelect() as Boolean {
+        AppController.instance().completeSet();
+        return true;
+    }
+
+    public function onBack() as Boolean {
+        _view.setFocus(_view.focus() == Tuning.FOCUS_REPS
+            ? Tuning.FOCUS_WEIGHT
+            : Tuning.FOCUS_REPS);
+        return true;
+    }
+
+    //! Abandon: the set is not recorded, and the planned values are restored.
+    public function onMenu() as Boolean {
+        var controller = AppController.instance();
+        controller.syncPendingValues(_view.exercise());
+        WatchUi.switchToView(new ExerciseView(), new ExerciseDelegate(), WatchUi.SLIDE_DOWN);
+        return true;
     }
 }

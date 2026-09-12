@@ -25,6 +25,10 @@ class AppController {
     //! Which data screen the exercise view is showing. Lives here rather than on
     //! the view so it survives rest screens and menu round-trips.
     private var _exercisePage as Number;
+    //! Epoch seconds when the current exercise was selected, for the on-screen
+    //! exercise timer. Garmin owns the activity clock; this one answers a
+    //! different question — how long have I been on THIS exercise.
+    private var _exerciseStartedAt as Number;
 
     public function initialize() {
         _engine = null;
@@ -34,6 +38,7 @@ class AppController {
         _pendingWeight = 0.0;
         _pendingReps = 0;
         _exercisePage = 0;
+        _exerciseStartedAt = 0;
     }
 
     public static function instance() as AppController {
@@ -73,6 +78,15 @@ class AppController {
         return _exercisePage;
     }
 
+    //! Seconds spent on the exercise currently selected.
+    public function exerciseSeconds() as Number {
+        if (_exerciseStartedAt <= 0) {
+            return 0;
+        }
+        var elapsed = now() - _exerciseStartedAt;
+        return elapsed > 0 ? elapsed : 0;
+    }
+
     //! Page through the exercise data screens, wrapping at both ends.
     public function turnExercisePage(delta as Number) as Void {
         var count = Tuning.PAGE_COUNT;
@@ -91,7 +105,9 @@ class AppController {
     public function startWorkout(workout as Workout) as Void {
         var session = new WorkoutSession(workout, now());
         _engine = new WorkoutEngine(session);
+        _exerciseStartedAt = now();
         _recorder.start(workout.name);
+        _startTicker();
         _persist();
     }
 
@@ -105,6 +121,8 @@ class AppController {
         if (ex != null) {
             syncPendingValues(ex);
         }
+        _exerciseStartedAt = now();
+        _startTicker();
     }
 
     //! Pre-fill the editable weight/reps from the exercise's inheritance rules.
@@ -125,7 +143,9 @@ class AppController {
         if (ex != null) {
             syncPendingValues(ex);
         }
+        _exerciseStartedAt = now();
         _exercisePage = Tuning.PAGE_SET;
+        _startTicker();
         _persist();
         return true;
     }
@@ -193,7 +213,9 @@ class AppController {
         if (ex != null) {
             syncPendingValues(ex);
         }
+        _exerciseStartedAt = now();
         _exercisePage = Tuning.PAGE_SET;
+        _startTicker();
         _persist();
         return true;
     }
@@ -230,7 +252,7 @@ class AppController {
 
     public function startRest(durationSec as Number) as Void {
         _rest.start(durationSec);
-        _startTicker();
+        _startTicker();   // already running during a workout; harmless to re-arm
         WatchUi.switchToView(new RestView(), new RestDelegate(), WatchUi.SLIDE_UP);
     }
 
@@ -248,9 +270,10 @@ class AppController {
         }
     }
 
-    //! 1 Hz tick that drives the rest countdown.
+    //! 1 Hz tick. Drives the rest countdown, and keeps the exercise timer and
+    //! the live metric pages moving while the athlete is working.
     public function onTick() as Void {
-        if (_rest.tick()) {
+        if (_rest.isRunning() && _rest.tick()) {
             // Reached zero exactly on this tick — notify once.
             vibrate(100, 400);
         }
@@ -264,7 +287,6 @@ class AppController {
     //! the athlete a trip through the overview after every exercise.
     public function endRest() as Void {
         _rest.skip();
-        stopTicker();
 
         var engine = _engine;
         if (engine != null) {

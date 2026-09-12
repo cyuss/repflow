@@ -118,6 +118,27 @@ Useful simulator menus:
 The design rule: completing a set is always one press of START, and the
 overview is always one press of BACK.
 
+### Logging a set
+
+```
+LOG SET  ->  confirm screen  ->  rest  ->  (exercise finished?) next exercise
+```
+
+The confirm screen exists because what you planned and what you performed are
+not the same thing — eight reps when you wrote ten is the normal case, and the
+number that gets recorded should be the real one. It opens on the **reps**, for
+that reason.
+
+| Button | On the confirm screen |
+|---|---|
+| START | log the set and start the rest |
+| UP / DOWN | adjust the highlighted value |
+| BACK | swap between reps and weight |
+| MENU | abandon the set without logging it |
+
+START is spent on logging, so BACK swaps the field. That keeps a set to a single
+extra press when nothing needs changing, which is the common case.
+
 ### The workflow
 
 Modelled on Hevy's Apple Watch app, adapted to buttons and a round screen.
@@ -126,25 +147,28 @@ The main screen is the **set list** for the current exercise — not a single
 "current set" panel. It answers the two questions an athlete has mid-exercise
 (what did I just lift, how many sets are left) without pressing anything.
 
+The set screen borrows its shape from a native Garmin activity screen: heart
+rate behind a heart at the top, the thing you are doing at full size in the
+middle, small labelled readouts along the bottom, clock underneath.
+
 ```
-     Lat Pulldown
- ---------------------
-  + 1        10 x 55        done      green
-  + 2        10 x 55
- [ 3         10 x 57.5 ]    active    accent, outlined
-    4        10 x 57.5      upcoming  dim
- ---------------------
-        LOG SET
+      (heart) 132
+      Lat Pulldown
+  --------------------
+         55 KG
+          x 10
+  --------------------
+    0:42      SET 1/4
+     [ LOG SET ]
+        12:08
 ```
 
-There is **no cursor**. The active set is always the next incomplete one, so
-START logs it and the list advances by itself — the one-press promise survives.
-Rows are windowed around the active set when an exercise has more than fit.
+The exercise timer answers a different question from Garmin's activity clock:
+how long have I been on *this* exercise. It resets when another is selected.
 
-The rest of the loop follows Hevy too: logging a set starts the rest timer;
-when the last set of an exercise is logged, leaving the rest screen moves
-straight on to the next exercise rather than dropping you back on a finished
-list.
+The rest of the loop follows Hevy: logging a set starts the rest timer, and when
+the last set of an exercise is logged, leaving the rest screen moves straight on
+to the next exercise rather than dropping you back on a finished one.
 
 ### Data screens
 
@@ -152,7 +176,7 @@ UP/DOWN page through data screens, as in every native Garmin activity:
 
 | Page | Shows |
 |---|---|
-| **SET** | The set list, and `LOG SET` |
+| **SET** | Heart rate, exercise, the load, exercise timer, set counter, `LOG SET` |
 | **BODY** | Heart rate, average HR, calories, elapsed timer |
 | **WORKOUT** | Training volume, sets, reps, exercises done |
 
@@ -235,12 +259,13 @@ a screen grab, so it keeps working when the window moves. Buttons can be driven
 too, which makes a real feedback loop possible:
 
 ```sh
-osascript -e 'tell application "System Events" to key code 36'   # START
-osascript -e 'tell application "System Events" to key code 53'   # BACK
-osascript -e 'tell application "System Events" to key code 126'  # UP
-osascript -e 'tell application "System Events" to key code 125'  # DOWN
-cliclick "dd:2583,343" w:1300 "du:2583,343"                      # long UP = MENU
+scripts/press.sh start                 # one button
+scripts/press.sh down down start       # a sequence
+scripts/press.sh menu                  # long UP, via cliclick
 ```
+
+`press.sh` focuses the window and paces the presses, which matters: fired too
+quickly after a launch they are simply dropped.
 
 **Look at the screen before believing a layout is right.** Three separate bugs
 in this app were invisible to the compiler and to the unit tests, and obvious in

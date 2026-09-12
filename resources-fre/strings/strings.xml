@@ -12,10 +12,11 @@
     <string id="FieldAvgHr">FC MOY</string>
     <string id="FieldMaxHr">FC MAX</string>
     <string id="FieldTime">TEMPS</string>
+    <string id="FieldTimer">CHRONO</string>
     <string id="FieldKcal">KCAL</string>
     <string id="FieldVolume">VOLUME</string>
     <string id="FieldSets">SERIES</string>
-    <string id="FieldExercises">EXOS</string>
+    <string id="FieldExercises">EXERCICES</string>
     <string id="PageBody">CORPS</string>
     <string id="PageWorkout">SEANCE</string>
     <string id="Bpm">bpm</string>
@@ -23,6 +24,7 @@
     <string id="EditSet">Modifier la serie</string>
     <string id="HintNextReps">START = REPS</string>
     <string id="HintConfirm">START = OK</string>
+    <string id="HintSwap">BACK = CHANGER</string>
     <string id="Rest">REPOS</string>
     <string id="NextLabel">Suite</string>
     <string id="SkipRest">Passer repos</string>

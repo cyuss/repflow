@@ -330,6 +330,72 @@ module Theme {
         return top;
     }
 
+    //! A small heart, drawn rather than typed.
+    //!
+    //! Garmin's own activity screens put the heart rate behind a heart glyph.
+    //! U+2665 is not in the Fenix 6 Pro's font set (it renders as a "?" box, the
+    //! same trap as the overview's tick marks), so it is drawn from two circles
+    //! and a triangle instead.
+    public function drawHeart(
+        dc as Graphics.Dc,
+        cx as Number,
+        cy as Number,
+        size as Number,
+        color as Number
+    ) as Void {
+        var r = size / 4;
+        if (r < 2) {
+            r = 2;
+        }
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+        dc.fillCircle(cx - r, cy - r / 2, r);
+        dc.fillCircle(cx + r, cy - r / 2, r);
+        dc.fillPolygon([
+            [cx - r * 2, cy - r / 2],
+            [cx + r * 2, cy - r / 2],
+            [cx, cy + size / 2]
+        ] as Array<[Numeric, Numeric]>);
+    }
+
+    //! A small labelled field: a value with its caption underneath, both small.
+    //! Used for the secondary readouts along the bottom of a screen, the way a
+    //! native Garmin activity screen does it.
+    public function drawMiniField(
+        dc as Graphics.Dc,
+        cx as Number,
+        top as Number,
+        value as String,
+        caption as String,
+        valueColor as Number
+    ) as Number {
+        var valueFont = Graphics.FONT_TINY;
+        var captionFont = Graphics.FONT_XTINY;
+        dc.setColor(valueColor, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, top, valueFont, value, Graphics.TEXT_JUSTIFY_CENTER);
+        var y = top + dc.getFontHeight(valueFont);
+        dc.setColor(COLOR_DIM, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, y, captionFont, caption, Graphics.TEXT_JUSTIFY_CENTER);
+        return y + dc.getFontHeight(captionFont);
+    }
+
+    //! Height drawMiniField needs.
+    public function miniFieldHeight(dc as Graphics.Dc) as Number {
+        return dc.getFontHeight(Graphics.FONT_TINY) + dc.getFontHeight(Graphics.FONT_XTINY);
+    }
+
+    //! Time of day, small and dim, in the strip below the action bar.
+    //!
+    //! Native Garmin activity screens keep the clock there, and on a round
+    //! display that strip is otherwise dead space — too narrow for content, too
+    //! tall to ignore.
+    public function drawClock(dc as Graphics.Dc, top as Number) as Void {
+        var now = System.getClockTime();
+        var text = now.hour.format("%02d") + ":" + now.min.format("%02d");
+        dc.setColor(COLOR_DIM, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(dc.getWidth() / 2, top, Graphics.FONT_XTINY, text,
+            Graphics.TEXT_JUSTIFY_CENTER);
+    }
+
     //! A ring around the rim showing progress from 0.0 to 1.0.
     //!
     //! The rim is the one area of a round display a field grid cannot use, so it

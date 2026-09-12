@@ -19,10 +19,11 @@
     <string id="FieldAvgHr">AVG HR</string>
     <string id="FieldMaxHr">MAX HR</string>
     <string id="FieldTime">TIME</string>
+    <string id="FieldTimer">TIMER</string>
     <string id="FieldKcal">KCAL</string>
     <string id="FieldVolume">VOLUME</string>
     <string id="FieldSets">SETS</string>
-    <string id="FieldExercises">EXOS</string>
+    <string id="FieldExercises">EXERCISES</string>
 
     <!-- Data screens -->
     <string id="PageBody">BODY</string>
@@ -33,6 +34,7 @@
     <string id="EditSet">Edit next set</string>
     <string id="HintNextReps">START = REPS</string>
     <string id="HintConfirm">START = OK</string>
+    <string id="HintSwap">BACK = SWAP</string>
 
     <!-- Rest -->
     <string id="Rest">REST</string>
