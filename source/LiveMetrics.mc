@@ -1,5 +1,6 @@
 import Toybox.Lang;
 import Toybox.Activity;
+import Toybox.UserProfile;
 
 //! Read-only access to the Garmin metrics that are genuinely available while an
 //! activity is recording.
@@ -57,6 +58,32 @@ module LiveMetrics {
             return null;
         }
         return ms / 1000;
+    }
+
+    //! Which heart rate zone the athlete is in: 1..5, or null.
+    //!
+    //! UserProfile.getHeartRateZones returns six thresholds — the floor of zone
+    //! 1 followed by the ceiling of each zone — so the zone is the first
+    //! ceiling the reading falls under.
+    public function heartRateZone() as Number? {
+        var hr = heartRate();
+        if (hr == null) {
+            return null;
+        }
+        try {
+            var zones = UserProfile.getHeartRateZones(UserProfile.HR_ZONE_SPORT_GENERIC);
+            if (zones == null || zones.size() < 6) {
+                return null;
+            }
+            for (var i = 1; i <= 5; i++) {
+                if (hr <= zones[i]) {
+                    return i;
+                }
+            }
+            return 5;   // above the top threshold is still zone 5
+        } catch (e) {
+            return null;
+        }
     }
 
     //! Render a nullable number, or "--" when the device has nothing to give.

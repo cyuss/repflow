@@ -65,6 +65,10 @@
             <iq:uses-permission id="Fit"/>
             <!-- Developer FIT fields: total sets, reps and training volume. -->
             <iq:uses-permission id="FitContributor"/>
+            <!-- Heart rate zone thresholds, for the zone gauge. Without this the
+                 gauge would have to guess a maximum heart rate, which would be
+                 inventing data rather than reading it. -->
+            <iq:uses-permission id="UserProfile"/>
         </iq:permissions>
 
         <iq:languages>

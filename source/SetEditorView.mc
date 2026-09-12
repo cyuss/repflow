@@ -4,23 +4,35 @@ import Toybox.WatchUi;
 
 //! Edit the weight and the reps of the upcoming set, on one screen.
 //!
-//!          NEXT SET
+//!        (heart) 132  ▮▮▮▯▯
+//!            SET 2 / 4
+//!                +
 //!      ┌────────┐ ┌──────┐
-//!      │  60    │ │  10  │
-//!      │  KG    │ │ REPS │
+//!      │   60   │ │  10  │
+//!      │   KG   │ │ REPS │
 //!      └────────┘ └──────┘
-//!        + / - 2.5
-//!        START = REPS
+//!                -
+//!            ● ● ○ ○
 //!
 //! The focused cell is outlined in the accent colour; UP/DOWN change it, START
 //! moves on and confirms on the last one, BACK steps back. That is exactly the
 //! interaction model of `WatchUi.Picker`, which is what a Garmin owner expects.
 //!
-//! It is *not* built on Picker, though, and that is deliberate: a three-column
-//! Picker does not fit a 260x260 screen — the reps column rendered off the right
-//! edge — and its own theming painted the background white over ours. Verified
-//! in the simulator. Drawing it here costs one small view and renders correctly
-//! on every target.
+//! The + and - sit above and below the focused cell because that is where the
+//! buttons are: press the top button, the number goes up. They are drawn from
+//! rectangles rather than typed, so no device's font set can turn them into
+//! "?" boxes — the Fenix 6 Pro did exactly that to Unicode glyphs.
+//!
+//! There is no line of button hints. "START LOG - BACK SWAP" told the athlete
+//! what the two signs and the outline already say, and it cost the values the
+//! height they needed. The exercise name is gone for the same reason: the screen
+//! underneath is showing it.
+//!
+//! It is *not* built on Picker, and that is deliberate: a three-column Picker
+//! does not fit a 260x260 screen — the reps column rendered off the right edge —
+//! and its own theming painted the background white over ours. Verified in the
+//! simulator. Drawing it here costs one small view and renders correctly on
+//! every target.
 class SetEditorView extends WatchUi.View {
 
     private var _exercise as Exercise;
@@ -78,51 +90,50 @@ class SetEditorView extends WatchUi.View {
         var h = dc.getHeight();
         var confirming = _mode == Tuning.EDITOR_CONFIRM_LOG;
 
-        var y = Theme.drawFitted(dc, h / 12, _exercise.name,
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
+        // The live zone gauge takes the line the exercise name used to have.
+        // The name is on the screen this one slid up from; the heart rate is
+        // not, and mid-set it is the one number worth a glance.
+        var y = Theme.drawHeartRateGauge(dc, h / 12);
 
         var title = confirming
             ? (WatchUi.loadResource(Rez.Strings.SetLabel) as String).toUpper() + " " +
                 _exercise.currentSetNumber().toString() + " / " +
                 _exercise.targetSets.toString()
             : WatchUi.loadResource(Rez.Strings.NextSet) as String;
-        y = Theme.drawFitted(dc, y + h / 80, title,
+        y = Theme.drawFitted(dc, y + h / 60, title,
             [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_ACCENT);
 
-        // Two hint lines at the bottom: what UP/DOWN is worth, then the buttons.
-        // No action pill — START already does the obvious thing, and the space
-        // is better spent giving the values room.
-        var hintFont = Graphics.FONT_XTINY;
-        var hintHeight = dc.getFontHeight(hintFont);
-        var hintTop = h - hintHeight * 2 - h / 9;
+        // Sets done so far, as dots: the progression, without a sentence.
+        Theme.drawSetDots(dc, h - h / 9, _exercise.targetSets,
+            _exercise.completedSetCount());
 
-        _drawCells(dc, y + h / 30, hintTop - h / 30, controller);
+        // A band for the + above the cells and one for the - below them.
+        var signBand = h / 9;
+        var bottom = h - h / 6;
+        var cellsTop = y + signBand;
+        var cellsBottom = bottom - signBand;
 
-        var step = _focus == Tuning.FOCUS_REPS
-            ? "- 1 +"
-            : "- " + Theme.formatWeight(Tuning.WEIGHT_STEP) + " +";
-        var buttons = confirming
-            ? WatchUi.loadResource(Rez.Strings.HintLogSwap) as String
-            : (_focus == Tuning.FOCUS_REPS
-                ? WatchUi.loadResource(Rez.Strings.HintConfirm) as String
-                : WatchUi.loadResource(Rez.Strings.HintNextReps) as String);
+        var focusCx = _drawCells(dc, cellsTop, cellsBottom, controller);
 
-        var hintY = Theme.drawFitted(dc, hintTop, step,
-            [hintFont] as Array<Graphics.FontDefinition>, Theme.COLOR_TEXT);
-        Theme.drawFitted(dc, hintY + h / 90, buttons,
-            [hintFont] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
+        var signSize = (signBand * 55) / 100;
+        Theme.drawSign(dc, focusCx, y + signBand / 2, signSize, true, Theme.COLOR_ACCENT);
+        Theme.drawSign(dc, focusCx, cellsBottom + signBand / 2, signSize, false,
+            Theme.COLOR_ACCENT);
     }
 
     //! The two values, side by side, the focused one outlined.
+    //!
+    //! Returns the horizontal centre of the focused cell, so the caller can put
+    //! the + and the - directly above and below it.
     private function _drawCells(
         dc as Graphics.Dc,
         top as Number,
         bottom as Number,
         controller as AppController
-    ) as Void {
+    ) as Number {
         var height = bottom - top;
         if (height <= 0) {
-            return;
+            return dc.getWidth() / 2;
         }
         var width = Theme.bandWidth(dc, top, height);
         var left = (dc.getWidth() - width) / 2;
@@ -137,6 +148,8 @@ class SetEditorView extends WatchUi.View {
             controller.pendingReps().toString(),
             WatchUi.loadResource(Rez.Strings.FieldReps) as String,
             _focus == Tuning.FOCUS_REPS);
+
+        return _focus == Tuning.FOCUS_REPS ? left + half + half / 2 : left + half / 2;
     }
 
     private function _drawCell(

@@ -10,14 +10,14 @@ import Toybox.System;
 //!
 //!   SET                        BODY / WORKOUT (data fields)
 //!   +---------------------+    +---------------------+
-//!   |      Seated Row     |    |         132         |
-//!   |      SET 4 / 4      |    |          HR         |
+//!   |  (heart) 132  ###   |    |         132         |
+//!   |      Seated Row     |    |          HR         |
 //!   | ------------------- |    +----------+----------+
-//!   |       60 KG         |    |   128    |   210    |
-//!   |        x 10         |    |  AVG HR  |   KCAL   |
+//!   |    60    |    10    |    |   128    |   210    |
+//!   |    KG    |   REPS   |    |  AVG HR  |   KCAL   |
 //!   | ------------------- |    +----------+----------+
-//!   |      * * * o        |    |        12:34        |
-//!   |     [ LOG SET ]     |    |         TIME        |
+//!   |  0:42    |   1/4    |    |        12:34        |
+//!   |  TIMER   |   SET    |    |         TIME        |
 //!   +---------------------+    +---------------------+
 //!
 //! Only the middle band is ever split into columns, and wide values
@@ -78,15 +78,14 @@ class ExerciseView extends WatchUi.View {
     //! heart at the top, the thing you are actually doing in the middle at full
     //! size, and small labelled readouts along the bottom.
     //!
-    //!        (heart) 132        live HR
+    //!      (heart) 132  ###      live HR and its zone
     //!        Lat Pulldown
-    //!      ---------------
-    //!           55 KG           the hero
-    //!            x 10
-    //!      ---------------
-    //!       TIMER     SET       secondary readouts
-    //!       0:42      1/4
-    //!       [ LOG SET ]
+    //!      -----------------
+    //!        55    |    10     the load, two aligned cells
+    //!        KG    |   REPS
+    //!      -----------------
+    //!       TIMER  |   SET     secondary readouts
+    //!       0:42   |   1/4
     //!
     //! The set counter lives in the bottom band rather than the header, because
     //! repeating it in both wasted a line — and on a 260x260 screen a line is
@@ -112,16 +111,17 @@ class ExerciseView extends WatchUi.View {
         var clockTop = h - clockHeight - h / 22;
         Theme.drawClock(dc, clockTop);
 
-        var top = _drawHeartRate(dc, h / 14);
-        top = Theme.drawFitted(dc, top + h / 80, exercise.name,
+        var top = Theme.drawHeartRateGauge(dc, h / 14);
+        top = Theme.drawFitted(dc, top + h / 60, exercise.name,
             [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
             Theme.COLOR_TEXT);
-        top += h / 44;
+        top += h / 40;
         FieldGrid.drawRule(dc, top);
         top += 1;
 
         var bandTop = _drawSecondaryBand(dc, clockTop - h / 60, controller, exercise);
         _drawLoad(dc, top, bandTop - h / 50, controller);
+
     }
 
     //! The secondary readouts: exercise timer and set counter, as captioned
@@ -151,33 +151,14 @@ class ExerciseView extends WatchUi.View {
         return top - h / 50;
     }
 
-    //! Heart rate behind a heart, centred, the way a native Garmin activity
-    //! screen leads with it.
+    //! The load: weight and reps as two aligned cells sharing one band.
     //!
-    //! Always drawn, showing "--" when the device has no reading: a row that
-    //! comes and goes as the sensor drops in and out would shift everything
-    //! below it mid-set.
-    private function _drawHeartRate(dc as Graphics.Dc, top as Number) as Number {
-        var hr = LiveMetrics.heartRate();
-        var font = Graphics.FONT_XTINY;
-        var text = LiveMetrics.format(hr);
-        var textWidth = dc.getTextWidthInPixels(text, font);
-        var fontHeight = dc.getFontHeight(font);
-        var heartSize = (fontHeight * 70) / 100;
-        var gap = heartSize / 3;
-
-        var totalWidth = heartSize + gap + textWidth;
-        var left = (dc.getWidth() - totalWidth) / 2;
-
-        Theme.drawHeart(dc, left + heartSize / 2, top + fontHeight / 2, heartSize,
-            hr != null ? Theme.COLOR_HR : Theme.COLOR_SKIPPED);
-        dc.setColor(hr != null ? Theme.COLOR_TEXT : Theme.COLOR_SKIPPED,
-            Graphics.COLOR_TRANSPARENT);
-        dc.drawText(left + heartSize + gap, top, font, text, Graphics.TEXT_JUSTIFY_LEFT);
-        return top + fontHeight;
-    }
-
-    //! The weight, as large as the space allows, with the reps beneath it.
+    //! It used to be a big weight with the reps floating under it. That stacked
+    //! two unrelated-looking numbers, pushed the block against the rules above
+    //! and below, and looked nothing like the editor the athlete opens one press
+    //! later. Two captioned cells with a divider give each value its own room,
+    //! align their baselines, and make the reading screen and the editing screen
+    //! the same screen.
     private function _drawLoad(
         dc as Graphics.Dc,
         top as Number,
@@ -188,32 +169,21 @@ class ExerciseView extends WatchUi.View {
         if (available <= 0) {
             return;
         }
-        var gap = dc.getHeight() / 60;
-
-        var repsText = "x " + controller.pendingReps().toString();
-        var repsFont = Theme.pickFontFitting(dc, repsText, Theme.fontsTitle(),
-            Theme.bandWidth(dc, top, available), (available * 34) / 100);
-        var repsHeight = dc.getFontHeight(repsFont);
-
-        var weightText = Theme.formatWeight(controller.pendingWeight());
-        var weightBudget = available - repsHeight - gap;
-
-        var weightFont = Theme.pickFontFitting(dc, weightText, Theme.fontsHero(),
-            (Theme.bandWidth(dc, top, weightBudget) * 70) / 100, weightBudget);
-        var block = dc.getFontHeight(weightFont) + gap + repsHeight;
-
-        var y = top + (available - block) / 2;
-        if (y < top) {
-            y = top;
+        // Breathing room top and bottom, so the cells never sit on the hairlines
+        // that frame them.
+        var inset = dc.getHeight() / 36;
+        var height = available - inset * 2;
+        if (height <= 0) {
+            height = available;
+            inset = 0;
         }
-
-        y = Theme.drawValueWithUnitCapped(dc, y, weightText,
+        FieldGrid.drawPair(dc, top + inset, height,
+            Theme.formatWeight(controller.pendingWeight()),
             (WatchUi.loadResource(Rez.Strings.Kg) as String).toUpper(),
-            Theme.fontsHero(), Theme.COLOR_TEXT, Theme.COLOR_DIM, weightBudget);
-
-        dc.setColor(Theme.COLOR_TEXT, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(dc.getWidth() / 2, y + gap, repsFont, repsText,
-            Graphics.TEXT_JUSTIFY_CENTER);
+            Theme.COLOR_TEXT,
+            controller.pendingReps().toString(),
+            WatchUi.loadResource(Rez.Strings.FieldReps) as String,
+            Theme.COLOR_ACCENT);
     }
 
     //! Page 2 — live Garmin metrics, in Garmin's four-field round layout:
@@ -225,7 +195,7 @@ class ExerciseView extends WatchUi.View {
     private function _drawBodyPage(dc as Graphics.Dc, exercise as Exercise) as Void {
         var h = dc.getHeight();
         var top = _drawCompactHeader(dc, exercise.name);
-        var bottom = h - h / 7;
+        var bottom = h - h / 10;
 
         var hr = LiveMetrics.heartRate();
         var timer = LiveMetrics.timerSeconds();
@@ -272,7 +242,7 @@ class ExerciseView extends WatchUi.View {
             }
         }
 
-        var bottom = h - h / 7;
+        var bottom = h - h / 10;
         var edge = FieldGrid.edgeHeight(top, bottom);
         var middleTop = top + edge;
         var bottomTop = bottom - edge;

@@ -358,6 +358,92 @@ module Theme {
         ] as Array<[Numeric, Numeric]>);
     }
 
+    //! Colour of a heart rate zone, following Garmin's own scale and taken from
+    //! the 64-colour palette so it is exact on a MIP display.
+    public function zoneColor(zone as Number?) as Number {
+        if (zone == null) {
+            return COLOR_SKIPPED;
+        }
+        switch (zone) {
+            case 1: return 0x55AAAA;   // warm-up, teal
+            case 2: return COLOR_ACCENT;
+            case 3: return COLOR_DONE;
+            case 4: return COLOR_WARM;
+            case 5: return COLOR_HR;
+            default: return COLOR_SKIPPED;
+        }
+    }
+
+    //! Heart rate, as a heart, a number, and a five-segment zone gauge.
+    //!
+    //!   (heart) 132  ▮▮▮▯▯
+    //!
+    //! The gauge is what makes the number mean something at a glance: which
+    //! zone, and how far up the scale, without reading the digits. Returns the
+    //! y below it.
+    public function drawHeartRateGauge(dc as Graphics.Dc, top as Number) as Number {
+        var hr = LiveMetrics.heartRate();
+        var zone = LiveMetrics.heartRateZone();
+        var font = Graphics.FONT_XTINY;
+        var fontHeight = dc.getFontHeight(font);
+        var text = LiveMetrics.format(hr);
+
+        var heartSize = (fontHeight * 70) / 100;
+        var gap = heartSize / 2;
+        var textWidth = dc.getTextWidthInPixels(text, font);
+
+        // Five segments, sized from the text so the row scales with the screen.
+        var segments = 5;
+        var segWidth = fontHeight / 2;
+        var segGap = segWidth / 3;
+        var barWidth = segments * segWidth + (segments - 1) * segGap;
+
+        var total = heartSize + gap + textWidth + gap * 2 + barWidth;
+        var left = (dc.getWidth() - total) / 2;
+
+        drawHeart(dc, left + heartSize / 2, top + fontHeight / 2, heartSize,
+            hr != null ? COLOR_HR : COLOR_SKIPPED);
+
+        dc.setColor(hr != null ? COLOR_TEXT : COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(left + heartSize + gap, top, font, text, Graphics.TEXT_JUSTIFY_LEFT);
+
+        var barLeft = left + heartSize + gap + textWidth + gap * 2;
+        var barHeight = (fontHeight * 55) / 100;
+        var barTop = top + (fontHeight - barHeight) / 2;
+        for (var i = 0; i < segments; i++) {
+            var x = barLeft + i * (segWidth + segGap);
+            if (zone != null && i < zone) {
+                dc.setColor(zoneColor(zone), Graphics.COLOR_TRANSPARENT);
+                dc.fillRectangle(x, barTop, segWidth, barHeight);
+            } else {
+                dc.setColor(COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+                dc.fillRectangle(x, barTop + barHeight - 2, segWidth, 2);
+            }
+        }
+        return top + fontHeight;
+    }
+
+    //! A small minus or plus, drawn from rectangles rather than typed, so it
+    //! cannot fall foul of a device's font set.
+    public function drawSign(
+        dc as Graphics.Dc,
+        cx as Number,
+        cy as Number,
+        size as Number,
+        plus as Boolean,
+        color as Number
+    ) as Void {
+        var thickness = size / 4;
+        if (thickness < 2) {
+            thickness = 2;
+        }
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+        dc.fillRectangle(cx - size / 2, cy - thickness / 2, size, thickness);
+        if (plus) {
+            dc.fillRectangle(cx - thickness / 2, cy - size / 2, thickness, size);
+        }
+    }
+
     //! A small labelled field: a value with its caption underneath, both small.
     //! Used for the secondary readouts along the bottom of a screen, the way a
     //! native Garmin activity screen does it.
