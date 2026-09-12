@@ -26,6 +26,9 @@ module Tuning {
     const UNITS_METRIC = 1;
     const UNITS_STATUTE = 2;
 
+    const THEME_DARK = 0;
+    const THEME_LIGHT = 1;
+
     const ANIM_AUTO = 0;
     const ANIM_OFF = 1;
     const ANIM_ON = 2;

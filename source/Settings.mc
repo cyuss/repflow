@@ -27,6 +27,7 @@ module Settings {
     var _haptics as Boolean? = null;
     var _repCounter as Boolean? = null;
     var _animations as Number? = null;
+    var _theme as Number? = null;
 
     //! Re-read on the next call. Called from RepFlowApp.onSettingsChanged.
     public function invalidate() as Void {
@@ -36,6 +37,7 @@ module Settings {
         _haptics = null;
         _repCounter = null;
         _animations = null;
+        _theme = null;
         Units.invalidate();
         Device.invalidate();
     }
@@ -120,6 +122,47 @@ module Settings {
             _repCounter = v;
         }
         return v;
+    }
+
+    //! Tuning.THEME_DARK / THEME_LIGHT.
+    //!
+    //! Dark is the default: a MIP screen in a dim gym reads best that way and
+    //! an AMOLED spends almost nothing lighting it. Light exists because a
+    //! watch in bright sun is a different problem entirely.
+    public function theme() as Number {
+        var v = _theme;
+        if (v == null) {
+            v = readNumber("theme", Tuning.THEME_DARK, Tuning.THEME_DARK, Tuning.THEME_LIGHT);
+            _theme = v;
+        }
+        return v;
+    }
+
+    //! Change the theme from the watch, and make it stick.
+    public function setTheme(value as Number) as Void {
+        writeNumber("theme", value);
+        _theme = value;
+    }
+
+    //! Write a property back, for the on-watch settings screen.
+    //!
+    //! The phone writes these too, so both routes share one source of truth and
+    //! neither has its own copy to drift.
+    public function writeNumber(key as String, value as Number) as Void {
+        try {
+            Application.Properties.setValue(key, value);
+        } catch (e) {
+            // A setting that will not persist is a setting that reverts on the
+            // next launch; nothing else breaks.
+        }
+    }
+
+    public function writeBoolean(key as String, value as Boolean) as Void {
+        try {
+            Application.Properties.setValue(key, value);
+        } catch (e) {
+            // as above
+        }
     }
 
     //! Tuning.ANIM_AUTO / ANIM_OFF / ANIM_ON.

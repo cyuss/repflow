@@ -15,36 +15,108 @@ import Toybox.Math;
 //! just below what it drew; callers add the gap they want.
 module Theme {
 
-    const COLOR_BG = Graphics.COLOR_BLACK;
-    const COLOR_TEXT = Graphics.COLOR_WHITE;
-    const COLOR_DIM = Graphics.COLOR_LT_GRAY;
-    //! RepFlow blue. Chosen from Garmin's 64-colour palette (each channel one of
-    //! 00/55/AA/FF) so it renders identically on an 8-bit MIP display like the
-    //! Fenix 6 Pro instead of being snapped to an approximate neighbour.
-    const COLOR_ACCENT = 0x00AAFF;
-    const COLOR_DONE = Graphics.COLOR_GREEN;
-    const COLOR_PENDING = Graphics.COLOR_ORANGE;
-    const COLOR_SKIPPED = Graphics.COLOR_DK_GRAY;
-    //! Also a palette colour, for the same reason.
-    const COLOR_HR = 0xFF5555;
+    //! Two palettes, one meaning each.
+    //!
+    //! RepFlow was black-on-white from the start, because a MIP screen in a dim
+    //! gym reads best that way and an AMOLED spends almost nothing lighting it.
+    //! But a watch worn in bright sun is a different problem — a white ground
+    //! is far more legible outdoors — so the athlete chooses, and everything
+    //! here answers that choice.
+    //!
+    //! **Every colour is from Garmin's 64-colour palette** — each channel one of
+    //! 00, 55, AA or FF — so it renders exactly on an 8-bit MIP display like the
+    //! Fenix 6 Pro instead of being snapped to an approximate neighbour. That is
+    //! why the light accents are not simply the dark ones darkened by eye.
+    //!
+    //! They are functions rather than constants because the answer changes with
+    //! a setting. `Settings.theme()` caches, so this costs a comparison.
+
+    // Dark: the default. White on black.
+    const DARK_BG = Graphics.COLOR_BLACK;
+    const DARK_TEXT = Graphics.COLOR_WHITE;
+    const DARK_DIM = Graphics.COLOR_LT_GRAY;
+    const DARK_FAINT = Graphics.COLOR_DK_GRAY;
+    const DARK_ACCENT = 0x00AAFF;
+    const DARK_DONE = Graphics.COLOR_GREEN;
+    const DARK_PENDING = Graphics.COLOR_ORANGE;
+    const DARK_HR = 0xFF5555;
+    const DARK_WARM = 0xFFAA00;
+    const DARK_DONE_DIM = 0x00AA55;
+
+    // Light: black on white. The accents are darker, not paler — a colour that
+    // reads on black is usually invisible on white.
+    const LIGHT_BG = Graphics.COLOR_WHITE;
+    const LIGHT_TEXT = Graphics.COLOR_BLACK;
+    const LIGHT_DIM = 0x555555;
+    const LIGHT_FAINT = 0xAAAAAA;
+    const LIGHT_ACCENT = 0x0055AA;
+    const LIGHT_DONE = 0x00AA00;
+    const LIGHT_PENDING = 0xAA5500;
+    const LIGHT_HR = 0xAA0000;
+    const LIGHT_WARM = 0xAA5500;
+    const LIGHT_DONE_DIM = 0x005500;
+
+    public function light() as Boolean {
+        return Settings.theme() == Tuning.THEME_LIGHT;
+    }
+
+    public function colorBg() as Number {
+        return light() ? LIGHT_BG : DARK_BG;
+    }
+
+    public function colorText() as Number {
+        return light() ? LIGHT_TEXT : DARK_TEXT;
+    }
+
+    //! Captions and secondary text.
+    public function colorDim() as Number {
+        return light() ? LIGHT_DIM : DARK_DIM;
+    }
+
+    //! Rules, empty tracks, things not reached. Quiet, never invisible.
+    public function colorFaint() as Number {
+        return light() ? LIGHT_FAINT : DARK_FAINT;
+    }
+
+    public function colorAccent() as Number {
+        return light() ? LIGHT_ACCENT : DARK_ACCENT;
+    }
+
+    public function colorDone() as Number {
+        return light() ? LIGHT_DONE : DARK_DONE;
+    }
+
+    public function colorPending() as Number {
+        return light() ? LIGHT_PENDING : DARK_PENDING;
+    }
+
+    public function colorHr() as Number {
+        return light() ? LIGHT_HR : DARK_HR;
+    }
+
     //! Energy / calories.
-    const COLOR_WARM = 0xFFAA00;
+    public function colorWarm() as Number {
+        return light() ? LIGHT_WARM : DARK_WARM;
+    }
+
     //! Completed work.
-    const COLOR_DONE_DIM = 0x00AA55;
+    public function colorDoneDim() as Number {
+        return light() ? LIGHT_DONE_DIM : DARK_DONE_DIM;
+    }
 
     //! Colour used for an exercise state in lists and headers.
     public function stateColor(state as ExerciseState) as Number {
         switch (state) {
             case EX_COMPLETED:
-                return COLOR_DONE;
+                return colorDone();
             case EX_ACTIVE:
-                return COLOR_WARM;
+                return colorWarm();
             case EX_PENDING:
-                return COLOR_PENDING;
+                return colorPending();
             case EX_SKIPPED:
-                return COLOR_SKIPPED;
+                return colorFaint();
             default:
-                return COLOR_DIM;
+                return colorDim();
         }
     }
 
@@ -134,7 +206,7 @@ module Theme {
     // ------------------------------------------------------------------
 
     public function clear(dc as Graphics.Dc) as Void {
-        dc.setColor(COLOR_TEXT, COLOR_BG);
+        dc.setColor(colorText(), colorBg());
         dc.clear();
     }
 
@@ -298,7 +370,7 @@ module Theme {
         var valueHeight = dc.getFontHeight(valueFont);
         var rowHeight = labelHeight > valueHeight ? labelHeight : valueHeight;
 
-        dc.setColor(COLOR_DIM, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(colorDim(), Graphics.COLOR_TRANSPARENT);
         dc.drawText(left, y + (rowHeight - labelHeight) / 2, labelFont, label,
             Graphics.TEXT_JUSTIFY_LEFT);
 
@@ -341,7 +413,7 @@ module Theme {
 
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
         dc.fillRoundedRectangle((w - barWidth) / 2, top, barWidth, barHeight, barHeight / 2);
-        dc.setColor(COLOR_BG, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(colorBg(), Graphics.COLOR_TRANSPARENT);
         dc.drawText(w / 2, top + padding, font, label, Graphics.TEXT_JUSTIFY_CENTER);
         return top;
     }
@@ -377,15 +449,19 @@ module Theme {
     //! the 64-colour palette so it is exact on a MIP display.
     public function zoneColor(zone as Number?) as Number {
         if (zone == null) {
-            return COLOR_SKIPPED;
+            return colorFaint();
         }
+        // Zone 1 is its own colour rather than one of the semantic ones: a
+        // warm-up is not "information" and not "done", it is the bottom of the
+        // scale. Teal on black, a darker teal on white — a pale one would
+        // vanish against it.
         switch (zone) {
-            case 1: return 0x55AAAA;   // warm-up, teal
-            case 2: return COLOR_ACCENT;
-            case 3: return COLOR_DONE;
-            case 4: return COLOR_WARM;
-            case 5: return COLOR_HR;
-            default: return COLOR_SKIPPED;
+            case 1: return light() ? 0x005555 : 0x55AAAA;
+            case 2: return colorAccent();
+            case 3: return colorDone();
+            case 4: return colorWarm();
+            case 5: return colorHr();
+            default: return colorFaint();
         }
     }
 
@@ -426,7 +502,7 @@ module Theme {
             var x = left + i * (segWidth + gap);
             if (zone == null || i > (zone as Number) - 1) {
                 // Not reached: a thin baseline, so the scale keeps its length.
-                dc.setColor(COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+                dc.setColor(colorFaint(), Graphics.COLOR_TRANSPARENT);
                 dc.fillRectangle(x, top + height - rest, segWidth, rest);
                 continue;
             }
@@ -449,7 +525,7 @@ module Theme {
                 filled = 2;      // always visibly in this zone, even at its floor
             }
 
-            dc.setColor(COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+            dc.setColor(colorFaint(), Graphics.COLOR_TRANSPARENT);
             dc.fillRectangle(x, top + height - rest, segWidth, rest);
             dc.setColor(zoneColor(i + 1), Graphics.COLOR_TRANSPARENT);
             dc.fillRectangle(x, top, filled, height);
@@ -472,7 +548,7 @@ module Theme {
         // The heart takes the zone's colour. It is the largest coloured thing
         // on the row, so it says how hard you are working before the eye has
         // reached the number — which is the whole point of a glance.
-        var tint = hr == null ? COLOR_SKIPPED : (zone == null ? COLOR_HR : zoneColor(zone));
+        var tint = hr == null ? colorFaint() : (zone == null ? colorHr() : zoneColor(zone));
 
         var heartSize = (fontHeight * 70) / 100;
         var gap = heartSize / 2;
@@ -486,7 +562,7 @@ module Theme {
 
         drawHeart(dc, left + heartSize / 2, top + fontHeight / 2, heartSize, tint);
 
-        dc.setColor(hr != null ? COLOR_TEXT : COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(hr != null ? colorText() : colorFaint(), Graphics.COLOR_TRANSPARENT);
         dc.drawText(left + heartSize + gap, top, font, text, Graphics.TEXT_JUSTIFY_LEFT);
 
         var barLeft = left + heartSize + gap + textWidth + gap * 2;
@@ -524,8 +600,8 @@ module Theme {
         var progress = LiveMetrics.zoneProgressFor(hr);
         var text = LiveMetrics.format(hr);
         var color = hr == null
-            ? COLOR_SKIPPED
-            : (zone == null ? COLOR_HR : zoneColor(zone));
+            ? colorFaint()
+            : (zone == null ? colorHr() : zoneColor(zone));
 
         var width = bandWidth(dc, top, height);
         var left = (dc.getWidth() - width) / 2;
@@ -555,7 +631,7 @@ module Theme {
             barWidth, barHeight, zone, progress);
 
         var label = zone != null ? caption + "   Z" + zone.toString() : caption;
-        dc.setColor(COLOR_DIM, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(colorDim(), Graphics.COLOR_TRANSPARENT);
         dc.drawText(dc.getWidth() / 2, top + height - captionHeight, captionFont, label,
             Graphics.TEXT_JUSTIFY_CENTER);
     }
@@ -597,7 +673,7 @@ module Theme {
         dc.setColor(valueColor, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, top, valueFont, value, Graphics.TEXT_JUSTIFY_CENTER);
         var y = top + dc.getFontHeight(valueFont);
-        dc.setColor(COLOR_DIM, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(colorDim(), Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, y, capFont, caption, Graphics.TEXT_JUSTIFY_CENTER);
         return y + dc.getFontHeight(capFont);
     }
@@ -615,7 +691,7 @@ module Theme {
     public function drawClock(dc as Graphics.Dc, top as Number) as Void {
         var now = System.getClockTime();
         var text = now.hour.format("%02d") + ":" + now.min.format("%02d");
-        dc.setColor(COLOR_DIM, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(colorDim(), Graphics.COLOR_TRANSPARENT);
         dc.drawText(dc.getWidth() / 2, top, Graphics.FONT_XTINY, text,
             Graphics.TEXT_JUSTIFY_CENTER);
     }
@@ -637,7 +713,7 @@ module Theme {
         var cy = h / 2;
 
         dc.setPenWidth(5);
-        dc.setColor(COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(colorFaint(), Graphics.COLOR_TRANSPARENT);
         dc.drawCircle(cx, cy, radius);
 
         if (progress <= 0.0) {
@@ -674,7 +750,7 @@ module Theme {
         var x = w - (w / 22) - radius;
         var startY = h / 2 - ((count - 1) * spacing) / 2;
         for (var i = 0; i < count; i++) {
-            dc.setColor(i == active ? COLOR_ACCENT : COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+            dc.setColor(i == active ? colorAccent() : colorFaint(), Graphics.COLOR_TRANSPARENT);
             dc.fillCircle(x, startY + i * spacing, i == active ? radius + 1 : radius);
         }
     }
@@ -698,10 +774,10 @@ module Theme {
         var startX = dc.getWidth() / 2 - ((total - 1) * spacing) / 2;
         for (var i = 0; i < total; i++) {
             if (i < done) {
-                dc.setColor(COLOR_DONE, Graphics.COLOR_TRANSPARENT);
+                dc.setColor(colorDone(), Graphics.COLOR_TRANSPARENT);
                 dc.fillCircle(startX + i * spacing, y + radius, radius);
             } else {
-                dc.setColor(COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+                dc.setColor(colorFaint(), Graphics.COLOR_TRANSPARENT);
                 dc.drawCircle(startX + i * spacing, y + radius, radius);
             }
         }

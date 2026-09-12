@@ -20,7 +20,7 @@ module MetricPages {
     //! Title and a rule, the header both pages share.
     public function header(dc as Graphics.Dc, title as String) as Number {
         var h = dc.getHeight();
-        var y = Marquee.drawFitted(dc, h / 14, title, Theme.fontsTitle(), Theme.COLOR_TEXT,
+        var y = Marquee.drawFitted(dc, h / 14, title, Theme.fontsTitle(), Theme.colorText(),
             Theme.usableWidth(dc, h / 14));
         y += h / 44;
         FieldGrid.drawRule(dc, y);
@@ -53,17 +53,17 @@ module MetricPages {
         FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
             LiveMetrics.format(LiveMetrics.averageHeartRate()),
             WatchUi.loadResource(Rez.Strings.FieldAvgHr) as String,
-            Theme.COLOR_HR,
+            Theme.colorHr(),
             LiveMetrics.format(LiveMetrics.calories()),
             WatchUi.loadResource(Rez.Strings.FieldKcal) as String,
-            Theme.COLOR_WARM);
+            Theme.colorWarm());
 
         var timer = LiveMetrics.timerSeconds();
         FieldGrid.drawRule(dc, bottomTop);
         FieldGrid.drawSingle(dc, bottomTop, edge,
             timer != null ? Theme.formatDuration(timer) : LiveMetrics.NO_VALUE,
             WatchUi.loadResource(Rez.Strings.FieldTime) as String,
-            Theme.COLOR_TEXT);
+            Theme.colorText());
     }
 
     //! The session so far: volume, sets and reps, exercises finished.
@@ -87,21 +87,21 @@ module MetricPages {
         FieldGrid.drawSingle(dc, top, edge,
             Theme.formatVolume(summary.totalVolume),
             WatchUi.loadResource(Rez.Strings.FieldVolume) as String,
-            Theme.COLOR_ACCENT);
+            Theme.colorAccent());
 
         FieldGrid.drawRule(dc, middleTop);
         FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
             summary.completedSets.toString(),
             WatchUi.loadResource(Rez.Strings.FieldSets) as String,
-            Theme.COLOR_DONE,
+            Theme.colorDone(),
             summary.totalReps.toString(),
             WatchUi.loadResource(Rez.Strings.FieldReps) as String,
-            Theme.COLOR_TEXT);
+            Theme.colorText());
 
         FieldGrid.drawRule(dc, bottomTop);
         FieldGrid.drawSingle(dc, bottomTop, edge,
             done.toString() + "/" + summary.exerciseCount.toString(),
             WatchUi.loadResource(Rez.Strings.FieldExercises) as String,
-            Theme.COLOR_DONE);
+            Theme.colorDone());
     }
 }

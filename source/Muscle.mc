@@ -54,17 +54,17 @@ module Muscle {
     //! Pulled from the palette the rest of the app already uses.
     public function color(group as Number) as Number {
         switch (group) {
-            case CHEST:      return Theme.COLOR_HR;
-            case BACK:       return Theme.COLOR_ACCENT;
-            case SHOULDERS:  return Theme.COLOR_WARM;
-            case BICEPS:     return 0x55AAAA;
-            case TRICEPS:    return 0xAA55FF;
-            case QUADS:      return Theme.COLOR_DONE;
-            case HAMSTRINGS: return Theme.COLOR_DONE_DIM;
-            case GLUTES:     return 0xFF55AA;
-            case CALVES:     return 0xAAAA00;
-            case CORE:       return Theme.COLOR_DIM;
-            default:         return Theme.COLOR_SKIPPED;
+            case CHEST:      return Theme.colorHr();
+            case BACK:       return Theme.colorAccent();
+            case SHOULDERS:  return Theme.colorWarm();
+            case BICEPS:     return Theme.light() ? 0x005555 : 0x55AAAA;
+            case TRICEPS:    return Theme.light() ? 0x5500AA : 0xAA55FF;
+            case QUADS:      return Theme.colorDone();
+            case HAMSTRINGS: return Theme.colorDoneDim();
+            case GLUTES:     return Theme.light() ? 0xAA0055 : 0xFF55AA;
+            case CALVES:     return Theme.light() ? 0x555500 : 0xAAAA00;
+            case CORE:       return Theme.colorDim();
+            default:         return Theme.colorFaint();
         }
     }
 

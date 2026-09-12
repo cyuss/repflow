@@ -87,14 +87,14 @@ class RestView extends WatchUi.View {
         // The countdown is the hero: it owns the top third outright.
         var y = h / 9;
         y = Theme.drawFitted(dc, y, WatchUi.loadResource(Rez.Strings.Rest) as String,
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
+            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.colorDim());
 
         var countdownTop = y + h / 60;
         var countdownHeight = (h * 26) / 100;
         var timerFont = Theme.pickFontFitting(dc, rest.format(), Theme.fontsHero(),
             (Theme.usableWidth(dc, countdownTop + countdownHeight / 2) * 80) / 100,
             countdownHeight);
-        dc.setColor(rest.isRunning() ? Theme.COLOR_TEXT : Theme.COLOR_DONE,
+        dc.setColor(rest.isRunning() ? Theme.colorText() : Theme.colorDone(),
             Graphics.COLOR_TRANSPARENT);
         dc.drawText(dc.getWidth() / 2, countdownTop, timerFont, rest.format(),
             Graphics.TEXT_JUSTIFY_CENTER);
@@ -138,15 +138,15 @@ class RestView extends WatchUi.View {
         // you watch it — which is the only reason to look at a rest screen.
         var drop = controller.recovery().drop();
         var dropText = drop == null ? LiveMetrics.NO_VALUE : "-" + drop.toString();
-        var dropColor = Theme.COLOR_SKIPPED;
+        var dropColor = Theme.colorFaint();
         if (drop != null) {
-            dropColor = drop >= 12 ? Theme.COLOR_DONE : Theme.COLOR_WARM;
+            dropColor = drop >= 12 ? Theme.colorDone() : Theme.colorWarm();
         }
 
         FieldGrid.drawPair(dc, top, fieldBottom - top,
             LiveMetrics.format(hr),
             WatchUi.loadResource(Rez.Strings.FieldHr) as String,
-            hr != null ? Theme.COLOR_HR : Theme.COLOR_SKIPPED,
+            hr != null ? Theme.colorHr() : Theme.colorFaint(),
             dropText,
             WatchUi.loadResource(Rez.Strings.FieldRecovery) as String,
             dropColor);
@@ -158,7 +158,7 @@ class RestView extends WatchUi.View {
 
         FieldGrid.drawRule(dc, fieldBottom);
         var y = fieldBottom + h / 44;
-        y = Marquee.draw(dc, y, exercise.name, Theme.fontsBody(), Theme.COLOR_TEXT,
+        y = Marquee.draw(dc, y, exercise.name, Theme.fontsBody(), Theme.colorText(),
             Theme.usableWidth(dc, y));
 
         var detail = (exercise.completedSetCount() + 1).toString() + "/" +
@@ -167,11 +167,11 @@ class RestView extends WatchUi.View {
             Theme.formatPlannedWeight(exercise.plannedWeight()) + " " +
             Units.label();
         y = Theme.drawFitted(dc, y, detail,
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_ACCENT);
+            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.colorAccent());
 
         if (lastLine != null) {
             Theme.drawFitted(dc, y, lastLine as String,
-                [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
+                [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.colorDim());
         }
     }
 
@@ -188,10 +188,10 @@ class RestView extends WatchUi.View {
         var sweep = (360.0 * (1.0 - rest.progress())).toNumber();
 
         dc.setPenWidth(Device.stroke(27));
-        dc.setColor(Theme.COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
         dc.drawCircle(cx, cy, radius);
         if (sweep > 0) {
-            dc.setColor(Theme.COLOR_ACCENT, Graphics.COLOR_TRANSPARENT);
+            dc.setColor(Theme.colorAccent(), Graphics.COLOR_TRANSPARENT);
             dc.drawArc(cx, cy, radius, Graphics.ARC_CLOCKWISE, 90, (90 - sweep + 360) % 360);
         }
         dc.setPenWidth(1);

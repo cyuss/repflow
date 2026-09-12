@@ -87,24 +87,24 @@ class WorkoutSummaryView extends WatchUi.View {
         Theme.drawProgressRing(dc,
             (planned > 0 ? _summary.completedSets.toFloat() / planned.toFloat() : 0.0)
                 * Animator.value(),
-            _saved ? Theme.COLOR_DONE : Theme.COLOR_SKIPPED);
+            _saved ? Theme.colorDone() : Theme.colorFaint());
 
         var y = Marquee.drawFitted(dc, h / 16, _workout.name,
             [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_TEXT, Theme.usableWidth(dc, h / 16));
+            Theme.colorText(), Theme.usableWidth(dc, h / 16));
 
         // A record is the headline when there is one. "Workout done" is true
         // of every session; "2 records" is true of this one.
         var status = _saved
             ? WatchUi.loadResource(Rez.Strings.SummaryTitle) as String
             : WatchUi.loadResource(Rez.Strings.SummaryDiscarded) as String;
-        var statusColor = _saved ? Theme.COLOR_DONE : Theme.COLOR_SKIPPED;
+        var statusColor = _saved ? Theme.colorDone() : Theme.colorFaint();
         if (_saved && _records > 0) {
             status = _records.toString() + " " +
                 (WatchUi.loadResource(_records == 1
                     ? Rez.Strings.RecordOne
                     : Rez.Strings.RecordMany) as String);
-            statusColor = Theme.COLOR_WARM;
+            statusColor = Theme.colorWarm();
         }
         y = Theme.drawFitted(dc, y, status,
             [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, statusColor);
@@ -144,24 +144,24 @@ class WorkoutSummaryView extends WatchUi.View {
         FieldGrid.drawSingle(dc, top, edge,
             Theme.formatDuration(_summary.durationSec),
             WatchUi.loadResource(Rez.Strings.FieldTime) as String,
-            Theme.COLOR_TEXT);
+            Theme.colorText());
 
         FieldGrid.drawRule(dc, middleTop);
         FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
             _summary.completedSets.toString() + "/" + _summary.plannedSets.toString(),
             WatchUi.loadResource(Rez.Strings.FieldSets) as String,
             _summary.completedSets >= _summary.plannedSets
-                ? Theme.COLOR_DONE
-                : Theme.COLOR_WARM,
+                ? Theme.colorDone()
+                : Theme.colorWarm(),
             _summary.totalReps.toString(),
             WatchUi.loadResource(Rez.Strings.FieldReps) as String,
-            Theme.COLOR_TEXT);
+            Theme.colorText());
 
         FieldGrid.drawRule(dc, bottomTop);
         FieldGrid.drawSingle(dc, bottomTop, edge,
             Theme.formatVolume(_summary.totalVolume),
             WatchUi.loadResource(Rez.Strings.FieldVolume) as String,
-            Theme.COLOR_ACCENT);
+            Theme.colorAccent());
     }
 
     //! Garmin's own numbers, plus the two this app is in a position to add.
@@ -182,16 +182,16 @@ class WorkoutSummaryView extends WatchUi.View {
         FieldGrid.drawSingle(dc, top, edge,
             LiveMetrics.format(LiveMetrics.calories()),
             WatchUi.loadResource(Rez.Strings.FieldKcal) as String,
-            Theme.COLOR_WARM);
+            Theme.colorWarm());
 
         FieldGrid.drawRule(dc, middleTop);
         FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
             LiveMetrics.format(LiveMetrics.averageHeartRate()),
             WatchUi.loadResource(Rez.Strings.FieldAvgHr) as String,
-            Theme.COLOR_HR,
+            Theme.colorHr(),
             LiveMetrics.format(LiveMetrics.maxHeartRate()),
             WatchUi.loadResource(Rez.Strings.FieldMaxHr) as String,
-            Theme.COLOR_HR);
+            Theme.colorHr());
 
         // Best beats dropped in a minute of rest, and what the session cost in
         // Body Battery. Both are "--" when the watch could not measure them,
@@ -201,23 +201,23 @@ class WorkoutSummaryView extends WatchUi.View {
             : "-" + (_recovery as Number).toString();
 
         var batteryText = LiveMetrics.NO_VALUE;
-        var batteryColor = Theme.COLOR_SKIPPED;
+        var batteryColor = Theme.colorFaint();
         var start = _batteryStart;
         var finish = LiveMetrics.bodyBattery();
         if (start != null && finish != null) {
             var spent = (start as Number) - (finish as Number);
             batteryText = spent > 0 ? "-" + spent.toString() : (finish as Number).toString();
-            batteryColor = Theme.COLOR_DONE;
+            batteryColor = Theme.colorDone();
         } else if (finish != null) {
             batteryText = (finish as Number).toString();
-            batteryColor = Theme.COLOR_DONE;
+            batteryColor = Theme.colorDone();
         }
 
         FieldGrid.drawRule(dc, bottomTop);
         FieldGrid.drawPair(dc, bottomTop, edge,
             recoveryText,
             WatchUi.loadResource(Rez.Strings.FieldRecovery) as String,
-            _recovery == null ? Theme.COLOR_SKIPPED : Theme.COLOR_DONE,
+            _recovery == null ? Theme.colorFaint() : Theme.colorDone(),
             batteryText,
             WatchUi.loadResource(Rez.Strings.FieldBattery) as String,
             batteryColor);
@@ -251,7 +251,7 @@ class WorkoutSummaryView extends WatchUi.View {
         }
         if (peak <= 0) {
             FieldGrid.drawSingle(dc, top, bottom - top, LiveMetrics.NO_VALUE,
-                WatchUi.loadResource(Rez.Strings.ThisWeek) as String, Theme.COLOR_SKIPPED);
+                WatchUi.loadResource(Rez.Strings.ThisWeek) as String, Theme.colorFaint());
             return;
         }
 
@@ -291,7 +291,7 @@ class WorkoutSummaryView extends WatchUi.View {
             }
             var color = Muscle.color(group);
 
-            dc.setColor(Theme.COLOR_TEXT, Graphics.COLOR_TRANSPARENT);
+            dc.setColor(Theme.colorText(), Graphics.COLOR_TRANSPARENT);
             dc.drawText(left, y, font, _clip(dc, Muscle.name(group), font, labelWidth),
                 Graphics.TEXT_JUSTIFY_LEFT);
 
@@ -303,7 +303,7 @@ class WorkoutSummaryView extends WatchUi.View {
             dc.setColor(color, Graphics.COLOR_TRANSPARENT);
             dc.fillRectangle(barLeft, barTop, filled, barHeight);
 
-            dc.setColor(Theme.COLOR_DIM, Graphics.COLOR_TRANSPARENT);
+            dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
             dc.drawText(left + width, y, font, Theme.formatVolume(volume.toFloat()),
                 Graphics.TEXT_JUSTIFY_RIGHT);
 
@@ -333,7 +333,7 @@ class WorkoutSummaryView extends WatchUi.View {
         var peak = _zones.peakSeconds();
         if (peak <= 0) {
             FieldGrid.drawSingle(dc, top, bottom - top, LiveMetrics.NO_VALUE, caption,
-                Theme.COLOR_SKIPPED);
+                Theme.colorFaint());
             return;
         }
 
@@ -370,14 +370,14 @@ class WorkoutSummaryView extends WatchUi.View {
             var seconds = _zones.secondsIn(zone);
             var color = Theme.zoneColor(zone);
 
-            dc.setColor(seconds > 0 ? Theme.COLOR_TEXT : Theme.COLOR_SKIPPED,
+            dc.setColor(seconds > 0 ? Theme.colorText() : Theme.colorFaint(),
                 Graphics.COLOR_TRANSPARENT);
             dc.drawText(left, y, font, "Z" + zone.toString(), Graphics.TEXT_JUSTIFY_LEFT);
 
             var barTop = y + (lineHeight - barHeight) / 2;
             // The empty track keeps the five rows reading as one chart even
             // when only two of them have any time in them.
-            dc.setColor(Theme.COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+            dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
             dc.fillRectangle(barLeft, barTop + barHeight - 2, barWidth, 2);
 
             if (seconds > 0) {
@@ -389,7 +389,7 @@ class WorkoutSummaryView extends WatchUi.View {
                 dc.fillRectangle(barLeft, barTop, filled, barHeight);
             }
 
-            dc.setColor(seconds > 0 ? color : Theme.COLOR_SKIPPED,
+            dc.setColor(seconds > 0 ? color : Theme.colorFaint(),
                 Graphics.COLOR_TRANSPARENT);
             dc.drawText(left + width, y, font, Theme.formatDuration(seconds),
                 Graphics.TEXT_JUSTIFY_RIGHT);
@@ -472,7 +472,7 @@ class WorkoutSummaryView extends WatchUi.View {
 
         if (truncated) {
             var rest = list.size() - shown;
-            dc.setColor(Theme.COLOR_DIM, Graphics.COLOR_TRANSPARENT);
+            dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
             dc.drawText(dc.getWidth() / 2, y, font, "+" + rest.toString(),
                 Graphics.TEXT_JUSTIFY_CENTER);
         }
@@ -504,14 +504,14 @@ class WorkoutSummaryView extends WatchUi.View {
         dc.drawText(left + width, y, font, count, Graphics.TEXT_JUSTIFY_RIGHT);
 
         // A skipped exercise is a fact about the session, not a headline.
-        dc.setColor(exercise.state == EX_SKIPPED ? Theme.COLOR_DIM : Theme.COLOR_TEXT,
+        dc.setColor(exercise.state == EX_SKIPPED ? Theme.colorDim() : Theme.colorText(),
             Graphics.COLOR_TRANSPARENT);
         dc.drawText(left, y, font,
             _clip(dc, exercise.name, font, width - countWidth - gap),
             Graphics.TEXT_JUSTIFY_LEFT);
 
         var barTop = y + dc.getFontHeight(font) + barGap;
-        dc.setColor(Theme.COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
         dc.fillRectangle(left, barTop, width, barHeight);
 
         if (done > 0 && target > 0) {

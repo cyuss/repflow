@@ -2,29 +2,32 @@
   <!--
     RepFlow launcher icon.
 
-    Garmin's own activity icons are one bold silhouette and, at most, one accent
-    colour, on a transparent ground so the watch's launcher frame shows through.
-    This follows that: a barbell in white, inside the progress ring RepFlow draws
-    around the rim of every exercise screen.
+    It carries its own ground. The first version was a white barbell on
+    transparent, which vanished on a light app list — and a launcher background
+    is not something an app gets to choose. A dark disc behind the mark fixes
+    that without giving up the dark-list case: on white the disc is the
+    contrast, on black the ring and the barbell are.
 
-    The ring is not decoration — it is the app's own signature, the one thing
-    that is on screen for the whole workout, and it is what separates this from
-    every other dumbbell icon in the store.
+    Everything else follows Garmin's own activity icons: one bold silhouette,
+    one accent colour, and strokes no thinner than about 6% of the width,
+    because the launcher renders this between 33 and 80 pixels across.
 
-    Everything is sized as a fraction of a 512 grid and kept inside a 24 px
-    margin, because the launcher renders this between 33 and 80 pixels wide on
-    the supported devices and anything thinner than about 5% of the width
-    disappears there.
+    The ring is RepFlow's progress ring, the one thing on screen for the whole
+    workout. It is what separates this from every other dumbbell in the store.
   -->
 
+  <!-- The ground. Not pure black: a hair lighter reads as a deliberate disc
+       rather than as a hole punched in a dark list. -->
+  <circle cx="256" cy="256" r="228" fill="#141A20"/>
+
   <!-- Progress ring: 300 degrees, opening at the top-left the way the ring on
-       the exercise screen does. Stroke is 6% of the icon so it survives 33 px. -->
+       the exercise screen does. -->
   <path d="M 256 50
            A 206 206 0 1 1 153.0 78.6"
         fill="none" stroke="#00AAFF" stroke-width="32" stroke-linecap="round"/>
 
-  <!-- Barbell. Two plates a side: the outer one short, the inner one tall, which
-       is what makes it read as a bar and not as a dumbbell-shaped blob. -->
+  <!-- Barbell. Two plates a side: the outer short, the inner tall, which is
+       what makes it read as a bar and not as a dumbbell-shaped blob. -->
   <g fill="#FFFFFF">
     <rect x="112" y="214" width="34"  height="84"  rx="11"/>
     <rect x="158" y="183" width="48"  height="146" rx="17"/>

@@ -117,7 +117,7 @@ class SetEditorView extends WatchUi.View {
                 _exercise.targetSets.toString()
             : WatchUi.loadResource(Rez.Strings.NextSet) as String;
         y = Theme.drawFitted(dc, y + h / 60, title,
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_ACCENT);
+            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.colorAccent());
 
         // Sets done so far, as dots: the progression, without a sentence.
         Theme.drawSetDots(dc, h - h / 9, _exercise.targetSets,
@@ -132,9 +132,9 @@ class SetEditorView extends WatchUi.View {
         var focusCx = _drawCells(dc, cellsTop, cellsBottom, controller);
 
         var signSize = (signBand * 55) / 100;
-        Theme.drawSign(dc, focusCx, y + signBand / 2, signSize, true, Theme.COLOR_ACCENT);
+        Theme.drawSign(dc, focusCx, y + signBand / 2, signSize, true, Theme.colorAccent());
         Theme.drawSign(dc, focusCx, cellsBottom + signBand / 2, signSize, false,
-            Theme.COLOR_ACCENT);
+            Theme.colorAccent());
     }
 
     //! The two values, side by side, the focused one outlined.
@@ -185,12 +185,12 @@ class SetEditorView extends WatchUi.View {
             // contrast, which matters on the Fenix 6's 8-bit display. The
             // content is inset inside it so the caption does not sit on the line.
             dc.setPenWidth(3);
-            dc.setColor(Theme.COLOR_ACCENT, Graphics.COLOR_TRANSPARENT);
+            dc.setColor(Theme.colorAccent(), Graphics.COLOR_TRANSPARENT);
             dc.drawRoundedRectangle(x + inset, y, width - inset * 2, height, height / 4);
             dc.setPenWidth(1);
         }
         FieldGrid.drawCell(dc, x, y + pad, width, height - pad * 2, value, caption,
-            focused ? Theme.COLOR_TEXT : Theme.COLOR_DIM);
+            focused ? Theme.colorText() : Theme.colorDim());
     }
 }
 

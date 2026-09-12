@@ -117,10 +117,30 @@ There is **no API of any kind** for the contents: no exercises, no steps, no
 sets, no repetitions, no loads, no rest. The workout an athlete built in Garmin
 Connect is, to a Connect IQ app, a name and a handle.
 
-`Activity.getCurrentWorkoutStep()` does report step detail — but only while
-**Garmin's own workout player** is the thing running the activity. An app
-cannot start that player and stay in control: `toIntent()` hands the watch over
-to Garmin's activity, and RepFlow is no longer on screen.
+### Why Garmin's own activity can do it and an app cannot
+
+This is the fair objection, and it deserves a straight answer: Garmin's native
+activity is **firmware**, not a Connect IQ app. It reads the workout database
+directly. Connect IQ apps are given a deliberately narrow subset of what the
+watch knows, and the contents of a stored workout are not in it. It is a
+product decision by Garmin, not a technical impossibility — which is why it
+looks inconsistent from the outside. It is.
+
+`Activity.getCurrentWorkoutStep()` and `getNextWorkoutStep()` **do** exist, and
+**are** supported on the Fenix 6 Pro. They return a `WorkoutStepInfo`: the
+step's name, notes, intensity and sport, plus duration and target. So the data
+is reachable — under one condition.
+
+They report the step that is **currently executing**, which only happens while
+Garmin's own workout player is running the activity. That rules out a watch
+app: `toIntent()` hands the watch over to Garmin's activity, and RepFlow is no
+longer the thing on screen.
+
+It does **not** rule out a **data field**, which runs inside Garmin's native
+activity. A RepFlow data field could read the running step of a Garmin workout
+and show it. What it could not do is change the order — the native player owns
+that, and owning the order is the entire point of this app. A data field would
+be a different product, and the one RepFlow exists to replace.
 
 **Consequence:** RepFlow cannot import, read, mirror or execute a workout
 created in Garmin Connect. Listing the names would cost a `PersistedContent`

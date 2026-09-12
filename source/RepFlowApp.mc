@@ -17,6 +17,15 @@ class RepFlowApp extends Application.AppBase {
 
     //! The phone wrote new settings. Drop the cached copies so the next read
     //! picks them up; nothing else has to know.
+    //! RepFlow's own settings, opened by the watch.
+    //!
+    //! Whether the watch offers a Settings entry for an app in its list is the
+    //! firmware's decision, not the app's — so this cannot be the only way in,
+    //! and MENU on the workout picker opens the same menu.
+    public function getSettingsView() as [WatchUi.Views] or [WatchUi.Views, WatchUi.InputDelegates] or Null {
+        return [AppSettingsMenu.build(), new AppSettingsDelegate(true)];
+    }
+
     //! Settings changed — either the athlete's, written from the phone, or the
     //! watch's own. Drop every cached answer so the next read picks them up;
     //! nothing else in the app has to know.

@@ -81,7 +81,7 @@ module FieldGrid {
             // Keep the caption clear of the band's bottom edge; a caption
             // sitting on the separating rule reads as a collision.
             var bottomInset = height / 20;
-            dc.setColor(Theme.COLOR_DIM, Graphics.COLOR_TRANSPARENT);
+            dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
             dc.drawText(cx, y + height - captionHeight - bottomInset, captionFont, caption,
                 Graphics.TEXT_JUSTIFY_CENTER);
         }
@@ -126,14 +126,14 @@ module FieldGrid {
 
         // Divider, inset top and bottom so it reads as a separator, not a box.
         var inset = height / 6;
-        dc.setColor(Theme.COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
         dc.fillRectangle(left + half, top + inset, 1, height - inset * 2);
     }
 
     //! Hairline across the usable width at `y`. Separates bands.
     public function drawRule(dc as Graphics.Dc, y as Number) as Void {
         var width = Theme.usableWidth(dc, y);
-        dc.setColor(Theme.COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
         dc.fillRectangle((dc.getWidth() - width) / 2, y, width, 1);
     }
 

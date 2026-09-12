@@ -70,27 +70,27 @@ class StateIcon extends WatchUi.Drawable {
 
         switch (_state) {
             case EX_COMPLETED:
-                _disc(dc, cx, cy, r, Theme.COLOR_DONE);
+                _disc(dc, cx, cy, r, Theme.colorDone());
                 _tick(dc, cx, cy, r);
                 break;
 
             case EX_ACTIVE:
-                _disc(dc, cx, cy, r, Theme.COLOR_WARM);
+                _disc(dc, cx, cy, r, Theme.colorWarm());
                 _play(dc, cx, cy, r);
                 break;
 
             case EX_PENDING:
-                _ring(dc, cx, cy, r, Theme.COLOR_PENDING, r / 3);
-                _pause(dc, cx, cy, r, Theme.COLOR_PENDING);
+                _ring(dc, cx, cy, r, Theme.colorPending(), r / 3);
+                _pause(dc, cx, cy, r, Theme.colorPending());
                 break;
 
             case EX_SKIPPED:
-                _ring(dc, cx, cy, r, Theme.COLOR_SKIPPED, r / 5);
-                _cross(dc, cx, cy, r, Theme.COLOR_SKIPPED);
+                _ring(dc, cx, cy, r, Theme.colorFaint(), r / 5);
+                _cross(dc, cx, cy, r, Theme.colorFaint());
                 break;
 
             default:
-                _ring(dc, cx, cy, r, Theme.COLOR_SKIPPED, r / 6);
+                _ring(dc, cx, cy, r, Theme.colorFaint(), r / 6);
                 break;
         }
     }
@@ -124,7 +124,7 @@ class StateIcon extends WatchUi.Drawable {
 
     //! A tick, in the background colour, inside the filled disc.
     private function _tick(dc as Graphics.Dc, cx as Number, cy as Number, r as Number) as Void {
-        dc.setColor(Theme.COLOR_BG, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(Theme.colorBg(), Graphics.COLOR_TRANSPARENT);
         dc.setPenWidth(r / 3 > 2 ? r / 3 : 2);
         dc.drawLine(cx - r / 2, cy, cx - r / 8, cy + r / 2);
         dc.drawLine(cx - r / 8, cy + r / 2, cx + r / 2, cy - r / 2);
@@ -139,7 +139,7 @@ class StateIcon extends WatchUi.Drawable {
         var back = cx - (r * 30) / 100;
         var apex = cx + (r * 50) / 100;
         var half = (r * 45) / 100;
-        dc.setColor(Theme.COLOR_BG, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(Theme.colorBg(), Graphics.COLOR_TRANSPARENT);
         dc.fillPolygon([
             [back, cy - half],
             [apex, cy],

@@ -102,7 +102,7 @@ class NumberEditorView extends WatchUi.View {
 
         var y = Theme.drawFitted(dc, h / 9, _title,
             [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_ACCENT);
+            Theme.colorAccent());
 
         var signBand = h / 8;
         var bottom = h - h / 7;
@@ -118,18 +118,18 @@ class NumberEditorView extends WatchUi.View {
         var inset = width / 8;
 
         dc.setPenWidth(Device.stroke(11));
-        dc.setColor(Theme.COLOR_ACCENT, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(Theme.colorAccent(), Graphics.COLOR_TRANSPARENT);
         dc.drawRoundedRectangle(left + inset, cellTop, width - inset * 2, height, height / 4);
         dc.setPenWidth(1);
 
         var pad = height / 12;
         FieldGrid.drawCell(dc, left, cellTop + pad, width, height - pad * 2,
-            _text(), _unit, Theme.COLOR_TEXT);
+            _text(), _unit, Theme.colorText());
 
         var signSize = (signBand * 55) / 100;
         var cx = dc.getWidth() / 2;
-        Theme.drawSign(dc, cx, y + signBand / 2, signSize, true, Theme.COLOR_ACCENT);
-        Theme.drawSign(dc, cx, cellBottom + signBand / 2, signSize, false, Theme.COLOR_ACCENT);
+        Theme.drawSign(dc, cx, y + signBand / 2, signSize, true, Theme.colorAccent());
+        Theme.drawSign(dc, cx, cellBottom + signBand / 2, signSize, false, Theme.colorAccent());
     }
 }
 

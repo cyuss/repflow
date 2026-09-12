@@ -109,4 +109,8 @@
     <string id="LastTime">Last</string>
     <string id="FieldRecovery">REC</string>
     <string id="FieldBattery">BODY BATT</string>
+    <string id="AppSettings">Settings</string>
+    <string id="EditWorkoutItem">Edit workout</string>
+    <string id="SettingOn">On</string>
+    <string id="SettingOff">Off</string>
 </strings>

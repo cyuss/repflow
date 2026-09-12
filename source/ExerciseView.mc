@@ -63,7 +63,7 @@ class ExerciseView extends WatchUi.View {
 
         if (exercise == null) {
             Theme.drawFitted(dc, dc.getHeight() / 2 - 20, "No exercise selected",
-                Theme.fontsBody(), Theme.COLOR_DIM);
+                Theme.fontsBody(), Theme.colorDim());
             return;
         }
 
@@ -109,7 +109,7 @@ class ExerciseView extends WatchUi.View {
         // Progress on the rim: the one area a round screen gives away free.
         Theme.drawProgressRing(dc,
             (target > 0 ? done.toFloat() / target.toFloat() : 0.0) * Animator.value(),
-            Theme.COLOR_DONE);
+            Theme.colorDone());
 
         // No action button. START logs the set, and a button saying so was only
         // repeating what the athlete already knows while eating the space the
@@ -121,7 +121,7 @@ class ExerciseView extends WatchUi.View {
         var top = Theme.drawHeartRateGauge(dc, h / 14);
         top = Marquee.draw(dc, top + h / 60, exercise.name,
             [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_TEXT, Theme.usableWidth(dc, top + h / 60));
+            Theme.colorText(), Theme.usableWidth(dc, top + h / 60));
         top += h / 40;
         FieldGrid.drawRule(dc, top);
         top += 1;
@@ -151,10 +151,10 @@ class ExerciseView extends WatchUi.View {
         FieldGrid.drawRule(dc, top - h / 50);
 
         Theme.drawMiniField(dc, bandLeft + bandWidth / 4, top, timer,
-            WatchUi.loadResource(Rez.Strings.FieldTimer) as String, Theme.COLOR_TEXT);
+            WatchUi.loadResource(Rez.Strings.FieldTimer) as String, Theme.colorText());
         Theme.drawMiniField(dc, bandLeft + (bandWidth * 3) / 4, top, sets,
             (WatchUi.loadResource(Rez.Strings.SetLabel) as String).toUpper(),
-            Theme.COLOR_ACCENT);
+            Theme.colorAccent());
         return top - h / 50;
     }
 
@@ -190,16 +190,16 @@ class ExerciseView extends WatchUi.View {
         // so it is visibly a measurement rather than the plan.
         var counted = controller.countedReps();
         var repsText = controller.pendingReps().toString();
-        var repsColor = Theme.COLOR_ACCENT;
+        var repsColor = Theme.colorAccent();
         if (counted != null && (counted as Number) > 0) {
             repsText = (counted as Number).toString();
-            repsColor = Theme.COLOR_WARM;
+            repsColor = Theme.colorWarm();
         }
 
         FieldGrid.drawPair(dc, top + inset, height,
             Theme.formatWeight(controller.pendingWeight()),
             Units.label().toUpper(),
-            Theme.COLOR_TEXT,
+            Theme.colorText(),
             repsText,
             WatchUi.loadResource(Rez.Strings.FieldReps) as String,
             repsColor);

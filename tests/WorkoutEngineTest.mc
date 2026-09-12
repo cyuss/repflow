@@ -764,26 +764,26 @@ function testGridPrimitivesDraw(logger as Test.Logger) as Boolean {
     var middleHeight = (bottom - edge) - middleTop;
 
     // The full four-field layout, exactly as the metric pages compose it.
-    FieldGrid.drawSingle(dc, top, edge, "1:02:34", "TIME", Theme.COLOR_TEXT);
+    FieldGrid.drawSingle(dc, top, edge, "1:02:34", "TIME", Theme.colorText());
     FieldGrid.drawRule(dc, middleTop);
     FieldGrid.drawPair(dc, middleTop, middleHeight,
-        "128", "AVG HR", Theme.COLOR_HR,
-        "210", "KCAL", Theme.COLOR_TEXT);
+        "128", "AVG HR", Theme.colorHr(),
+        "210", "KCAL", Theme.colorText());
     FieldGrid.drawRule(dc, bottom - edge);
-    FieldGrid.drawSingle(dc, bottom - edge, edge, "--", "HR", Theme.COLOR_SKIPPED);
+    FieldGrid.drawSingle(dc, bottom - edge, edge, "--", "HR", Theme.colorFaint());
 
     // A cell so short the caption has to be dropped, and a very wide value.
-    FieldGrid.drawCell(dc, 0, 0, size, size / 14, "3.2 t", "VOLUME", Theme.COLOR_ACCENT);
-    FieldGrid.drawCell(dc, 0, 0, size, size / 3, "137.5", "WEIGHT", Theme.COLOR_TEXT);
+    FieldGrid.drawCell(dc, 0, 0, size, size / 14, "3.2 t", "VOLUME", Theme.colorAccent());
+    FieldGrid.drawCell(dc, 0, 0, size, size / 3, "137.5", "WEIGHT", Theme.colorText());
 
     // And the Theme primitives every screen leans on.
-    Theme.drawActionBar(dc, "COMPLETE SET", Theme.COLOR_ACCENT);
+    Theme.drawActionBar(dc, "COMPLETE SET", Theme.colorAccent());
     Theme.drawPageDots(dc, 3, 1);
     Theme.drawSetDots(dc, size / 2, 4, 2);
-    Theme.drawFitted(dc, size / 3, "Romanian Deadlift", Theme.fontsTitle(), Theme.COLOR_TEXT);
+    Theme.drawFitted(dc, size / 3, "Romanian Deadlift", Theme.fontsTitle(), Theme.colorText());
     Theme.drawValueWithUnit(dc, size / 3, "55", "kg", Theme.fontsHero(),
-        Theme.COLOR_TEXT, Theme.COLOR_DIM);
-    Theme.drawMetricRow(dc, size / 2, "VOLUME", "3.2 t", Theme.COLOR_ACCENT);
+        Theme.colorText(), Theme.colorDim());
+    Theme.drawMetricRow(dc, size / 2, "VOLUME", "3.2 t", Theme.colorAccent());
 
     // The heart rate zone gauge, at every zone and with no zone at all. The
     // simulator never reports a heart rate, so this is the only place the
@@ -807,8 +807,8 @@ function testGridPrimitivesDraw(logger as Test.Logger) as Boolean {
     Theme.drawHeartRateField(dc, 0, size / 14, "HR");
 
     // The plus and minus of the set editor.
-    Theme.drawSign(dc, size / 2, size / 3, size / 14, true, Theme.COLOR_ACCENT);
-    Theme.drawSign(dc, size / 2, size / 2, size / 14, false, Theme.COLOR_ACCENT);
+    Theme.drawSign(dc, size / 2, size / 3, size / 14, true, Theme.colorAccent());
+    Theme.drawSign(dc, size / 2, size / 2, size / 14, false, Theme.colorAccent());
     return true;
 }
 
@@ -1595,20 +1595,20 @@ function testMarqueeStopsWhenNothingOverflows(logger as Test.Logger) as Boolean 
     var fonts = [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>;
 
     // A short name fits, is drawn still, and starts nothing.
-    Marquee.draw(dc, size / 4, "Squat", fonts, Theme.COLOR_TEXT, Theme.usableWidth(dc, size / 4));
+    Marquee.draw(dc, size / 4, "Squat", fonts, Theme.colorText(), Theme.usableWidth(dc, size / 4));
     Marquee.endFrame();
     Test.assert(!Marquee.isRunning());
 
     // A name far too long for any font in the ladder has to move.
     var long = "Single-Leg Romanian Deadlift With A Very Long Name Indeed";
-    Marquee.draw(dc, size / 4, long, fonts, Theme.COLOR_TEXT, Theme.usableWidth(dc, size / 4));
+    Marquee.draw(dc, size / 4, long, fonts, Theme.colorText(), Theme.usableWidth(dc, size / 4));
     Test.assert(Marquee.isRunning());
 
     // And the frame after it leaves the screen, it stops again. A timer left
     // running at 10 fps for the rest of the workout is exactly the kind of cost
     // this app cannot afford.
     Marquee.endFrame();
-    Marquee.draw(dc, size / 4, "Squat", fonts, Theme.COLOR_TEXT, Theme.usableWidth(dc, size / 4));
+    Marquee.draw(dc, size / 4, "Squat", fonts, Theme.colorText(), Theme.usableWidth(dc, size / 4));
     Marquee.endFrame();
     Test.assert(!Marquee.isRunning());
     return true;
@@ -1666,7 +1666,7 @@ function testLongCatalogueNamesScroll(logger as Test.Logger) as Boolean {
         for (var i = 0; i < rows.size(); i++) {
             var name = (rows[i] as Array)[ExerciseCatalogue.F_NAME] as String;
             Marquee.stop();
-            Marquee.draw(dc, y, name, fonts, Theme.COLOR_TEXT, maxWidth);
+            Marquee.draw(dc, y, name, fonts, Theme.colorText(), maxWidth);
             if (Marquee.isRunning()) {
                 scrolled++;
             } else {
@@ -1715,5 +1715,56 @@ function testZoneProgressArithmetic(logger as Test.Logger) as Boolean {
         Test.assert(p >= 0.0 && p <= 1.0);
         previous = p;
     }
+    return true;
+}
+
+//! Both themes resolve, and no colour is shared between a ground and the text
+//! that sits on it.
+//!
+//! The failure this guards is the one that makes an app unusable rather than
+//! ugly: a colour defined for one theme and left in place for the other, so
+//! white text lands on a white ground. Every pair is checked in both.
+(:test)
+function testBothThemesAreLegible(logger as Test.Logger) as Boolean {
+    var themes = [Tuning.THEME_DARK, Tuning.THEME_LIGHT] as Array<Number>;
+    var before = Settings.theme();
+
+    for (var t = 0; t < themes.size(); t++) {
+        Settings.setTheme(themes[t]);
+        Test.assertEqual(Settings.theme(), themes[t]);
+
+        var bg = Theme.colorBg();
+        // Nothing that carries meaning may equal the ground it is drawn on.
+        Test.assert(Theme.colorText() != bg);
+        Test.assert(Theme.colorDim() != bg);
+        Test.assert(Theme.colorFaint() != bg);
+        Test.assert(Theme.colorAccent() != bg);
+        Test.assert(Theme.colorDone() != bg);
+        Test.assert(Theme.colorPending() != bg);
+        Test.assert(Theme.colorHr() != bg);
+        Test.assert(Theme.colorWarm() != bg);
+        Test.assert(Theme.colorDoneDim() != bg);
+
+        // Captions must be distinguishable from body text, and from the rules.
+        Test.assert(Theme.colorDim() != Theme.colorText());
+        Test.assert(Theme.colorFaint() != Theme.colorText());
+
+        // Every heart rate zone has its own colour, and none is the ground.
+        var seen = {} as Dictionary;
+        for (var zone = 1; zone <= 5; zone++) {
+            var c = Theme.zoneColor(zone);
+            Test.assert(c != bg);
+            Test.assert(!seen.hasKey(c));
+            seen.put(c, true);
+        }
+
+        // And every muscle group's colour, which the weekly chart relies on.
+        var groups = Muscle.browseOrder();
+        for (var g = 0; g < groups.size(); g++) {
+            Test.assert(Muscle.color(groups[g]) != bg);
+        }
+    }
+
+    Settings.setTheme(before);
     return true;
 }

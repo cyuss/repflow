@@ -102,4 +102,11 @@
     <string id="LastTime">Derniere</string>
     <string id="FieldRecovery">REC</string>
     <string id="FieldBattery">BODY BATT</string>
+    <string id="SetTheme">Fond d'ecran</string>
+    <string id="SetThemeDark">Noir</string>
+    <string id="SetThemeLight">Blanc</string>
+    <string id="AppSettings">Reglages</string>
+    <string id="EditWorkoutItem">Modifier la seance</string>
+    <string id="SettingOn">Active</string>
+    <string id="SettingOff">Desactive</string>
 </strings>

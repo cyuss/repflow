@@ -16,6 +16,7 @@
         <property id="haptics"           type="boolean">true</property>
         <property id="repCounter"        type="boolean">false</property>
         <property id="animations"        type="number">0</property>
+        <property id="theme"             type="number">0</property>
     </properties>
 
     <strings>
@@ -31,6 +32,9 @@
         <string id="SetAnimAuto">Follow the watch</string>
         <string id="SetAnimOff">Off</string>
         <string id="SetAnimOn">On</string>
+        <string id="SetTheme">Background</string>
+        <string id="SetThemeDark">Black</string>
+        <string id="SetThemeLight">White</string>
     </strings>
 
     <settings>
@@ -63,6 +67,13 @@
                 <listEntry value="0">@Strings.SetAnimAuto</listEntry>
                 <listEntry value="1">@Strings.SetAnimOff</listEntry>
                 <listEntry value="2">@Strings.SetAnimOn</listEntry>
+            </settingConfig>
+        </setting>
+
+        <setting propertyKey="@Properties.theme" title="@Strings.SetTheme">
+            <settingConfig type="list">
+                <listEntry value="0">@Strings.SetThemeDark</listEntry>
+                <listEntry value="1">@Strings.SetThemeLight</listEntry>
             </settingConfig>
         </setting>
     </settings>
