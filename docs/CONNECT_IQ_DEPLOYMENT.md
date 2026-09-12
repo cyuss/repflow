@@ -110,19 +110,36 @@ can produce that.
 
 ```sh
 make sim DEVICE=fenix6pro
-make store-shot            # opens the simulator's own export, once per screen
+# get to RepFlow's SET screen, then, once:
+DEVICE=fenix6pro scripts/store-shots.sh calibrate
+# then one per screen worth showing:
+DEVICE=fenix6pro scripts/store-shots.sh set-screen
+DEVICE=fenix6pro scripts/store-shots.sh overview
 ```
 
-`make store-shot` puts `store-assets/screenshots/` on your clipboard and opens
-the panel; press Cmd+Shift+G, Cmd+V, name the file, save. Repeat for each screen
-worth showing. A good set for RepFlow is five or six:
+The script finds the display from geometry the app itself guarantees — every
+exercise screen draws a full grey circle at radius `size / 2 - 5` with a pen 5
+wide, so the black disc inside it is exactly `size - 15` pixels across. It
+measures that disc, checks the answer against the resolution the device
+definition declares, and refuses rather than producing a plausible-looking
+screenshot of the wrong region. Everything outside the round display is masked
+to black, because a round watch has no pixels in the corners of its framebuffer
+and the simulator paints its own artwork there.
 
-1. The set screen, mid-workout — the load, the reps, the heart rate zone gauge
-2. The workout overview, showing a deferred exercise — this is the product
-3. The rest screen, with the recovery figure and what is next
-4. The recap's time-in-zone chart
-5. The recap's per-exercise list
-6. The catalogue, mid-build
+The ten already in `store-assets/screenshots/` are a complete set:
+
+| Screenshot | Why it earns a slot |
+|---|---|
+| `set-screen` | The load, the reps, the heart rate zone gauge |
+| `overview` | A finished exercise and three waiting — **this is the product** |
+| `set-editor` | Correcting the reps before they are logged |
+| `rest` | The countdown, the recovery figure, and what is next |
+| `stop-menu` | The Garmin-style keep training / save / discard |
+| `recap-work` | Time, sets against plan, reps, volume |
+| `recap-body` | Calories, heart rate, recovery, Body Battery |
+| `recap-zones` | Time in zone, the chart a Fenix ends every activity on |
+| `recap-exercises` | What was done, exercise by exercise, with progress bars |
+| `recap-week` | Volume per muscle group across the last seven days |
 
 ## Step 8 — Write the listing
 

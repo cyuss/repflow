@@ -694,8 +694,20 @@ module Theme {
     //!
     //! Everything upstream of here is kilograms — FIT, history, the engine —
     //! and the conversion happens once, at the moment it becomes text.
+    //!
+    //! Reports exactly what is stored. Use it for a load that was **lifted**.
     public function formatWeight(weight as Float) as String {
         return formatNumber(Units.fromKg(weight));
+    }
+
+    //! A load the athlete has not lifted yet, on the step grid of their unit.
+    //!
+    //! A 55 kg template default is 121.3 lb, and a plan offering 121.3 reads as
+    //! a measurement rather than a suggestion. Separate from formatWeight
+    //! because the distinction is the whole point: a plan may be rounded to
+    //! something sensible, a record may not be touched.
+    public function formatPlannedWeight(weight as Float) as String {
+        return formatNumber(Units.fromKg(Units.snap(weight)));
     }
 
     //! "1:05:23" or "42:07"

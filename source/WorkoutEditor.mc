@@ -73,7 +73,7 @@ module WorkoutEditor {
             menu.addItem(new WatchUi.MenuItem(
                 ex.name,
                 ex.targetSets.toString() + " x " + ex.targetReps.toString() + "   " +
-                    Theme.formatWeight(ex.plannedWeight()) + " " + Units.label(),
+                    Theme.formatPlannedWeight(ex.plannedWeight()) + " " + Units.label(),
                 ex.id, {}));
         }
         menu.addItem(new WatchUi.MenuItem(
@@ -131,7 +131,7 @@ module WorkoutEditor {
             ex.targetReps.toString(), ACT_REPS, {}));
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.WeightLabel) as String,
-            Theme.formatWeight(ex.defaultWeight) + " " + Units.label(), ACT_WEIGHT, {}));
+            Theme.formatPlannedWeight(ex.defaultWeight) + " " + Units.label(), ACT_WEIGHT, {}));
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.RestLabel) as String,
             Theme.formatDuration(ex.restDuration), ACT_REST, {}));

@@ -49,7 +49,7 @@ module ExercisePicker {
             // mistake rather than as "yourself".
             var sub = weight > 0.0
                 ? (row[ExerciseCatalogue.F_REPS] as Number).toString() + " x " +
-                    Theme.formatWeight(weight) + " " + Units.label()
+                    Theme.formatPlannedWeight(weight) + " " + Units.label()
                 : (row[ExerciseCatalogue.F_REPS] as Number).toString() + " " +
                     (WatchUi.loadResource(Rez.Strings.FieldReps) as String).toLower();
             menu.addItem(new WatchUi.MenuItem(

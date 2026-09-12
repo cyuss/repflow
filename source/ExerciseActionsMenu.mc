@@ -43,7 +43,7 @@ module ExerciseActionsMenu {
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.EditSet) as String,
             exercise.plannedReps().toString() + " x " +
-                Theme.formatWeight(exercise.plannedWeight()) + " " +
+                Theme.formatPlannedWeight(exercise.plannedWeight()) + " " +
                 Units.label(),
             ACTION_EDIT_SET, {}));
         menu.addItem(new WatchUi.MenuItem(

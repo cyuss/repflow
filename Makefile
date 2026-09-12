@@ -74,8 +74,8 @@ shot: ## Screenshot the simulator's watch face to build/sim-shot.png
 	@scripts/shot.sh
 
 .PHONY: store-shot
-store-shot: ## Open the simulator's native-resolution export, for store screenshots
-	@scripts/store-shots.sh
+store-shot: ## Capture the simulator display at native resolution (calibrate first)
+	@DEVICE=$(DEVICE) scripts/store-shots.sh $(if $(NAME),$(NAME),calibrate)
 
 sideload: ## Build and copy a release PRG to a USB-connected watch
 	@scripts/sideload.sh $(DEVICE)

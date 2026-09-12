@@ -49,7 +49,7 @@ class WorkoutOverviewView extends WatchUi.Menu2 {
             // two facts, "2/460kg" as one run-on. ASCII only — the Fenix 6 Pro
             // has no glyph for a middot and draws a "?" box instead.
             var sub = ex.completedSetCount().toString() + "/" + ex.targetSets.toString() +
-                "    " + Theme.formatWeight(ex.plannedWeight()) +
+                "    " + Theme.formatPlannedWeight(ex.plannedWeight()) +
                 " " + Units.label();
             addItem(new WatchUi.IconMenuItem(
                 ex.name, sub, ex.id, new StateIcon(ex.state, iconSize), {}));
