@@ -69,6 +69,9 @@
                  gauge would have to guess a maximum heart rate, which would be
                  inventing data rather than reading it. -->
             <iq:uses-permission id="UserProfile"/>
+    <!-- Body Battery, read at the start and end of a workout for the recap.
+         Garmin's own number: RepFlow reads it and never estimates one. -->
+    <iq:uses-permission id="SensorHistory"/>
         </iq:permissions>
 
         <iq:languages>

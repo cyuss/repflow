@@ -23,6 +23,19 @@ class AppController {
     //! Time in heart rate zone, counted off the same 1 Hz tick. Garmin shows
     //! this at the end of its own activities and gives no API to read it back.
     private var _zones as ZoneTracker;
+    //! Beats dropped between sets, off the same tick as the zone chart.
+    private var _recovery as RecoveryTracker;
+    //! Garmin's Body Battery when the workout started, for the recap. Read
+    //! once, because a session is what moves it and a per-tick read would cost
+    //! a sensor-history query every second for a number that changes hourly.
+    private var _batteryStart as Number?;
+    //! Every movement's records, loaded once at the start of a workout and
+    //! written back once at the end. Comparing in memory is what lets a record
+    //! buzz the instant it is set without a storage write on the hot path.
+    private var _bests as Dictionary;
+    //! The best thing that happened this session, for the recap.
+    private var _bestRecord as Number;
+    private var _recordCount as Number;
     //! Weight/reps the athlete has dialled in for the set about to be performed.
     private var _pendingWeight as Float;
     private var _pendingReps as Number;
@@ -40,6 +53,11 @@ class AppController {
         _rest = new RestTimer();
         _ticker = null;
         _zones = new ZoneTracker();
+        _recovery = new RecoveryTracker();
+        _batteryStart = null;
+        _bests = {} as Dictionary;
+        _bestRecord = History.RECORD_NONE;
+        _recordCount = 0;
         _pendingWeight = 0.0;
         _pendingReps = 0;
         _exercisePage = 0;
@@ -65,6 +83,33 @@ class AppController {
 
     public function zoneTracker() as ZoneTracker {
         return _zones;
+    }
+
+    public function recovery() as RecoveryTracker {
+        return _recovery;
+    }
+
+    public function bodyBatteryStart() as Number? {
+        return _batteryStart;
+    }
+
+    //! Records as they stood when this workout began, plus anything set since.
+    public function bests() as Dictionary {
+        return _bests;
+    }
+
+    //! The strongest record set this session, and how many fell.
+    public function bestRecord() as Number {
+        return _bestRecord;
+    }
+
+    public function recordCount() as Number {
+        return _recordCount;
+    }
+
+    //! What was done on this movement in the last session that touched it.
+    public function lastPerformance(exerciseId as String) as Array? {
+        return History.lastPerformance(_bests, exerciseId);
     }
 
     public function restTimer() as RestTimer {
@@ -115,6 +160,9 @@ class AppController {
         var session = new WorkoutSession(workout, now());
         _engine = new WorkoutEngine(session);
         _zones = new ZoneTracker();
+        _recovery = new RecoveryTracker();
+        _batteryStart = LiveMetrics.bodyBattery();
+        _loadHistory();
         _exerciseStartedAt = now();
         _recorder.start(workout.name);
         _startTicker();
@@ -127,6 +175,7 @@ class AppController {
     public function resumeWorkout(session as WorkoutSession) as Void {
         _engine = new WorkoutEngine(session);
         _zones = new ZoneTracker();
+        _loadHistory();
         _recorder.start(session.workout.name);
         var ex = session.currentExercise();
         if (ex != null) {
@@ -293,12 +342,27 @@ class AppController {
         if (exercise == null) {
             return;
         }
-        engine.completeCurrentSet(_pendingReps, _pendingWeight, now());
+        var at = now();
+        var reps = _pendingReps;
+        var weight = _pendingWeight;
+        engine.completeCurrentSet(reps, weight, at);
         _recorder.markSet();
-        _recorder.updateTotals(engine.summary(now()));
+        _recorder.updateTotals(engine.summary(at));
         syncPendingValues(exercise);
         _persist();
-        Haptics.setLogged();
+
+        // A record is the one thing in a session worth interrupting for, so it
+        // gets its own pattern rather than the ordinary "set logged" tap.
+        var record = History.recordSet(_bests, exercise.id, reps, weight, at);
+        if (record != History.RECORD_NONE) {
+            _recordCount++;
+            if (record > _bestRecord) {
+                _bestRecord = record;
+            }
+            Haptics.record();
+        } else {
+            Haptics.setLogged();
+        }
         // Always return to the set page: the next thing the athlete does is the
         // next set, not read metrics.
         _exercisePage = Tuning.PAGE_SET;
@@ -315,6 +379,7 @@ class AppController {
 
     public function startRest(durationSec as Number) as Void {
         _rest.start(durationSec);
+        _recovery.startRest();
         _startTicker();   // already running during a workout; harmless to re-arm
         WatchUi.switchToView(new RestView(), new RestDelegate(), WatchUi.SLIDE_UP);
     }
@@ -337,7 +402,9 @@ class AppController {
     //! the live metric pages moving while the athlete is working.
     public function onTick() as Void {
         if (_engine != null) {
-            _zones.sample(LiveMetrics.heartRateZone());
+            var hr = LiveMetrics.heartRate();
+            _zones.sample(LiveMetrics.zoneFor(hr));
+            _recovery.sample(hr);
         }
         if (_rest.isRunning() && _rest.tick()) {
             // Reached zero exactly on this tick — notify once.
@@ -353,6 +420,7 @@ class AppController {
     //! the athlete a trip through the overview after every exercise.
     public function endRest() as Void {
         _rest.skip();
+        _recovery.endRest();
 
         var engine = _engine;
         if (engine != null) {
@@ -384,9 +452,12 @@ class AppController {
             return;
         }
         stopTicker();
-        var summary = engine.finishWorkout(now());
+        var finishedAt = now();
+        var summary = engine.finishWorkout(finishedAt);
         _recorder.updateTotals(summary);
         SessionRepository.appendHistory(engine.getSession(), summary);
+        // Records and the week's volume are written once, here, never mid-set.
+        History.commitSession(_bests, engine.getWorkout(), finishedAt);
         SessionRepository.clearActive();
 
         // Take what the recap needs before the engine is released: stopping the
@@ -400,7 +471,11 @@ class AppController {
         }
         _engine = null;
 
-        var view = new WorkoutSummaryView(summary, workout, _zones, save);
+        // Read once, here, rather than from a draw call: the recap pages are
+        // repainted on every tick and Storage is not free.
+        var weekly = History.volumeForWeek(finishedAt);
+        var view = new WorkoutSummaryView(summary, workout, _zones, weekly,
+            _recordCount, _batteryStart, _recovery.best(), save);
         WatchUi.switchToView(view, new WorkoutSummaryDelegate(view), WatchUi.SLIDE_UP);
     }
 
@@ -421,6 +496,13 @@ class AppController {
     // ------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------
+
+    //! Read the records in before the first set, so comparing one is free.
+    private function _loadHistory() as Void {
+        _bests = History.loadBests();
+        _bestRecord = History.RECORD_NONE;
+        _recordCount = 0;
+    }
 
     private function _persist() as Void {
         var engine = _engine;

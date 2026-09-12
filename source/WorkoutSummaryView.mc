@@ -8,6 +8,7 @@ import Toybox.WatchUi;
 //!   Page 2 — the body        Garmin's calories and heart rate
 //!   Page 3 — time in zones   the bar chart a Fenix shows after any activity
 //!   Page 4 — the exercises   what was actually done, exercise by exercise
+//!   Page 5 — this week       volume per muscle group, across the last 7 days
 //!
 //! It carries no buttons. Save and discard were answered in the stop menu
 //! before this screen opened (see EndWorkoutFlow); a SAVE button here asked a
@@ -22,11 +23,19 @@ import Toybox.WatchUi;
 //! rather than a fabricated zero when the device does not provide them.
 class WorkoutSummaryView extends WatchUi.View {
 
-    public static const PAGE_COUNT = 4;
+    public static const PAGE_COUNT = 5;
 
     private var _summary as SessionSummary;
     private var _workout as Workout;
     private var _zones as ZoneTracker;
+    //! Whole kilograms per muscle group for the week this session fell in,
+    //! read once at construction — the pages repaint on every tick.
+    private var _weekly as Array<Number>;
+    private var _records as Number;
+    //! Garmin's Body Battery when the session began, for the before-and-after.
+    private var _batteryStart as Number?;
+    //! Best one-minute heart rate recovery this session.
+    private var _recovery as Number?;
     private var _saved as Boolean;
     private var _page as Number;
 
@@ -34,12 +43,20 @@ class WorkoutSummaryView extends WatchUi.View {
         summary as SessionSummary,
         workout as Workout,
         zones as ZoneTracker,
+        weekly as Array<Number>,
+        records as Number,
+        batteryStart as Number?,
+        recovery as Number?,
         saved as Boolean
     ) {
         View.initialize();
         _summary = summary;
         _workout = workout;
         _zones = zones;
+        _weekly = weekly;
+        _records = records;
+        _batteryStart = batteryStart;
+        _recovery = recovery;
         _saved = saved;
         _page = 0;
     }
@@ -62,12 +79,21 @@ class WorkoutSummaryView extends WatchUi.View {
             [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
             Theme.COLOR_TEXT);
 
+        // A record is the headline when there is one. "Workout done" is true
+        // of every session; "2 records" is true of this one.
         var status = _saved
             ? WatchUi.loadResource(Rez.Strings.SummaryTitle) as String
             : WatchUi.loadResource(Rez.Strings.SummaryDiscarded) as String;
+        var statusColor = _saved ? Theme.COLOR_DONE : Theme.COLOR_SKIPPED;
+        if (_saved && _records > 0) {
+            status = _records.toString() + " " +
+                (WatchUi.loadResource(_records == 1
+                    ? Rez.Strings.RecordOne
+                    : Rez.Strings.RecordMany) as String);
+            statusColor = Theme.COLOR_WARM;
+        }
         y = Theme.drawFitted(dc, y, status,
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
-            _saved ? Theme.COLOR_DONE : Theme.COLOR_SKIPPED);
+            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, statusColor);
 
         y += h / 60;
         FieldGrid.drawRule(dc, y);
@@ -81,6 +107,8 @@ class WorkoutSummaryView extends WatchUi.View {
             _drawZonesPage(dc, top, bottom);
         } else if (_page == 3) {
             _drawExercisesPage(dc, top, bottom);
+        } else if (_page == 4) {
+            _drawWeekPage(dc, top, bottom);
         } else {
             _drawWorkPage(dc, top, bottom);
         }
@@ -121,9 +149,16 @@ class WorkoutSummaryView extends WatchUi.View {
             Theme.COLOR_ACCENT);
     }
 
-    //! Garmin's own numbers, plus the average load moved per set — the one
-    //! derived figure worth showing, because it says how heavy the session was
-    //! rather than how long it took.
+    //! Garmin's own numbers, plus the two this app is in a position to add.
+    //!
+    //! Recovery and Body Battery both replace figures that were derivable from
+    //! page one. They are here because they answer something a set count cannot:
+    //! how hard the session actually was on the athlete, rather than how much
+    //! iron moved.
+    //!
+    //! The bottom band splits, against the usual rule that only the middle does.
+    //! It is allowed here because both values are two or three characters —
+    //! "18" and "-21" — which is what the rule is really about.
     private function _drawBodyPage(dc as Graphics.Dc, top as Number, bottom as Number) as Void {
         var edge = FieldGrid.edgeHeight(top, bottom);
         var middleTop = top + edge;
@@ -143,13 +178,123 @@ class WorkoutSummaryView extends WatchUi.View {
             WatchUi.loadResource(Rez.Strings.FieldMaxHr) as String,
             Theme.COLOR_HR);
 
+        // Best beats dropped in a minute of rest, and what the session cost in
+        // Body Battery. Both are "--" when the watch could not measure them,
+        // never a zero that reads like a result.
+        var recoveryText = _recovery == null
+            ? LiveMetrics.NO_VALUE
+            : "-" + (_recovery as Number).toString();
+
+        var batteryText = LiveMetrics.NO_VALUE;
+        var batteryColor = Theme.COLOR_SKIPPED;
+        var start = _batteryStart;
+        var finish = LiveMetrics.bodyBattery();
+        if (start != null && finish != null) {
+            var spent = (start as Number) - (finish as Number);
+            batteryText = spent > 0 ? "-" + spent.toString() : (finish as Number).toString();
+            batteryColor = Theme.COLOR_DONE;
+        } else if (finish != null) {
+            batteryText = (finish as Number).toString();
+            batteryColor = Theme.COLOR_DONE;
+        }
+
         FieldGrid.drawRule(dc, bottomTop);
-        var perSet = _summary.completedSets > 0
-            ? Theme.formatVolume(_summary.totalVolume / _summary.completedSets.toFloat())
-            : LiveMetrics.NO_VALUE;
-        FieldGrid.drawSingle(dc, bottomTop, edge, perSet,
-            WatchUi.loadResource(Rez.Strings.FieldPerSet) as String,
-            Theme.COLOR_ACCENT);
+        FieldGrid.drawPair(dc, bottomTop, edge,
+            recoveryText,
+            WatchUi.loadResource(Rez.Strings.FieldRecovery) as String,
+            _recovery == null ? Theme.COLOR_SKIPPED : Theme.COLOR_DONE,
+            batteryText,
+            WatchUi.loadResource(Rez.Strings.FieldBattery) as String,
+            batteryColor);
+    }
+
+    //! The week's volume, muscle group by muscle group.
+    //!
+    //!   Back      ####################   4.2 t
+    //!   Chest     ##########             2.1 t
+    //!   Biceps    ###                    0.6 t
+    //!
+    //! Only the groups that were actually trained appear. A list of ten rows
+    //! with seven zeroes in it says nothing, and the question this answers is
+    //! whether the week is balanced — six pushing exercises and one pulling is
+    //! visible in three seconds here and invisible anywhere else in the app.
+    //!
+    //! The bar scale is the busiest group, not a target: RepFlow does not know
+    //! what the athlete is training for and will not invent a prescription.
+    private function _drawWeekPage(dc as Graphics.Dc, top as Number, bottom as Number) as Void {
+        var order = Muscle.browseOrder();
+        var peak = 0;
+        var trained = 0;
+        for (var i = 0; i < order.size(); i++) {
+            var v = _weekly[order[i]];
+            if (v > 0) {
+                trained++;
+                if (v > peak) {
+                    peak = v;
+                }
+            }
+        }
+        if (peak <= 0) {
+            FieldGrid.drawSingle(dc, top, bottom - top, LiveMetrics.NO_VALUE,
+                WatchUi.loadResource(Rez.Strings.ThisWeek) as String, Theme.COLOR_SKIPPED);
+            return;
+        }
+
+        var font = Graphics.FONT_XTINY;
+        var lineHeight = dc.getFontHeight(font);
+        var rowHeight = lineHeight + lineHeight / 5;
+        var available = bottom - top;
+
+        var rows = available / rowHeight;
+        var shown = trained < rows ? trained : rows;
+        var used = rowHeight * shown;
+        var visible = used - lineHeight / 5;
+        var y = top + (available - visible) / 2;
+        if (y < top) {
+            y = top;
+        }
+
+        var gutter = dc.getWidth() / 14;
+        var width = Theme.bandWidth(dc, y, used) - gutter;
+        var left = (dc.getWidth() - width) / 2;
+        var labelWidth = (width * 34) / 100;
+        var valueWidth = (width * 26) / 100;
+        var gap = dc.getWidth() / 40;
+        var barLeft = left + labelWidth + gap;
+        var barWidth = width - labelWidth - valueWidth - gap * 2;
+        var barHeight = (lineHeight * 45) / 100;
+        if (barWidth < 4) {
+            return;
+        }
+
+        var drawn = 0;
+        for (var i = 0; i < order.size() && drawn < shown; i++) {
+            var group = order[i];
+            var volume = _weekly[group];
+            if (volume <= 0) {
+                continue;
+            }
+            var color = Muscle.color(group);
+
+            dc.setColor(Theme.COLOR_TEXT, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(left, y, font, _clip(dc, Muscle.name(group), font, labelWidth),
+                Graphics.TEXT_JUSTIFY_LEFT);
+
+            var barTop = y + (lineHeight - barHeight) / 2;
+            var filled = (barWidth * volume) / peak;
+            if (filled < 3) {
+                filled = 3;
+            }
+            dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+            dc.fillRectangle(barLeft, barTop, filled, barHeight);
+
+            dc.setColor(Theme.COLOR_DIM, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(left + width, y, font, Theme.formatVolume(volume.toFloat()),
+                Graphics.TEXT_JUSTIFY_RIGHT);
+
+            y += rowHeight;
+            drawn++;
+        }
     }
 
     //! Time in heart rate zone, as a bar chart — the screen a Fenix shows at

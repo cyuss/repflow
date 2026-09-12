@@ -1,6 +1,7 @@
 import Toybox.Lang;
 import Toybox.Activity;
 import Toybox.UserProfile;
+import Toybox.SensorHistory;
 
 //! Read-only access to the Garmin metrics that are genuinely available while an
 //! activity is recording.
@@ -66,7 +67,13 @@ module LiveMetrics {
     //! 1 followed by the ceiling of each zone — so the zone is the first
     //! ceiling the reading falls under.
     public function heartRateZone() as Number? {
-        var hr = heartRate();
+        return zoneFor(heartRate());
+    }
+
+    //! The zone a given reading falls in. Separate from heartRateZone() so the
+    //! 1 Hz tick can read the sensor once and feed both the zone chart and the
+    //! recovery tracker from it.
+    public function zoneFor(hr as Number?) as Number? {
         if (hr == null) {
             return null;
         }
@@ -84,6 +91,40 @@ module LiveMetrics {
                 }
             }
             return 5;   // above the top threshold is still zone 5
+        } catch (e) {
+            return null;
+        }
+    }
+
+    //! The wearer's current Body Battery, 0-100, or null.
+    //!
+    //! Garmin's own number, read rather than computed — RepFlow has no business
+    //! estimating it. Not every device tracks it and not every firmware exposes
+    //! the history module, so both are checked with `has` rather than a
+    //! try/catch: a missing symbol is a Monkey C runtime error, and those are
+    //! not Exceptions.
+    public function bodyBattery() as Number? {
+        if (!(Toybox has :SensorHistory)) {
+            return null;
+        }
+        if (!(SensorHistory has :getBodyBatteryHistory)) {
+            return null;
+        }
+        try {
+            var iterator = SensorHistory.getBodyBatteryHistory({
+                :period => 1,
+                :order => SensorHistory.ORDER_NEWEST_FIRST
+            });
+            var sample = iterator.next();
+            if (sample == null) {
+                return null;
+            }
+            var value = sample.data;
+            if (!(value instanceof Number) && !(value instanceof Float)) {
+                return null;
+            }
+            var n = (value instanceof Float) ? (value as Float).toNumber() : value as Number;
+            return (n >= 0 && n <= 100) ? n : null;
         } catch (e) {
             return null;
         }

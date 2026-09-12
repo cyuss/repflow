@@ -8,6 +8,7 @@ import Toybox.WatchUi;
 module ExerciseActionsMenu {
 
     const ACTION_EDIT_SET = "set";
+    const ACTION_LAST = "last";
     const ACTION_SKIP_FOR_NOW = "defer";
     const ACTION_OVERVIEW = "overview";
     const ACTION_MARK_DONE = "done";
@@ -16,8 +17,27 @@ module ExerciseActionsMenu {
     const ACTION_UNDO_SET = "undo";
     const ACTION_END = "end";
 
+    //! "60 x 10 x 4" — what this movement was last done for.
+    //!
+    //! It is the number an athlete actually wants before deciding a load, and
+    //! until now the app could not answer it. Absent for a movement never
+    //! performed, rather than shown as zeroes.
+    public function lastLine(exerciseId as String) as String? {
+        var last = AppController.instance().lastPerformance(exerciseId);
+        if (last == null) {
+            return null;
+        }
+        return (WatchUi.loadResource(Rez.Strings.LastTime) as String) + "  " +
+            Theme.formatWeight(last[0] as Float) + " " + Units.label() + " x " +
+            (last[1] as Number).toString() + " x " + (last[2] as Number).toString();
+    }
+
     public function show(exercise as Exercise) as Void {
         var menu = new WatchUi.Menu2({ :title => exercise.name });
+        var last = lastLine(exercise.id);
+        if (last != null) {
+            menu.addItem(new WatchUi.MenuItem(last, null, ACTION_LAST, {}));
+        }
         // Editing the set is the reason this menu is opened most often, so it
         // sits under the cursor the moment it appears.
         menu.addItem(new WatchUi.MenuItem(
@@ -60,6 +80,11 @@ class ExerciseActionsDelegate extends WatchUi.Menu2InputDelegate {
         var controller = AppController.instance();
         var id = item.getId() as String;
 
+        if (id.equals(ExerciseActionsMenu.ACTION_LAST)) {
+            // It is a readout, not a control. Selecting it goes back to work.
+            _backToExercise();
+            return;
+        }
         if (id.equals(ExerciseActionsMenu.ACTION_EDIT_SET)) {
             SetEditor.open(_exercise, Tuning.RETURN_EXERCISE);
             return;

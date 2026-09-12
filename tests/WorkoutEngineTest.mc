@@ -829,7 +829,14 @@ function testSummaryPagesDraw(logger as Test.Logger) as Boolean {
     for (var i = 0; i < 45; i++) { zones.sample(4); }
     for (var i = 0; i < 30; i++) { zones.sample(null); }
 
-    var view = new WorkoutSummaryView(summary, engine.getWorkout(), zones, true);
+    // A week with real volume in it, so the muscle chart is exercised too.
+    var weekly = new [Muscle.COUNT] as Array<Number>;
+    for (var i = 0; i < Muscle.COUNT; i++) { weekly[i] = 0; }
+    weekly[Muscle.CHEST] = 4200;
+    weekly[Muscle.BACK] = 3100;
+    weekly[Muscle.BICEPS] = 640;
+    var view = new WorkoutSummaryView(summary, engine.getWorkout(), zones, weekly,
+        2, 71, 24, true);
     for (var page = 0; page < WorkoutSummaryView.PAGE_COUNT; page++) {
         view.onUpdate(dc);
         view.turnPage(1);
@@ -837,8 +844,12 @@ function testSummaryPagesDraw(logger as Test.Logger) as Boolean {
 
     // And the same screens with nothing to show: no zone ever reached, and a
     // workout that was ended before a single set was logged.
+    var emptyWeek = new [Muscle.COUNT] as Array<Number>;
+    for (var i = 0; i < Muscle.COUNT; i++) { emptyWeek[i] = 0; }
+    // And with nothing measurable at all: no records, no battery, no recovery.
     var empty = new WorkoutSummaryView(
-        new SessionSummary(), TestSupport.abcWorkout(), new ZoneTracker(), false);
+        new SessionSummary(), TestSupport.abcWorkout(), new ZoneTracker(),
+        emptyWeek, 0, null, null, false);
     for (var page = 0; page < WorkoutSummaryView.PAGE_COUNT; page++) {
         empty.onUpdate(dc);
         empty.turnPage(1);
@@ -1219,5 +1230,194 @@ function testBuiltInWorkoutsUseCatalogueIds(logger as Test.Logger) as Boolean {
             Test.assertEqual(ex.muscle, known.get(movement) as Number);
         }
     }
+    return true;
+}
+
+//! Estimated one-rep max, and what it is for.
+//!
+//! Epley makes a set of ten comparable with a set of three, which is the only
+//! way to tell whether a month of training went anywhere. It is an estimate,
+//! and the app never calls it a maximum.
+(:test)
+function testEstimated1RM(logger as Test.Logger) as Boolean {
+    // A single rep is already the maximum; no estimation to do.
+    Test.assertEqual(History.estimated1RM(1, 100.0), 100.0);
+
+    // Ten reps at 100 estimates well above 100.
+    var ten = History.estimated1RM(10, 100.0);
+    Test.assert(ten > 130.0 && ten < 135.0);
+
+    // More reps at the same load estimates a higher maximum; the same reps at
+    // a higher load likewise.
+    Test.assert(History.estimated1RM(12, 100.0) > ten);
+    Test.assert(History.estimated1RM(10, 110.0) > ten);
+
+    // Nonsense in, zero out — never a number that looks like a record.
+    Test.assertEqual(History.estimated1RM(0, 100.0), 0.0);
+    Test.assertEqual(History.estimated1RM(10, 0.0), 0.0);
+    Test.assertEqual(History.estimated1RM(-3, 100.0), 0.0);
+    return true;
+}
+
+//! Personal records: what counts, what does not, and what is announced.
+(:test)
+function testRecordDetection(logger as Test.Logger) as Boolean {
+    var bests = {} as Dictionary;
+
+    // A movement's first ever set is not a record. Everything would be.
+    Test.assertEqual(History.classify(bests, "c_bench", 10, 60.0), History.RECORD_NONE);
+    Test.assertEqual(History.recordSet(bests, "c_bench", 10, 60.0, 1000), History.RECORD_NONE);
+
+    // Same again beats nothing.
+    Test.assertEqual(History.classify(bests, "c_bench", 10, 60.0), History.RECORD_NONE);
+    // Fewer reps at the same load beats nothing either.
+    Test.assertEqual(History.classify(bests, "c_bench", 8, 60.0), History.RECORD_NONE);
+
+    // More reps at the same load: a better estimated maximum, not a heavier set.
+    Test.assertEqual(History.classify(bests, "c_bench", 12, 60.0), History.RECORD_1RM);
+    // A heavier set outranks it, because that is the one a lifter cares about.
+    Test.assertEqual(History.classify(bests, "c_bench", 3, 80.0), History.RECORD_WEIGHT);
+
+    History.recordSet(bests, "c_bench", 3, 80.0, 2000);
+    Test.assertEqual(History.classify(bests, "c_bench", 3, 80.0), History.RECORD_NONE);
+    Test.assertEqual(History.classify(bests, "c_bench", 3, 82.5), History.RECORD_WEIGHT);
+
+    // A second round of the same movement in one session shares its records.
+    Test.assertEqual(History.classify(bests, "c_bench#2", 3, 80.0), History.RECORD_NONE);
+    Test.assertEqual(History.classify(bests, "c_bench#2", 3, 85.0), History.RECORD_WEIGHT);
+
+    // A different movement keeps its own.
+    Test.assertEqual(History.classify(bests, "c_incline_bb", 10, 20.0), History.RECORD_NONE);
+
+    // Nothing is a record on nonsense.
+    Test.assertEqual(History.classify(bests, "c_bench", 0, 500.0), History.RECORD_NONE);
+    Test.assertEqual(History.classify(bests, "c_bench", 10, 0.0), History.RECORD_NONE);
+    return true;
+}
+
+//! Volume records exist for the sets that are neither heavy nor long.
+(:test)
+function testVolumeRecord(logger as Test.Logger) as Boolean {
+    var bests = {} as Dictionary;
+    History.recordSet(bests, "b_db_row", 10, 30.0, 1000);   // 300 kg, e1rm 40
+
+    // Twenty at 20 is 400 kg of work, lighter and with a lower estimate.
+    Test.assert(History.estimated1RM(20, 20.0) < History.estimated1RM(10, 30.0));
+    Test.assertEqual(History.classify(bests, "b_db_row", 20, 20.0), History.RECORD_VOLUME);
+
+    History.recordSet(bests, "b_db_row", 20, 20.0, 1100);
+    Test.assertEqual(History.classify(bests, "b_db_row", 20, 20.0), History.RECORD_NONE);
+    return true;
+}
+
+//! A damaged or foreign bests store is ignored, not parsed.
+(:test)
+function testBestsStoreRejectsRubbish(logger as Test.Logger) as Boolean {
+    var bests = {} as Dictionary;
+    Test.assert(History.rowFor(bests, "nothing") == null);
+    Test.assert(History.lastPerformance(bests, "nothing") == null);
+
+    bests.put("short", [1, 2, 3] as Array);
+    bests.put("wrongtype", "not a row");
+    bests.put("nulls", [1, 2, 3, 4, 5, 6, null] as Array);
+    Test.assert(History.rowFor(bests, "short") == null);
+    Test.assert(History.rowFor(bests, "wrongtype") == null);
+    Test.assert(History.rowFor(bests, "nulls") == null);
+
+    // And classify treats an unreadable row as no history at all rather than
+    // reading fields out of it.
+    Test.assertEqual(History.classify(bests, "short", 10, 100.0), History.RECORD_NONE);
+    return true;
+}
+
+//! Closing a session records what each movement was last done for.
+(:test)
+function testCommitSessionRecordsLastPerformance(logger as Test.Logger) as Boolean {
+    var bests = {} as Dictionary;
+    var engine = TestSupport.newEngine();
+    engine.selectExercise("A");
+    engine.completeCurrentSet(10, 50.0, TestSupport.T0);
+    engine.completeCurrentSet(8, 55.0, TestSupport.T0 + 120);
+    engine.selectExercise("B");     // touched but never performed
+
+    History.commitSession(bests, engine.getWorkout(), TestSupport.T0 + 600);
+
+    var last = History.lastPerformance(bests, "A");
+    Test.assert(last != null);
+    Test.assertEqual((last as Array)[0] as Float, 55.0);   // the last set's load
+    Test.assertEqual((last as Array)[1] as Number, 8);
+    Test.assertEqual((last as Array)[2] as Number, 2);     // sets performed
+    Test.assertEqual((last as Array)[3] as Number, TestSupport.T0 + 600);
+
+    // An exercise with no completed sets leaves no trace.
+    Test.assert(History.lastPerformance(bests, "B") == null);
+    Test.assert(History.lastPerformance(bests, "C") == null);
+    return true;
+}
+
+//! Recovery: beats below this rest's peak, measured from the peak.
+(:test)
+function testRecoveryTracker(logger as Test.Logger) as Boolean {
+    var rec = new RecoveryTracker();
+    Test.assert(rec.drop() == null);
+    Test.assert(rec.best() == null);
+
+    // Outside a rest nothing is collected.
+    rec.sample(150);
+    Test.assert(rec.drop() == null);
+
+    rec.startRest();
+    Test.assert(rec.isResting());
+
+    // Heart rate lags effort, so it keeps climbing for the first seconds. The
+    // peak has to be taken from the rest, not from the moment the set ended.
+    rec.sample(150);
+    rec.sample(158);
+    rec.sample(162);
+    Test.assert(rec.drop() == 0);       // still at the peak
+
+    rec.sample(150);
+    Test.assert(rec.drop() == 12);
+    rec.sample(138);
+    Test.assert(rec.drop() == 24);
+    Test.assert(rec.best() == 24);
+
+    // Seconds with no reading do not break the figure.
+    rec.sample(null);
+    Test.assert(rec.drop() == 24);
+
+    // A new rest restarts the drop but not the session best.
+    rec.startRest();
+    Test.assert(rec.drop() == null);
+    rec.sample(140);
+    rec.sample(132);
+    Test.assert(rec.drop() == 8);
+    Test.assert(rec.best() == 24);
+
+    rec.endRest();
+    Test.assert(rec.drop() == null);
+    return true;
+}
+
+//! A drop that takes longer than a minute is not a recovery figure.
+//!
+//! Standing around for three minutes brings anyone's heart rate down. The
+//! number that is comparable week to week is what happens in the first minute,
+//! so `best()` only counts drops inside that window.
+(:test)
+function testRecoveryOnlyCountsTheFirstMinute(logger as Test.Logger) as Boolean {
+    var rec = new RecoveryTracker();
+    rec.startRest();
+    rec.sample(170);
+    for (var i = 0; i < RecoveryTracker.WINDOW_SECONDS; i++) {
+        rec.sample(160);
+    }
+    Test.assert(rec.best() == 10);
+
+    // Past the window the live drop still updates — the athlete is watching it
+    // — but the session best does not move.
+    rec.sample(120);
+    Test.assert(rec.drop() == 50);
+    Test.assert(rec.best() == 10);
     return true;
 }

@@ -96,4 +96,10 @@
     <string id="EditWorkout">Modifier la seance</string>
     <string id="Substitute">Remplacer</string>
     <string id="AddSet">Ajouter une serie</string>
+    <string id="RecordOne">record</string>
+    <string id="RecordMany">records</string>
+    <string id="ThisWeek">CETTE SEMAINE</string>
+    <string id="LastTime">Derniere</string>
+    <string id="FieldRecovery">REC</string>
+    <string id="FieldBattery">BODY BATT</string>
 </strings>

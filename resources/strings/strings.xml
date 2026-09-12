@@ -103,4 +103,10 @@
     <string id="EditWorkout">Edit workout</string>
     <string id="Substitute">Substitute</string>
     <string id="AddSet">Add a set</string>
+    <string id="RecordOne">record</string>
+    <string id="RecordMany">records</string>
+    <string id="ThisWeek">THIS WEEK</string>
+    <string id="LastTime">Last</string>
+    <string id="FieldRecovery">REC</string>
+    <string id="FieldBattery">BODY BATT</string>
 </strings>

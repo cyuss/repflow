@@ -8,11 +8,12 @@ import Toybox.WatchUi;
 //!   |        REST         |   <- draining arc around the rim
 //!   |       01:30         |
 //!   +----------+----------+
-//!   |   132    |   3/4    |
-//!   |    HR    |   SETS   |
+//!   |   132    |   -18    |
+//!   |    HR    |   REC    |   beats below this rest's peak
 //!   +----------+----------+
-//!   | Lat Pulldown        |   what is next, so you can plan
-//!   | SET 3/4  10 x 55 KG |
+//!   | Lat Pulldown  3/4   |   what is next, so you can plan
+//!   | 10 x 55 KG          |
+//!   | LAST 52 KG x 10 x 4 |   only before the first set of it
 //!   +---------------------+
 //!
 //! Buttons:
@@ -65,24 +66,41 @@ class RestView extends WatchUi.View {
         var engine = controller.engine();
         var next = engine != null ? engine.suggestNextExercise() : null;
 
+        // What was done on this movement last time, but only before the first
+        // set of it: once there is a set in this session, the planned load is
+        // already the athlete's own and the older number is just noise.
+        var lastLine = null as String?;
+        if (next != null && next.completedSetCount() == 0) {
+            lastLine = ExerciseActionsMenu.lastLine(next.id);
+        }
+
         // Reserve the bottom for "next up" only when there is one.
         var bottom = h - h / 14;
-        var nextHeight = next != null ? (h * 22) / 100 : 0;
+        var nextHeight = 0;
+        if (next != null) {
+            nextHeight = lastLine != null ? (h * 30) / 100 : (h * 22) / 100;
+        }
         var fieldBottom = bottom - nextHeight;
 
         var hr = LiveMetrics.heartRate();
-        var setsDone = "--";
-        if (next != null) {
-            setsDone = next.completedSetCount().toString() + "/" + next.targetSets.toString();
+
+        // Beats below this rest's peak. It replaces a set count that the block
+        // underneath already carries, and unlike that count it changes while
+        // you watch it — which is the only reason to look at a rest screen.
+        var drop = controller.recovery().drop();
+        var dropText = drop == null ? LiveMetrics.NO_VALUE : "-" + drop.toString();
+        var dropColor = Theme.COLOR_SKIPPED;
+        if (drop != null) {
+            dropColor = drop >= 12 ? Theme.COLOR_DONE : Theme.COLOR_WARM;
         }
 
         FieldGrid.drawPair(dc, top, fieldBottom - top,
             LiveMetrics.format(hr),
             WatchUi.loadResource(Rez.Strings.FieldHr) as String,
             hr != null ? Theme.COLOR_HR : Theme.COLOR_SKIPPED,
-            setsDone,
-            WatchUi.loadResource(Rez.Strings.FieldSets) as String,
-            Theme.COLOR_TEXT);
+            dropText,
+            WatchUi.loadResource(Rez.Strings.FieldRecovery) as String,
+            dropColor);
 
         if (next == null) {
             return;
@@ -92,11 +110,18 @@ class RestView extends WatchUi.View {
         var y = fieldBottom + h / 44;
         y = Theme.drawFitted(dc, y, next.name, Theme.fontsBody(), Theme.COLOR_TEXT);
 
-        var detail = next.plannedReps().toString() + " x " +
+        var detail = (next.completedSetCount() + 1).toString() + "/" +
+            next.targetSets.toString() + "   " +
+            next.plannedReps().toString() + " x " +
             Theme.formatWeight(next.plannedWeight()) + " " +
             Units.label();
-        Theme.drawFitted(dc, y, detail,
+        y = Theme.drawFitted(dc, y, detail,
             [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_ACCENT);
+
+        if (lastLine != null) {
+            Theme.drawFitted(dc, y, lastLine as String,
+                [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
+        }
     }
 
     //! Thin arc that drains as the rest elapses — readable at a glance.
