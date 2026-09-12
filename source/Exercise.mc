@@ -18,6 +18,10 @@ class Exercise {
     //! True when the athlete explicitly declared the exercise finished before
     //! all target sets were performed.
     public var forcedComplete as Boolean;
+    //! Which muscle group this trains — see Muscle. Carried on the exercise
+    //! rather than looked up, because a workout outlives the catalogue entry it
+    //! was built from and weekly volume has to keep adding up.
+    public var muscle as Number;
 
     public function initialize(
         id as String,
@@ -36,6 +40,7 @@ class Exercise {
         me.sets = [] as Array<WorkoutSet>;
         me.state = EX_NOT_STARTED;
         me.forcedComplete = false;
+        me.muscle = Muscle.OTHER;
     }
 
     public function completedSetCount() as Number {
@@ -136,6 +141,7 @@ class Exercise {
             "r" => restDuration,
             "st" => state as Number,
             "fc" => forcedComplete,
+            "m" => muscle,
             "s" => rawSets
         };
     }
@@ -163,6 +169,12 @@ class Exercise {
         );
         ex.state = data["st"] as ExerciseState;
         ex.forcedComplete = data["fc"] as Boolean;
+        // Absent in schema v1. SessionSnapshot fills it in on migration, but
+        // an exercise read from anywhere else defaults rather than crashing.
+        var m = data["m"];
+        ex.muscle = (m instanceof Number) && Muscle.isValid(m as Number)
+            ? m as Number
+            : Muscle.OTHER;
         var rawSets = data["s"] as Array;
         for (var i = 0; i < rawSets.size(); i++) {
             ex.sets.add(WorkoutSet.fromStorage(rawSets[i] as Array));

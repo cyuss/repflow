@@ -183,3 +183,98 @@ function testIntegerWeightsAreAccepted(logger as Test.Logger) as Boolean {
     Test.assertEqual(a.totalVolume(), 500.0);
     return true;
 }
+
+//! A v1 snapshot is brought forward, not thrown away.
+//!
+//! Discarding an unknown version was right while nobody had any history. It
+//! stops being right the moment they do: an athlete mid-workout when an update
+//! lands would silently lose the session. v1 differed from v2 only by the
+//! absent muscle tag, so every set survives the upgrade and only the muscle
+//! breakdown of that one workout is unknown.
+(:test)
+function testV1SnapshotMigratesForward(logger as Test.Logger) as Boolean {
+    var engine = TestSupport.newEngine();
+    engine.selectExercise("A");
+    engine.completeCurrentSet(9, 57.5, TestSupport.T0 + 10);
+    engine.selectExercise("B");
+    engine.deferExercise("B");
+
+    // Write what v1 would have written: no version bump, no muscle tags.
+    var raw = engine.getSession().toStorage();
+    raw.put("v", 1);
+    var exercises = (raw["w"] as Dictionary)["e"] as Array;
+    for (var i = 0; i < exercises.size(); i++) {
+        (exercises[i] as Dictionary).remove("m");
+    }
+    Test.assert(!SessionSnapshot.isValid(raw));      // not current, as expected
+
+    var migrated = SessionSnapshot.migrate(raw);
+    Test.assert(migrated != null);
+    Test.assert(SessionSnapshot.isValid(migrated));
+
+    var restored = WorkoutSession.fromStorage(migrated as Dictionary);
+    Test.assertEqual(restored.workout.exercises.size(), 3);
+    var a = restored.workout.findExercise("A") as Exercise;
+    Test.assertEqual(a.plannedWeight(), 57.5);       // the work survived
+    Test.assertEqual(a.completedSetCount(), 1);
+    Test.assertEqual(a.muscle, Muscle.OTHER);        // and only this is unknown
+    Test.assertEqual(TestSupport.stateOf(engine, "B"), EX_PENDING);
+    return true;
+}
+
+//! Migration still refuses what it cannot read.
+//!
+//! Bringing data forward must not become a licence to guess: a version this
+//! build has never seen, or a v1 snapshot that was damaged before the upgrade,
+//! is as dangerous as it ever was.
+(:test)
+function testMigrationRefusesWhatItCannotRead(logger as Test.Logger) as Boolean {
+    Test.assert(SessionSnapshot.migrate(null) == null);
+    Test.assert(SessionSnapshot.migrate("nonsense") == null);
+    Test.assert(SessionSnapshot.migrate({} as Dictionary) == null);
+
+    var engine = TestSupport.newEngine();
+
+    // From the future.
+    var future = engine.getSession().toStorage();
+    future.put("v", SessionSnapshot.SCHEMA_VERSION + 1);
+    Test.assert(SessionSnapshot.migrate(future) == null);
+
+    // Older than anything this build knows.
+    var ancient = engine.getSession().toStorage();
+    ancient.put("v", 0);
+    Test.assert(SessionSnapshot.migrate(ancient) == null);
+
+    // A v1 snapshot that was already damaged: the muscle tag is not the only
+    // thing missing, so there is nothing safe to upgrade.
+    var damaged = engine.getSession().toStorage();
+    damaged.put("v", 1);
+    (damaged["w"] as Dictionary).remove("e");
+    Test.assert(SessionSnapshot.migrate(damaged) == null);
+
+    // And a current snapshot passes straight through.
+    var current = engine.getSession().toStorage();
+    Test.assert(SessionSnapshot.migrate(current) != null);
+    return true;
+}
+
+//! The custom-workout store validates with the same refusal to guess.
+(:test)
+function testCustomWorkoutValidation(logger as Test.Logger) as Boolean {
+    var workout = TestSupport.abcWorkout();
+    Test.assert(SessionSnapshot.isValidWorkout(workout.toStorage()));
+
+    Test.assert(!SessionSnapshot.isValidWorkout(null));
+    Test.assert(!SessionSnapshot.isValidWorkout("no"));
+    Test.assert(!SessionSnapshot.isValidWorkout([] as Array));
+
+    var raw = workout.toStorage();
+    raw.remove("n");
+    Test.assert(!SessionSnapshot.isValidWorkout(raw));
+
+    // An exercise with a muscle group outside the enum is not a muscle group.
+    var bad = workout.toStorage();
+    ((bad["e"] as Array)[0] as Dictionary).put("m", 99);
+    Test.assert(!SessionSnapshot.isValidWorkout(bad));
+    return true;
+}

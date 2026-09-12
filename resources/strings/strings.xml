@@ -75,4 +75,17 @@
     <string id="AvgHr">Avg HR</string>
     <string id="MaxHr">Max HR</string>
     <string id="Saved">Saved</string>
+
+    <!-- Muscle groups -->
+    <string id="MuscleChest">Chest</string>
+    <string id="MuscleBack">Back</string>
+    <string id="MuscleShoulders">Shoulders</string>
+    <string id="MuscleBiceps">Biceps</string>
+    <string id="MuscleTriceps">Triceps</string>
+    <string id="MuscleQuads">Quads</string>
+    <string id="MuscleHamstrings">Hamstrings</string>
+    <string id="MuscleGlutes">Glutes</string>
+    <string id="MuscleCalves">Calves</string>
+    <string id="MuscleCore">Core</string>
+    <string id="MuscleOther">Other</string>
 </strings>

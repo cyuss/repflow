@@ -20,20 +20,89 @@ import Toybox.Lang;
 //! malformed input (see tests/SessionSnapshotTest.mc).
 module SessionSnapshot {
 
-    //! Bump this whenever the stored layout changes in a way older data cannot
-    //! satisfy. Old snapshots are then discarded instead of misread.
-    const SCHEMA_VERSION = 1;
+    //! Bump this whenever the stored layout changes.
+    //!
+    //!   v1  the original layout
+    //!   v2  exercises carry a muscle group ("m"), for weekly volume
+    const SCHEMA_VERSION = 2;
+
+    //! The oldest layout this build can still bring forward.
+    const OLDEST_MIGRATABLE = 1;
+
+    //! Bring an older snapshot up to the current layout, or return null.
+    //!
+    //! Discarding an unknown version was right while nobody had any history.
+    //! It stops being right the moment they do: an athlete mid-workout when an
+    //! update lands would have lost the session. A version this build knows how
+    //! to read is upgraded in place; anything older, newer, or damaged is still
+    //! refused, because guessing at a layout is how the app crashes on launch.
+    //!
+    //! Migration happens on the raw Dictionary, before anything is constructed,
+    //! for the same reason validation does: a Monkey C runtime error here is not
+    //! catchable.
+    public function migrate(raw as Object?) as Object? {
+        if (!(raw instanceof Dictionary)) {
+            return null;
+        }
+        var data = raw as Dictionary;
+        var version = data["v"];
+        if (!(version instanceof Number)) {
+            return null;
+        }
+        var v = version as Number;
+        if (v == SCHEMA_VERSION) {
+            return isValid(data) ? data : null;
+        }
+        if (v < OLDEST_MIGRATABLE || v > SCHEMA_VERSION) {
+            return null;
+        }
+
+        // v1 -> v2: every exercise gains a muscle group. Nothing in v1 recorded
+        // one, so they become OTHER — the session keeps every set it had, and
+        // only the muscle breakdown of this one workout is unknown.
+        if (v == 1) {
+            if (!_isValidV1(data)) {
+                return null;
+            }
+            var workout = data["w"] as Dictionary;
+            var exercises = workout["e"] as Array;
+            for (var i = 0; i < exercises.size(); i++) {
+                var ex = exercises[i] as Dictionary;
+                ex["m"] = Muscle.OTHER;
+            }
+            data["v"] = SCHEMA_VERSION;
+            v = SCHEMA_VERSION;
+        }
+
+        return isValid(data) ? data : null;
+    }
+
+    //! v1 differed from v2 only by the absent muscle tag, so it validates with
+    //! the current rules minus that one field.
+    function _isValidV1(raw as Object?) as Boolean {
+        return _isValidShape(raw, false);
+    }
 
     //! True when `raw` is a snapshot this build can safely parse.
     public function isValid(raw as Object?) as Boolean {
         if (!(raw instanceof Dictionary)) {
             return false;
         }
-        var data = raw as Dictionary;
-
-        if (!_isNumber(data["v"] as Object?) || (data["v"] as Number) != SCHEMA_VERSION) {
+        if (!_isNumber((raw as Dictionary)["v"] as Object?) ||
+            ((raw as Dictionary)["v"] as Number) != SCHEMA_VERSION) {
             return false;
         }
+        return _isValidShape(raw, true);
+    }
+
+    //! Everything but the version check. `requireMuscle` is what separates v2
+    //! from v1, so the migration can reuse the whole of this.
+    function _isValidShape(raw as Object?, requireMuscle as Boolean) as Boolean {
+        if (!(raw instanceof Dictionary)) {
+            return false;
+        }
+        var data = raw as Dictionary;
+
         if (!_isNumber(data["s"] as Object?) || !_isNumber(data["st"] as Object?)) {
             return false;
         }
@@ -44,10 +113,18 @@ module SessionSnapshot {
         if (data["c"] != null && !(data["c"] instanceof String)) {
             return false;
         }
-        return _isValidWorkout(data["w"] as Object?);
+        return _isValidWorkout(data["w"] as Object?, requireMuscle);
     }
 
-    function _isValidWorkout(raw as Object?) as Boolean {
+    //! True when `raw` is a workout dictionary this build can parse.
+    //!
+    //! Exposed because custom workouts are stored on their own, outside any
+    //! session, and they need exactly the same refusal to guess.
+    public function isValidWorkout(raw as Object?) as Boolean {
+        return _isValidWorkout(raw, true);
+    }
+
+    function _isValidWorkout(raw as Object?, requireMuscle as Boolean) as Boolean {
         if (!(raw instanceof Dictionary)) {
             return false;
         }
@@ -60,14 +137,14 @@ module SessionSnapshot {
         }
         var exercises = data["e"] as Array;
         for (var i = 0; i < exercises.size(); i++) {
-            if (!_isValidExercise(exercises[i] as Object?)) {
+            if (!_isValidExercise(exercises[i] as Object?, requireMuscle)) {
                 return false;
             }
         }
         return true;
     }
 
-    function _isValidExercise(raw as Object?) as Boolean {
+    function _isValidExercise(raw as Object?, requireMuscle as Boolean) as Boolean {
         if (!(raw instanceof Dictionary)) {
             return false;
         }
@@ -83,6 +160,12 @@ module SessionSnapshot {
         }
         if (!_isFloat(data["w"] as Object?)) {
             return false;
+        }
+        if (requireMuscle) {
+            var m = data["m"];
+            if (!(m instanceof Number) || !Muscle.isValid(m as Number)) {
+                return false;
+            }
         }
         if (!(data["s"] instanceof Array)) {
             return false;

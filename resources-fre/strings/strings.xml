@@ -68,4 +68,17 @@
     <string id="SetAnimAuto">Suivre la montre</string>
     <string id="SetAnimOff">Desactivee</string>
     <string id="SetAnimOn">Activee</string>
+
+    <!-- Groupes musculaires -->
+    <string id="MuscleChest">Pectoraux</string>
+    <string id="MuscleBack">Dos</string>
+    <string id="MuscleShoulders">Epaules</string>
+    <string id="MuscleBiceps">Biceps</string>
+    <string id="MuscleTriceps">Triceps</string>
+    <string id="MuscleQuads">Quadriceps</string>
+    <string id="MuscleHamstrings">Ischios</string>
+    <string id="MuscleGlutes">Fessiers</string>
+    <string id="MuscleCalves">Mollets</string>
+    <string id="MuscleCore">Gainage</string>
+    <string id="MuscleOther">Autre</string>
 </strings>

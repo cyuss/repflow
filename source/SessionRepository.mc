@@ -50,13 +50,16 @@ module SessionRepository {
         if (raw == null) {
             return null;
         }
-        if (!SessionSnapshot.isValid(raw)) {
-            // Unrecognised or damaged — discard it instead of guessing.
+        // An older layout this build understands is brought forward rather than
+        // thrown away: an athlete mid-workout when an update lands keeps their
+        // session. Anything unrecognised or damaged is still refused.
+        var migrated = SessionSnapshot.migrate(raw);
+        if (migrated == null) {
             clearActive();
             return null;
         }
         try {
-            var session = WorkoutSession.fromStorage(raw as Dictionary);
+            var session = WorkoutSession.fromStorage(migrated as Dictionary);
             if (session.state == SESSION_FINISHED) {
                 return null;
             }
