@@ -62,6 +62,8 @@
 
     <!-- Summary -->
     <string id="SummaryTitle">Workout done</string>
+    <string id="SummaryDiscarded">Not saved</string>
+    <string id="FieldPerSet">PER SET</string>
     <string id="Duration">Duration</string>
     <string id="Exercises">Exercises</string>
     <string id="SetsDone">Sets</string>

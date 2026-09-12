@@ -42,6 +42,8 @@
     <string id="SaveActivity">Enregistrer</string>
     <string id="DiscardActivity">Supprimer</string>
     <string id="SummaryTitle">Seance terminee</string>
+    <string id="SummaryDiscarded">Non enregistre</string>
+    <string id="FieldPerSet">PAR SERIE</string>
     <string id="Duration">Duree</string>
     <string id="Exercises">Exercices</string>
     <string id="SetsDone">Series</string>

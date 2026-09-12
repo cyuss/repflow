@@ -38,7 +38,7 @@ module Theme {
             case EX_COMPLETED:
                 return COLOR_DONE;
             case EX_ACTIVE:
-                return COLOR_ACCENT;
+                return COLOR_WARM;
             case EX_PENDING:
                 return COLOR_PENDING;
             case EX_SKIPPED:
@@ -374,13 +374,54 @@ module Theme {
         }
     }
 
-    //! Heart rate, as a heart, a number, and a five-segment zone gauge.
+    //! The five-segment heart rate zone bar.
     //!
-    //!   (heart) 132  ▮▮▮▯▯
+    //! Each segment carries its own zone's colour rather than all of them
+    //! taking the current zone's, so the bar reads as a scale the athlete is
+    //! climbing — teal, blue, green, amber, red — and not as a single block
+    //! that changes hue. Segments above the current zone are drawn as a thin
+    //! baseline: present, so the scale keeps its length, but quiet.
     //!
-    //! The gauge is what makes the number mean something at a glance: which
-    //! zone, and how far up the scale, without reading the digits. Returns the
-    //! y below it.
+    //! A null zone means the device has no reading, or the profile has no zone
+    //! thresholds. Nothing is filled — the gauge never guesses.
+    public function drawZoneBar(
+        dc as Graphics.Dc,
+        left as Number,
+        top as Number,
+        width as Number,
+        height as Number,
+        zone as Number?
+    ) as Void {
+        var segments = 5;
+        var gap = width / 24;
+        if (gap < 2) {
+            gap = 2;
+        }
+        var segWidth = (width - gap * (segments - 1)) / segments;
+        if (segWidth < 2) {
+            return;
+        }
+        var rest = height / 4;
+        if (rest < 2) {
+            rest = 2;
+        }
+        for (var i = 0; i < segments; i++) {
+            var x = left + i * (segWidth + gap);
+            if (zone != null && i < zone) {
+                dc.setColor(zoneColor(i + 1), Graphics.COLOR_TRANSPARENT);
+                dc.fillRectangle(x, top, segWidth, height);
+            } else {
+                dc.setColor(COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+                dc.fillRectangle(x, top + height - rest, segWidth, rest);
+            }
+        }
+    }
+
+    //! Heart rate as a compact one-line row: a heart, the number, the zone bar.
+    //!
+    //!   (heart) 132  #####
+    //!
+    //! Used as a header on the screens whose subject is something else.
     public function drawHeartRateGauge(dc as Graphics.Dc, top as Number) as Number {
         var hr = LiveMetrics.heartRate();
         var zone = LiveMetrics.heartRateZone();
@@ -391,12 +432,7 @@ module Theme {
         var heartSize = (fontHeight * 70) / 100;
         var gap = heartSize / 2;
         var textWidth = dc.getTextWidthInPixels(text, font);
-
-        // Five segments, sized from the text so the row scales with the screen.
-        var segments = 5;
-        var segWidth = fontHeight / 2;
-        var segGap = segWidth / 3;
-        var barWidth = segments * segWidth + (segments - 1) * segGap;
+        var barWidth = fontHeight * 3;
 
         var total = heartSize + gap + textWidth + gap * 2 + barWidth;
         var left = (dc.getWidth() - total) / 2;
@@ -407,20 +443,67 @@ module Theme {
         dc.setColor(hr != null ? COLOR_TEXT : COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
         dc.drawText(left + heartSize + gap, top, font, text, Graphics.TEXT_JUSTIFY_LEFT);
 
-        var barLeft = left + heartSize + gap + textWidth + gap * 2;
-        var barHeight = (fontHeight * 55) / 100;
-        var barTop = top + (fontHeight - barHeight) / 2;
-        for (var i = 0; i < segments; i++) {
-            var x = barLeft + i * (segWidth + segGap);
-            if (zone != null && i < zone) {
-                dc.setColor(zoneColor(zone), Graphics.COLOR_TRANSPARENT);
-                dc.fillRectangle(x, barTop, segWidth, barHeight);
-            } else {
-                dc.setColor(COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
-                dc.fillRectangle(x, barTop + barHeight - 2, segWidth, 2);
-            }
-        }
+        var barHeight = (fontHeight * 45) / 100;
+        drawZoneBar(dc, left + heartSize + gap + textWidth + gap * 2,
+            top + (fontHeight - barHeight) / 2, barWidth, barHeight, zone);
         return top + fontHeight;
+    }
+
+    //! Heart rate as a full data field: the number at field size, the zone bar
+    //! beneath it, and a caption naming the zone.
+    //!
+    //!         132          coloured by zone
+    //!      ## ## ## - -
+    //!        HR  Z3
+    //!
+    //! This is the one field on the metric page worth more than a number. A
+    //! bare "132 / HR" makes the athlete do the arithmetic against thresholds
+    //! they cannot see; the bar answers "how hard am I working" at a glance,
+    //! which is the actual question mid-set.
+    public function drawHeartRateField(
+        dc as Graphics.Dc,
+        top as Number,
+        height as Number,
+        caption as String
+    ) as Void {
+        var hr = LiveMetrics.heartRate();
+        var zone = LiveMetrics.heartRateZone();
+        var text = LiveMetrics.format(hr);
+        var color = hr == null
+            ? COLOR_SKIPPED
+            : (zone == null ? COLOR_HR : zoneColor(zone));
+
+        var width = bandWidth(dc, top, height);
+        var left = (dc.getWidth() - width) / 2;
+
+        var captionFont = Graphics.FONT_XTINY;
+        var captionHeight = dc.getFontHeight(captionFont);
+        var gap = height / 14;
+        var barHeight = height / 9;
+        if (barHeight < 4) {
+            barHeight = 4;
+        }
+
+        var valueArea = height - captionHeight - barHeight - gap * 2;
+        if (valueArea < captionHeight) {
+            // No room for the full treatment; fall back to a plain field.
+            FieldGrid.drawCell(dc, left, top, width, height, text, caption, color);
+            return;
+        }
+
+        var valueFont = pickFontFitting(dc, text, fontsCell(), (width * 80) / 100, valueArea);
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(dc.getWidth() / 2, top + (valueArea - dc.getFontHeight(valueFont)) / 2,
+            valueFont, text, Graphics.TEXT_JUSTIFY_CENTER);
+
+        var barWidth = (width * 62) / 100;
+        drawZoneBar(dc, (dc.getWidth() - barWidth) / 2, top + valueArea + gap,
+            barWidth, barHeight, zone);
+
+        var label = zone != null ? caption + "   Z" + zone.toString() : caption;
+        dc.setColor(COLOR_DIM, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(dc.getWidth() / 2, top + height - captionHeight, captionFont, label,
+            Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     //! A small minus or plus, drawn from rectangles rather than typed, so it

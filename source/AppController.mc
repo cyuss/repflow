@@ -307,7 +307,12 @@ class AppController {
 
     //! Close the session and show the summary. Does not save the FIT file yet —
     //! the athlete confirms that on the summary screen.
-    public function finishWorkout() as Void {
+    //! End the workout and show the recap.
+    //!
+    //! `save` is the athlete's answer to the Garmin-style stop menu, taken
+    //! *before* this is called — the recap is a recap, not a second decision.
+    //! That is why it no longer carries a SAVE button.
+    public function finishWorkout(save as Boolean) as Void {
         var engine = _engine;
         if (engine == null) {
             return;
@@ -317,22 +322,23 @@ class AppController {
         _recorder.updateTotals(summary);
         SessionRepository.appendHistory(engine.getSession(), summary);
         SessionRepository.clearActive();
-        var summaryView = new WorkoutSummaryView(summary);
-        WatchUi.switchToView(summaryView, new WorkoutSummaryDelegate(summaryView), WatchUi.SLIDE_UP);
+
+        // Take what the recap needs before the engine is released: stopping the
+        // recording drops it, and the per-exercise breakdown reads from it.
+        var workout = engine.getWorkout();
+
+        if (save) {
+            _recorder.stopAndSave();
+        } else {
+            _recorder.stopAndDiscard();
+        }
+        _engine = null;
+
+        var view = new WorkoutSummaryView(summary, workout, save);
+        WatchUi.switchToView(view, new WorkoutSummaryDelegate(view), WatchUi.SLIDE_UP);
     }
 
     //! Write the Garmin activity and return to the workout list.
-    public function saveActivity() as Boolean {
-        var ok = _recorder.stopAndSave();
-        _engine = null;
-        return ok;
-    }
-
-    public function discardActivity() as Boolean {
-        var ok = _recorder.stopAndDiscard();
-        _engine = null;
-        return ok;
-    }
 
     //! Persist the session now. Used after an edit that changed nothing in the
     //! engine but should still survive an app restart.

@@ -45,9 +45,12 @@ class WorkoutOverviewView extends WatchUi.Menu2 {
         var list = engine.getWorkout().exercises;
         for (var i = 0; i < list.size(); i++) {
             var ex = list[i];
+            // Wide spacing, and a space before the unit: "2/4    60 kg" reads as
+            // two facts, "2/460kg" as one run-on. ASCII only — the Fenix 6 Pro
+            // has no glyph for a middot and draws a "?" box instead.
             var sub = ex.completedSetCount().toString() + "/" + ex.targetSets.toString() +
-                "   " + Theme.formatWeight(ex.plannedWeight()) +
-                (WatchUi.loadResource(Rez.Strings.Kg) as String);
+                "    " + Theme.formatWeight(ex.plannedWeight()) +
+                " " + (WatchUi.loadResource(Rez.Strings.Kg) as String);
             addItem(new WatchUi.IconMenuItem(
                 ex.name, sub, ex.id, new StateIcon(ex.state, iconSize), {}));
         }

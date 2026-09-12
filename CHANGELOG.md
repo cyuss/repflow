@@ -77,6 +77,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shorter 260x260 Fenix 6 Pro screen
 - Accent and heart-rate colours chosen from Garmin's 64-colour palette so they
   render exactly on 8-bit MIP displays as well as on AMOLED
+- **Heart rate zone gauge**: a five-segment bar coloured from the athlete's own
+  `UserProfile` thresholds — a compact row on the set and editor screens, and a
+  full data field on the metric screen. Never guesses a maximum heart rate: with
+  no reading, or no zones on the profile, nothing is filled
+- **Exercise state icons carry meaning in their shape**, not their colour: tick
+  for done, play for the exercise in hand, pause for one set aside, cross for
+  skipped, empty ring for untouched. Amber is the colour of unfinished work, so
+  active and pending read as one family
+- Set editor shows a **+ above and a - below the focused value**, where the
+  buttons physically are, and no line of button hints
+- The load on the set screen is **two aligned cells, weight | reps** — the same
+  shape as the editor, so the screen you read and the screen you edit match
+- **Garmin-style stop menu**: keep training / save / discard, with the safe
+  answer first, replacing a SAVE button on the recap that asked a question
+  already answered
+- **Three-page workout recap**: the work (time, sets done against planned, reps,
+  volume), the body (calories, average and maximum heart rate, load per set),
+  and the exercises one by one with their final state
 
 #### Garmin integration
 

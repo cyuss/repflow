@@ -195,19 +195,16 @@ class ExerciseView extends WatchUi.View {
     private function _drawBodyPage(dc as Graphics.Dc, exercise as Exercise) as Void {
         var h = dc.getHeight();
         var top = _drawCompactHeader(dc, exercise.name);
-        var bottom = h - h / 10;
+        var bottom = h - h / 13;
 
-        var hr = LiveMetrics.heartRate();
         var timer = LiveMetrics.timerSeconds();
 
         var edge = FieldGrid.edgeHeight(top, bottom);
         var middleTop = top + edge;
         var bottomTop = bottom - edge;
 
-        FieldGrid.drawSingle(dc, top, edge,
-            LiveMetrics.format(hr),
-            WatchUi.loadResource(Rez.Strings.FieldHr) as String,
-            hr != null ? Theme.COLOR_HR : Theme.COLOR_SKIPPED);
+        Theme.drawHeartRateField(dc, top, edge,
+            WatchUi.loadResource(Rez.Strings.FieldHr) as String);
 
         FieldGrid.drawRule(dc, middleTop);
         FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
@@ -242,7 +239,7 @@ class ExerciseView extends WatchUi.View {
             }
         }
 
-        var bottom = h - h / 10;
+        var bottom = h - h / 13;
         var edge = FieldGrid.edgeHeight(top, bottom);
         var middleTop = top + edge;
         var bottomTop = bottom - edge;

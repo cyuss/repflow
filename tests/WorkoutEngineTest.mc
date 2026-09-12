@@ -500,10 +500,31 @@ function testSmokeTestScenario(logger as Test.Logger) as Boolean {
     Test.assertEqual(summary.durationSec, 3600);
     Test.assertEqual(summary.exercisesWorked, 3);
     Test.assertEqual(summary.completedSets, 6);
+    // Every set the workout asked for was performed, so done equals planned.
+    Test.assertEqual(summary.plannedSets, 6);
     // A: 10x50 + 10x55 = 1050. B: 2 x 12x40 = 960. C: 2 x 8x60 = 960.
     Test.assertEqual(summary.totalVolume, 2970.0);
     Test.assertEqual(summary.totalReps, 60);
     Test.assertEqual(engine.getSession().state, SESSION_FINISHED);
+    return true;
+}
+
+//! Ending early must still report what the workout asked for.
+//!
+//! The recap shows sets as "done / planned". Without the plan, "2 sets" reads
+//! like a finished session; against a plan of six it reads like a session that
+//! was cut short, which is what actually happened.
+(:test)
+function testSummaryReportsPlannedSetsWhenEndedEarly(logger as Test.Logger) as Boolean {
+    var engine = TestSupport.newEngine();
+    engine.selectExercise("A");
+    TestSupport.completeSets(engine, 2);
+
+    var summary = engine.finishWorkout(TestSupport.T0 + 600);
+    Test.assertEqual(summary.completedSets, 2);
+    Test.assertEqual(summary.plannedSets, 6);      // 3 exercises x 2 sets
+    Test.assertEqual(summary.exercisesWorked, 1);
+    Test.assertEqual(summary.exerciseCount, 3);
     return true;
 }
 
@@ -750,6 +771,50 @@ function testGridPrimitivesDraw(logger as Test.Logger) as Boolean {
     Theme.drawValueWithUnit(dc, size / 3, "55", "kg", Theme.fontsHero(),
         Theme.COLOR_TEXT, Theme.COLOR_DIM);
     Theme.drawMetricRow(dc, size / 2, "VOLUME", "3.2 t", Theme.COLOR_ACCENT);
+
+    // The heart rate zone gauge, at every zone and with no zone at all. The
+    // simulator never reports a heart rate, so this is the only place the
+    // filled states are exercised at all.
+    Theme.drawZoneBar(dc, size / 4, size / 3, size / 2, size / 20, null);
+    for (var zone = 1; zone <= 5; zone++) {
+        Theme.drawZoneBar(dc, size / 4, size / 3, size / 2, size / 20, zone);
+        Theme.zoneColor(zone);
+    }
+    Theme.drawHeartRateGauge(dc, size / 8);
+    Theme.drawHeartRateField(dc, top, edge, "HR");
+    // A band too short for the bar and caption must fall back, not overflow.
+    Theme.drawHeartRateField(dc, 0, size / 14, "HR");
+
+    // The plus and minus of the set editor.
+    Theme.drawSign(dc, size / 2, size / 3, size / 14, true, Theme.COLOR_ACCENT);
+    Theme.drawSign(dc, size / 2, size / 2, size / 14, false, Theme.COLOR_ACCENT);
+    return true;
+}
+
+//! Draw every exercise-state icon, at a menu-sized canvas.
+//!
+//! Each state takes a different drawing path — disc, ring, polygon, bars — and
+//! a Monkey C runtime error in any of them aborts the app rather than raising
+//! something catchable. Running them all is the only way to know they work.
+(:test)
+function testStateIconsDraw(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+    var size = TestSupport.screenSize();
+    var states = [EX_NOT_STARTED, EX_ACTIVE, EX_PENDING, EX_COMPLETED, EX_SKIPPED]
+        as Array<ExerciseState>;
+    for (var i = 0; i < states.size(); i++) {
+        var icon = new StateIcon(states[i], size / 5);
+        icon.setLocation(size / 20, size / 4);
+        icon.draw(dc);
+        // And at a size small enough that the guards have to bite.
+        var tiny = new StateIcon(states[i], 8);
+        tiny.setLocation(0, 0);
+        tiny.draw(dc);
+        Theme.stateColor(states[i]);
+    }
     return true;
 }
 

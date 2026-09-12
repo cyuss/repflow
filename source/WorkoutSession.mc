@@ -6,6 +6,9 @@ class SessionSummary {
     public var exerciseCount as Number;
     public var exercisesWorked as Number;
     public var completedSets as Number;
+    //! Sets the workout asked for. completedSets against this is the one
+    //! number that says whether the session was actually finished.
+    public var plannedSets as Number;
     public var totalReps as Number;
     public var totalVolume as Float;
 
@@ -14,6 +17,7 @@ class SessionSummary {
         exerciseCount = 0;
         exercisesWorked = 0;
         completedSets = 0;
+        plannedSets = 0;
         totalReps = 0;
         totalVolume = 0.0;
     }
@@ -62,6 +66,7 @@ class WorkoutSession {
                 s.exercisesWorked++;
             }
             s.completedSets += done;
+            s.plannedSets += ex.targetSets;
             s.totalReps += ex.totalReps();
             s.totalVolume += ex.totalVolume();
         }
