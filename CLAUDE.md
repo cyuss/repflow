@@ -134,10 +134,10 @@ Fenix 9 at all, even though `fenix9pro47mm` and `fenix9pro51mm` build fine).
 
 ## Current milestone
 
-**V0.1 MVP — code complete and verified against SDK 9.2.0.**
+**V0.2 — code complete and verified against SDK 9.2.0.**
 
 - 33/33 declared products build at strict type checking (`-l 3`)
-- 18/18 unit tests pass on `fenix6pro` and `fenix9pro47mm`
+- 69/69 unit tests pass on `fenix6pro` and `fenix9pro51mm`
 - the app runs in the Connect IQ Simulator
 - `make package` produces a real `.iq` Store bundle
 
@@ -156,4 +156,8 @@ which asks the platform refuses outright.
 - Regenerate or commit the developer signing key.
 - Commit build artifacts (`build/`) or anything matching `*.der`, `*.pem`, `*.key`.
 - Build speculative architecture for roadmap items (V0.2+). Keep the MVP small.
-- Add a Garmin permission beyond `Fit` / `FitContributor` without a concrete need.
+- Add a Garmin permission beyond the five already declared without a concrete
+  need. Today: `Fit` (record the activity), `FitContributor` (sets, reps and
+  load into the FIT file), `UserProfile` (the athlete's own heart rate zones),
+  `SensorHistory` (Body Battery), `Sensor` (accelerometer, for counting reps —
+  off by default). Each one costs installs and invites review questions.

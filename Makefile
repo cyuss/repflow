@@ -73,6 +73,10 @@ sim-attach: ## Launch and stay attached, streaming the app's println output
 shot: ## Screenshot the simulator's watch face to build/sim-shot.png
 	@scripts/shot.sh
 
+.PHONY: store-shot
+store-shot: ## Open the simulator's native-resolution export, for store screenshots
+	@scripts/store-shots.sh
+
 sideload: ## Build and copy a release PRG to a USB-connected watch
 	@scripts/sideload.sh $(DEVICE)
 

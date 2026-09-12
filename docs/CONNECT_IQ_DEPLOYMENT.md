@@ -1,133 +1,210 @@
-# Connect IQ Store deployment
+# Publishing RepFlow on the Connect IQ Store
 
-## Phase 1 — Pre-release
+A step-by-step guide, from a clean checkout to a listing people can install.
 
-Work through `docs/RELEASE_CHECKLIST.md`. In summary:
+## What it costs
+
+**Nothing.** Publishing on the Connect IQ Store is free: there is no developer
+programme fee, no annual renewal, and no charge per app or per update. What you
+need is a Garmin account and acceptance of Garmin's Developer Agreement.
+
+Apps may be listed as free or paid. RepFlow is free, which also means there is
+no payment account to set up and no tax interview to complete.
+
+The two things that *do* cost you if you get them wrong are both one-way:
+
+- **The application UUID** in `manifest.xml` (`289C529B638645F0B9A7334DF736972B`).
+  Change it after release and every existing install becomes an orphan.
+- **The developer signing key** at `~/.garmin/repflow/developer_key.der`.
+  Lose it and you cannot publish an update to your own app, ever. Back it up
+  before you do anything else — see `docs/SIGNING.md`.
+
+---
+
+## Step 1 — Back up the signing key
+
+Do this first, before the interesting parts, because it is the step that is
+impossible to recover from later.
 
 ```sh
-git status                 # clean working tree
-# bump the version in CHANGELOG.md and manifest.xml (see "Versioning" below)
-make doctor                # environment OK
-make test                  # all unit tests pass
-make build-all             # every supported device compiles
-make sim                   # simulator smoke test
-make sideload              # physical Fenix smoke test
+ls -l ~/.garmin/repflow/developer_key.der   # this file is your app's identity
 ```
 
-Then verify by hand:
+Copy it somewhere durable and private: a password manager's file attachment, an
+encrypted archive, a second machine. **Never** into this repository — every path
+it could take is in `.gitignore`, and that is deliberate.
 
-- `manifest.xml` permissions — RepFlow declares only `Fit`. Extra permissions
-  cost you users and invite review questions.
-- `manifest.xml` products — `make devices-missing` must print nothing.
-- **Application UUID unchanged** — `289C529B638645F0B9A7334DF736972B`.
-- **Signing key backed up** — `docs/SIGNING.md`.
-- Memory headroom on the tightest device (simulator: *File → View Memory*).
-- Launcher icon and app name render correctly.
-- `docs/SMOKE_TEST.md` passed on hardware, with the result logged.
+## Step 2 — Decide the version
 
-## Phase 2 — Export the `.iq` bundle
+Two places have to agree, and `scripts/package.sh` reads the first:
 
-The Connect IQ Store takes a single `.iq` file containing one binary per
-supported device.
+- `CHANGELOG.md` — the topmost `## [x.y.z]` heading
+- `manifest.xml` — the `version` attribute on `<iq:application>`
 
-**From the CLI (what `make package` does):**
+For a first release, turn `## [Unreleased]` into `## [1.0.0] - YYYY-MM-DD`.
+
+## Step 3 — Check the environment
+
+```sh
+make doctor
+```
+
+This confirms the SDK is resolvable, the signing key exists, and the device
+definitions are installed. Every later step assumes it passed.
+
+## Step 4 — Run everything
+
+```sh
+make test                  # unit tests, in the simulator
+make build-all             # every product in manifest.xml compiles
+make devices-missing       # must print nothing
+```
+
+`make devices-missing` matters more than it looks: the Store bundle builds
+**every** declared product, so a device definition you have not installed will
+silently shrink the bundle — or fail it.
+
+## Step 5 — Test it on a watch
+
+The simulator will not tell you whether the buttons work with chalked hands or
+whether the activity really lands in Garmin Connect.
+
+```sh
+make sideload DEVICE=fenix6pro
+```
+
+Then work through `docs/SMOKE_TEST.md` on the watch. Steps 8, 12 and 14 —
+skip an exercise, leave it pending, resume it with its sets intact — are the
+product. If they fail, nothing else about the release matters.
+
+Save a real workout at the end and confirm it appears in Garmin Connect on the
+phone as a **Strength Training** activity, with a lap per set.
+
+## Step 6 — Build the Store bundle
 
 ```sh
 make package
 ```
 
-`scripts/package.sh` runs doctor, the tests and a release build for every
-device, then produces the bundle with Garmin's official packaging command:
+This runs doctor, the tests and a release build for every device, then produces
+the bundle with Garmin's own packaging command:
 
 ```sh
-monkeyc -e -r -w -f monkey.jungle -o build/release/RepFlow-<version>.iq \
+monkeyc -e -r -w -f monkey.jungle \
+        -o build/release/RepFlow-<version>.iq \
         -y ~/.garmin/repflow/developer_key.der
 ```
 
-`-e` / `--package-app` is the supported CLI equivalent of VS Code's export
-wizard. It builds **every** product declared in `manifest.xml`, so all their
-device definitions must be installed locally — `make devices-missing` must print
-nothing or `package.sh` will skip this step and tell you.
+`-e` (`--package-app`) is the supported CLI equivalent of VS Code's
+**Monkey C: Export Project**. Both produce the same artifact. Never assemble an
+`.iq` by hand.
 
-**From VS Code (equivalent):**
+You should end up with one file of a few megabytes containing one binary per
+supported product.
 
-Command Palette → **Monkey C: Export Project**
+## Step 7 — Take the screenshots
 
-Both routes produce the same artifact. Never assemble an `.iq` by hand.
+The Store wants the app's screen at the device's **native** resolution, not a
+photograph of the simulator window with a bezel around it. Only the simulator
+can produce that.
 
-## Phase 3 — Store materials
+```sh
+make sim DEVICE=fenix6pro
+make store-shot            # opens the simulator's own export, once per screen
+```
 
-`store-assets/` holds the listing material. Garmin requires:
+`make store-shot` puts `store-assets/screenshots/` on your clipboard and opens
+the panel; press Cmd+Shift+G, Cmd+V, name the file, save. Repeat for each screen
+worth showing. A good set for RepFlow is five or six:
 
-| Asset | Requirement |
+1. The set screen, mid-workout — the load, the reps, the heart rate zone gauge
+2. The workout overview, showing a deferred exercise — this is the product
+3. The rest screen, with the recovery figure and what is next
+4. The recap's time-in-zone chart
+5. The recap's per-exercise list
+6. The catalogue, mid-build
+
+## Step 8 — Write the listing
+
+`store-assets/` already holds the text. Check each one still describes what
+ships:
+
+| File | What it is |
 |---|---|
-| Icon | Square PNG, at least 256×256 |
-| Screenshots | Real device or simulator captures, at least one, per device family |
-| Short description | ~100 characters |
-| Full description | Features, supported devices, limitations |
-| Release notes | This version's changes |
-| Support URL | Where users report problems |
-| Privacy policy | Required if you collect data — RepFlow does not, but a short "no data leaves your watch" statement is still worth publishing |
+| `short-description.txt` | ~100 characters, shown in search results |
+| `full-description.txt` | Features, supported devices, and the honest limitations |
+| `release-notes.txt` | What changed in *this* version |
+| `support-url.txt` | Where people report problems — **currently a TODO** |
+| `privacy-policy.md` | RepFlow sends nothing anywhere; say so plainly |
+| `icon.png` | 512×512, generated from `icon.svg` by `make-icons.sh` |
 
-RepFlow's suggested description:
+`support-url.txt` has to be a real URL before you submit. A GitHub issues page
+is enough.
 
-> RepFlow is a flexible strength-training app for Garmin watches.
->
-> Change exercise order at any time, skip occupied machines, resume exercises
-> later and track your sets, reps and weights without interrupting your workout.
->
-> Your workout. Your order.
+**Be honest about the limitations in the description.** RepFlow records a
+genuine strength activity with laps, developer fields, heart rate and calories,
+but Connect IQ cannot write Garmin's native per-set FIT messages, so Garmin
+Connect's built-in strength breakdown will not be populated the way it is for
+Garmin's own Gym Activity. Saying that up front costs a few installs and saves
+every one-star review that would otherwise say it for you.
 
-Capture screenshots from the simulator with **File → Save Screenshot**.
+## Step 9 — Submit
 
-## Phase 4 — Submission
+At <https://apps.garmin.com/developer/>. The portal's wording changes from time
+to time; the sequence does not:
 
-1. Sign in at <https://apps.garmin.com/developer/>
-   (a Garmin account, plus acceptance of the Developer Agreement).
-2. Choose **Submit an App** — or **Upload New Version** for an update.
+1. Sign in with a Garmin account and accept the Developer Agreement.
+2. Start a new app submission (for an update, open the existing listing and
+   upload a new version instead — never submit an update as a new app).
 3. Upload the `.iq` from `build/release/`.
-4. Wait for Garmin's automated binary validation. It checks the signature, the
-   manifest, the declared products and per-device memory. Failures are reported
-   immediately with a reason.
-5. Complete the listing: name, category (**Health & Fitness**), descriptions.
-6. Upload the icon and screenshots.
-7. Verify the supported device list Garmin derived from the bundle matches what
-   you expect.
-8. Complete the required declarations (permissions usage, privacy, export
-   compliance).
-9. **Submit for review.**
+4. Wait for automated validation. It checks the signature, the manifest, the
+   declared products and per-device memory, and reports failures immediately
+   with a reason.
+5. Fill in the listing: name, category (**Health & Fitness**), descriptions.
+6. Upload the icon and the screenshots.
+7. Check the device list Garmin derived from the bundle against what you expect.
+8. Complete the declarations — permissions, privacy, export compliance.
 
-## Phase 5 — Review
+   RepFlow declares five permissions, and each has a one-line answer ready:
 
-After submission:
+   | Permission | Why |
+   |---|---|
+   | `Fit` | Record and save the workout as an activity |
+   | `FitContributor` | Write sets, reps and load into the FIT file |
+   | `UserProfile` | Read the athlete's own heart rate zones for the gauge |
+   | `SensorHistory` | Body Battery before and after the session |
+   | `Sensor` | Accelerometer, to count repetitions — off by default |
+
+9. Submit for review.
+
+## Step 10 — While it is in review
 
 - The app is **not publicly visible** until Garmin approves it.
-- You **can** install and test your own submitted app from your developer
-  account while review is pending.
-- Review typically takes a few business days.
-- Rejections come with a reason. Fix it, re-export and re-upload — the same
-  UUID and the same signing key.
+- You **can** install your own submitted app from your developer account and
+  keep testing while review is pending.
+- Review normally takes a few business days.
+- A rejection comes with a reason. Fix it, re-export, re-upload — same UUID,
+  same key.
 
-## Phase 6 — Future updates
+---
 
-Every update must:
+## Updates, later
 
-1. **Preserve the application UUID** in `manifest.xml`. Never regenerate it.
-2. **Use the same signing key.** A different key means a different app.
-3. Bump the version in `CHANGELOG.md` and `manifest.xml`.
-4. Update `CHANGELOG.md` with real changes.
-5. Pass the full test matrix: `make test`, `make build-all`, simulator and
-   physical smoke tests.
-6. Produce a fresh `.iq` with `make package`.
-7. Upload as **Update New Version** on the existing listing — never as a new app.
+1. Keep the UUID. Keep the key.
+2. Bump the version in `CHANGELOG.md` **and** `manifest.xml`.
+3. Write the real changes into `CHANGELOG.md` and `release-notes.txt`.
+4. `make test`, `make build-all`, simulator, and a physical smoke test.
+5. `make package`.
+6. Upload as a **new version of the existing listing**.
 
-## Versioning
+A new listing means a new app: your users keep the old one, your reviews do not
+carry over, and there is no way to merge them afterwards.
 
-RepFlow uses semantic versioning, recorded in two places that must agree:
+## If something fails
 
-- `CHANGELOG.md` — the topmost `## [x.y.z]` heading
-- `manifest.xml` — the `version` attribute on `<iq:application>` (add it when
-  you make the first store release; a missing attribute defaults to `1.0.0`)
-
-`scripts/package.sh` reads the version from `CHANGELOG.md` and names the `.iq`
-after it.
+| Symptom | Cause |
+|---|---|
+| Validation rejects the signature | Built with a different key than the one on file |
+| Fewer devices than expected in the bundle | A device definition is not installed — `make devices-missing` |
+| "Out of memory" on one product | That device is tighter than the rest; check in the simulator with *File → View Memory* |
+| The app installs but will not open | Almost always an uncaught Monkey C runtime error. See `docs/API_LIMITATIONS.md` §9 |

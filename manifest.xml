@@ -69,13 +69,13 @@
                  gauge would have to guess a maximum heart rate, which would be
                  inventing data rather than reading it. -->
             <iq:uses-permission id="UserProfile"/>
-    <!-- Body Battery, read at the start and end of a workout for the recap.
-         Garmin's own number: RepFlow reads it and never estimates one. -->
-    <iq:uses-permission id="SensorHistory"/>
-    <!-- Raw accelerometer, for counting repetitions from the wrist. Only
-         registered while the set screen is showing and only when the athlete
-         has switched it on: 25 Hz costs battery. -->
-    <iq:uses-permission id="Sensor"/>
+            <!-- Body Battery, read at the start and end of a workout for the
+                 recap. Garmin's own number: RepFlow reads it, never estimates. -->
+            <iq:uses-permission id="SensorHistory"/>
+            <!-- Raw accelerometer, for counting repetitions from the wrist.
+                 Registered only while the set screen is showing, and only when
+                 the athlete has switched it on: 25 Hz costs battery. -->
+            <iq:uses-permission id="Sensor"/>
         </iq:permissions>
 
         <iq:languages>

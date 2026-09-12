@@ -36,7 +36,8 @@ automates steps marked **(auto)** and refuses to continue if they fail.
 ## Manifest & identity
 
 - [ ] Application UUID unchanged: `289C529B638645F0B9A7334DF736972B` **(auto: reported)**
-- [ ] Permissions still minimal — `Fit` only **(auto: reported)**
+- [ ] Permissions still justified — `Fit`, `FitContributor`, `UserProfile`,
+      `SensorHistory`, `Sensor`, and nothing else **(auto: reported)**
 - [ ] Supported products list reviewed **(auto: reported)**
 - [ ] `minApiLevel` still correct for the declared products
 
