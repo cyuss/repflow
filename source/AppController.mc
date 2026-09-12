@@ -311,7 +311,23 @@ class AppController {
     //! looks like a measurement rather than a suggestion. What was actually
     //! lifted is never snapped — only what is about to be.
     public function syncPendingValues(exercise as Exercise) as Void {
-        _pendingWeight = Units.snap(exercise.plannedWeight());
+        var weight = exercise.plannedWeight();
+
+        // Before the first set of a movement, last session's load beats the
+        // template's. A routine that says "-" for the weight — which is most of
+        // them, because the load is the part that changes — would otherwise
+        // open on zero every single week.
+        //
+        // Only the load. The repetitions stay the plan's: the plan is the
+        // prescription, and the load is what the athlete found it took.
+        if (exercise.completedSetCount() == 0) {
+            var last = History.lastPerformance(_bests, exercise.id);
+            if (last != null) {
+                weight = (last as Array)[0] as Float;
+            }
+        }
+
+        _pendingWeight = Units.snap(weight);
         _pendingReps = exercise.plannedReps();
     }
 

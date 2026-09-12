@@ -91,7 +91,8 @@ module ExerciseCatalogue {
             ["c_pec_deck", "Pec Deck", 12, 40, 60],
             ["c_dip", "Chest Dip", 10, 0, 120],
             ["c_pushup", "Push-Up", 15, 0, 60],
-            ["c_decline", "Decline Bench Press", 8, 55, 150]
+            ["c_decline", "Decline Bench Press", 8, 55, 150],
+            ["c_chest_press", "Chest Press (Machine)", 10, 40, 90]
         ] as Array;
     }
 
@@ -107,7 +108,8 @@ module ExerciseCatalogue {
             ["b_tbar_row", "T-Bar Row", 10, 45, 120],
             ["b_face_pull", "Face Pull", 15, 25, 60],
             ["b_shrug", "Shrug", 12, 60, 60],
-            ["b_pullover", "Straight-Arm Pulldown", 12, 30, 60]
+            ["b_pullover", "Straight-Arm Pulldown", 12, 30, 60],
+            ["b_iso_low_row", "Iso-Lateral Low Row", 10, 30, 90]
         ] as Array;
     }
 
@@ -132,7 +134,8 @@ module ExerciseCatalogue {
             ["bi_preacher", "Preacher Curl", 10, 25, 60],
             ["bi_incline", "Incline DB Curl", 12, 10, 60],
             ["bi_cable", "Cable Curl", 12, 25, 60],
-            ["bi_concentration", "Concentration Curl", 12, 10, 45]
+            ["bi_concentration", "Concentration Curl", 12, 10, 45],
+            ["bi_hammer_cable", "Hammer Curl (Cable)", 10, 20, 75]
         ] as Array;
     }
 
@@ -144,7 +147,9 @@ module ExerciseCatalogue {
             ["tr_overhead", "Overhead Extension", 12, 20, 60],
             ["tr_close_bench", "Close-Grip Bench", 8, 50, 120],
             ["tr_dip", "Triceps Dip", 12, 0, 90],
-            ["tr_kickback", "Triceps Kickback", 15, 8, 45]
+            ["tr_kickback", "Triceps Kickback", 15, 8, 45],
+            ["tr_cable_ext", "Triceps Extension (Cable)", 10, 20, 75],
+            ["tr_db_ext", "Triceps Extension (Dumbbell)", 10, 12, 90]
         ] as Array;
     }
 

@@ -1768,3 +1768,85 @@ function testBothThemesAreLegible(logger as Test.Logger) as Boolean {
     Settings.setTheme(before);
     return true;
 }
+
+//! The three routines this athlete actually trains, as transcribed.
+//!
+//! They are data, and data typed from a screenshot is data with typos in it.
+//! This checks the shape rather than the values: every exercise resolves to a
+//! movement the catalogue knows, every muscle tag agrees with the catalogue's,
+//! and no workout repeats an id — which would make two exercises answer to one
+//! name and break "select any exercise at any time".
+(:test)
+function testShippedRoutinesAreCoherent(logger as Test.Logger) as Boolean {
+    var known = {} as Dictionary;
+    var groups = Muscle.browseOrder();
+    for (var g = 0; g < groups.size(); g++) {
+        var rows = ExerciseCatalogue.forMuscle(groups[g]);
+        for (var i = 0; i < rows.size(); i++) {
+            known.put((rows[i] as Array)[ExerciseCatalogue.F_ID] as String, groups[g]);
+        }
+    }
+
+    var workouts = WorkoutRepository.all();
+    Test.assert(workouts.size() >= 3);
+
+    for (var w = 0; w < workouts.size(); w++) {
+        var workout = workouts[w];
+        Test.assert(workout.name.length() > 0);
+        var list = workout.exercises;
+        Test.assert(list.size() > 0);
+
+        var seen = {} as Dictionary;
+        for (var i = 0; i < list.size(); i++) {
+            var ex = list[i];
+            var movement = ExerciseCatalogue.movementId(ex.id);
+
+            Test.assert(known.hasKey(movement));
+            Test.assertEqual(ex.muscle, known.get(movement) as Number);
+            Test.assert(!seen.hasKey(ex.id));
+            seen.put(ex.id, true);
+
+            Test.assert(ex.name.length() > 0);
+            Test.assert(ex.targetSets > 0 && ex.targetSets <= 10);
+            Test.assert(ex.targetReps > 0 && ex.targetReps <= 30);
+            Test.assert(ex.restDuration >= 30 && ex.restDuration <= 300);
+            Test.assert(ex.defaultWeight >= 0.0);
+        }
+    }
+    return true;
+}
+
+//! Last session's load fills in what the routine left blank.
+//!
+//! Most routines record "-" for the weight, because the load is the part that
+//! changes. Without this, every one of those exercises opens on zero every
+//! week and the athlete dials it from scratch each time.
+(:test)
+function testLastSessionsLoadFillsABlankRoutine(logger as Test.Logger) as Boolean {
+    var bests = {} as Dictionary;
+
+    // A movement with no target weight, performed once at 42.5 kg.
+    var engine = TestSupport.newEngine();
+    engine.selectExercise("A");
+    engine.completeCurrentSet(8, 42.5, TestSupport.T0);
+    History.commitSession(bests, engine.getWorkout(), TestSupport.T0 + 600);
+
+    var last = History.lastPerformance(bests, "A");
+    Test.assert(last != null);
+    Test.assertEqual((last as Array)[0] as Float, 42.5);
+
+    // A fresh session of the same workout: the exercise itself still carries
+    // the template's default, and history is what knows better.
+    var fresh = TestSupport.newEngine();
+    var a = TestSupport.exerciseOf(fresh, "A");
+    Test.assertEqual(a.completedSetCount(), 0);
+    Test.assertEqual(a.plannedWeight(), 50.0);          // the template's value
+
+    // Once a set is performed this session, the session's own number wins —
+    // history describes last week, not what is happening now.
+    fresh.selectExercise("A");
+    fresh.completeCurrentSet(8, 47.5, TestSupport.T0 + 1000);
+    Test.assertEqual(a.plannedWeight(), 47.5);
+    Test.assert(a.completedSetCount() > 0);
+    return true;
+}

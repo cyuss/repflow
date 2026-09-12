@@ -179,32 +179,56 @@ module WorkoutRepository {
         return ex;
     }
 
+    //! The athlete's own three-day programme, transcribed from their routines.
+    //!
+    //! Repetitions and rest times are exactly as recorded. Loads are as
+    //! recorded where a load was set; where the routine left the weight blank
+    //! the default is zero, which is what "no target weight" means — the first
+    //! set of the session sets it, and every set after that inherits it. After
+    //! the first session, last week's load is what appears.
+    //!
+    //! A routine carries one target per exercise here, not one per set. Where
+    //! the original varies — bench press at 20, 20, 20, then 30; curls at 10,
+    //! 10, 8, 8 — the opening value is the default and the athlete changes it
+    //! on the set itself, which is what they were doing anyway. Per-set targets
+    //! are a real feature and a separate one; see docs/FEATURE_BACKLOG.md 2.11.
+
     public function backAndTriceps() as Workout {
-        return new Workout("w_back_tri", "Back + Triceps", [
-            _ex("b_lat_pulldown", "Lat Pulldown", 4, 10, 55.0, 90, Muscle.BACK),
-            _ex("b_seated_row", "Seated Row", 4, 10, 60.0, 90, Muscle.BACK),
-            _ex("b_face_pull", "Face Pull", 4, 12, 25.0, 60, Muscle.BACK),
-            _ex("tr_pushdown", "Triceps Pushdown", 4, 10, 30.0, 60, Muscle.TRICEPS)
+        return new Workout("w_back_tri", "Dos + Triceps", [
+            _ex("b_lat_pulldown", "Lat Pulldown (Cable)", 4, 8, 0.0, 120, Muscle.BACK),
+            _ex("b_seated_row", "Seated Row (Machine)", 4, 8, 0.0, 120, Muscle.BACK),
+            _ex("b_db_row", "Dumbbell Row", 4, 10, 0.0, 90, Muscle.BACK),
+            _ex("b_iso_low_row", "Iso-Lateral Low Row", 4, 10, 0.0, 90, Muscle.BACK),
+            _ex("tr_pushdown", "Triceps Pushdown", 4, 10, 0.0, 75, Muscle.TRICEPS),
+            _ex("tr_cable_ext", "Triceps Extension (Cable)", 4, 10, 0.0, 75, Muscle.TRICEPS),
+            _ex("tr_rope", "Triceps Rope Pushdown", 4, 12, 0.0, 60, Muscle.TRICEPS)
         ] as Array<Exercise>);
     }
 
     public function chestAndBiceps() as Workout {
-        return new Workout("w_chest_bi", "Chest + Biceps", [
-            _ex("c_bench", "Bench Press", 4, 8, 70.0, 120, Muscle.CHEST),
-            _ex("c_incline_db", "Incline DB Press", 3, 10, 24.0, 90, Muscle.CHEST),
-            _ex("c_cable_fly", "Cable Fly", 3, 12, 15.0, 60, Muscle.CHEST),
-            _ex("bi_bb_curl", "Barbell Curl", 3, 10, 30.0, 60, Muscle.BICEPS),
-            _ex("bi_hammer", "Hammer Curl", 3, 12, 14.0, 60, Muscle.BICEPS)
+        return new Workout("w_chest_bi", "Pecs + Biceps", [
+            _ex("c_bench", "Bench Press (Barbell)", 4, 12, 20.0, 150, Muscle.CHEST),
+            _ex("c_incline_db", "Incline Bench Press (DB)", 4, 10, 14.0, 120, Muscle.CHEST),
+            _ex("c_pec_deck", "Chest Fly (Machine)", 4, 12, 39.0, 90, Muscle.CHEST),
+            _ex("c_chest_press", "Chest Press (Machine)", 4, 10, 25.0, 90, Muscle.CHEST),
+            _ex("bi_db_curl", "Bicep Curl (Dumbbell)", 4, 10, 9.0, 75, Muscle.BICEPS),
+            _ex("bi_hammer", "Hammer Curl (Dumbbell)", 4, 8, 9.0, 75, Muscle.BICEPS),
+            _ex("bi_concentration", "Concentration Curl", 4, 10, 0.0, 60, Muscle.BICEPS)
         ] as Array<Exercise>);
     }
 
+    //! Shoulders, biceps and triceps. Arnold Press was the one exercise whose
+    //! set rows were not visible in the routine; four by ten matches its
+    //! neighbours and is the only value here that was not read directly.
     public function legs() as Workout {
-        return new Workout("w_legs", "Legs", [
-            _ex("q_back_squat", "Back Squat", 5, 5, 90.0, 180, Muscle.QUADS),
-            _ex("h_rdl", "Romanian Deadlift", 4, 8, 80.0, 120, Muscle.HAMSTRINGS),
-            _ex("q_leg_press", "Leg Press", 4, 10, 140.0, 90, Muscle.QUADS),
-            _ex("h_leg_curl", "Lying Leg Curl", 3, 12, 40.0, 60, Muscle.HAMSTRINGS),
-            _ex("cf_standing", "Standing Calf Raise", 4, 15, 60.0, 45, Muscle.CALVES)
+        return new Workout("w_shoulders_arms", "Epaules + Bras", [
+            _ex("s_db_press", "Shoulder Press (Dumbbell)", 4, 8, 0.0, 120, Muscle.SHOULDERS),
+            _ex("s_lateral", "Lateral Raise (Dumbbell)", 4, 12, 0.0, 75, Muscle.SHOULDERS),
+            _ex("s_arnold", "Arnold Press (Dumbbell)", 4, 10, 0.0, 90, Muscle.SHOULDERS),
+            _ex("bi_bb_curl", "Bicep Curl (Barbell)", 4, 8, 0.0, 90, Muscle.BICEPS),
+            _ex("bi_hammer_cable", "Hammer Curl (Cable)", 4, 10, 0.0, 75, Muscle.BICEPS),
+            _ex("tr_db_ext", "Triceps Extension (DB)", 4, 10, 0.0, 90, Muscle.TRICEPS),
+            _ex("tr_rope", "Triceps Rope Pushdown", 4, 12, 0.0, 75, Muscle.TRICEPS)
         ] as Array<Exercise>);
     }
 }
