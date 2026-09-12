@@ -17,11 +17,42 @@ Plug the watch in with its data cable (a charge-only cable will not work).
 
 - **macOS / Windows:** most Fenix models mount as a USB mass-storage volume.
   You should see a `GARMIN` folder at its root.
-- **Fenix 8 / newer models in MTP mode:** these do not mount as a plain disk on
-  macOS. Install [Android File Transfer](https://www.android.com/filetransfer/)
-  or use a Windows machine, where MTP is supported natively by Explorer.
-  `scripts/sideload.sh` will not find an MTP device and will print the manual
-  copy instructions instead.
+- **MTP is the trap, and it starts with the Fenix 6 Pro.** Any Garmin watch with
+  music support can connect as MTP (the music-transfer protocol) instead of as a
+  USB drive. macOS does not support MTP natively, so the watch charges, the
+  watch says it is connected, and **the Mac shows nothing at all** — which looks
+  exactly like a dead cable.
+
+  Two places control it, and both must say the same thing:
+
+  - On the watch: **Settings → System → USB Mode → Garmin**. `Garmin` is mass
+    storage, which is what mounts and what Connect IQ sideloading needs. `MTP`
+    is music only.
+  - If the watch asks *"Use media transfer (MTP)?"* when you plug it in,
+    answer **No**. Yes means MTP.
+
+  `scripts/sideload.sh` will not find an MTP device and prints the manual copy
+  instructions instead.
+
+- **macOS on Apple Silicon blocks new USB accessories before enumerating them.**
+  The watch receives power and detects a host, and the Mac reports no device at
+  all — not even an unknown one. Check **System Settings → Privacy & Security →
+  Accessories** and allow it. The Mac must also be unlocked at the moment you
+  plug in; locked, it refuses new accessories whatever the setting says.
+
+### Telling a dead cable from a protocol problem
+
+Plug the clip into a **plain wall charger**, with no computer involved.
+
+- The *"Use media transfer (MTP)?"* prompt **still appears** → the watch is
+  reacting to power alone. It proves nothing about the data lines.
+- The prompt **does not appear** → the watch is detecting a USB *host*, which
+  needs D+ and D−. The cable's data wiring and the four contacts are fine, and
+  the problem is on the computer's side.
+
+The four contacts are worth cleaning either way: sweat is salty, and the two
+data pins oxidise before the two power pins because they are almost never used.
+That produces exactly this symptom — charges, does not connect.
 
 ## 2. Build a signed PRG
 
