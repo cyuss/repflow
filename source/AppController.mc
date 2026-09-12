@@ -5,6 +5,7 @@ import Toybox.Timer;
 import Toybox.Time;
 import Toybox.Attention;
 import Toybox.System;
+import Toybox.Math;
 
 //! Wires the workout engine, the rest timer, Garmin recording and persistence
 //! together, and owns screen transitions.
@@ -164,11 +165,25 @@ class AppController {
     // Editing the upcoming set
     // ------------------------------------------------------------------
 
+    //! Move the load by `deltaSteps` presses of UP or DOWN.
+    //!
+    //! The arithmetic happens in whatever unit the athlete reads, then converts
+    //! back to the kilograms everything is stored in. Stepping in kilos and
+    //! displaying pounds would walk the shown number off every round value.
+    //!
+    //! Snapping to the step grid is what makes holding the button land on 60
+    //! and 65 rather than on 62.5 and 67.5 after one odd starting weight.
     public function adjustWeight(deltaSteps as Number) as Void {
-        _pendingWeight += deltaSteps * Tuning.WEIGHT_STEP;
-        if (_pendingWeight < 0.0) {
-            _pendingWeight = 0.0;
+        var step = Units.step();
+        if (step <= 0.0) {
+            step = 1.0;
         }
+        var shown = Units.fromKg(_pendingWeight) + deltaSteps * step;
+        var snapped = Math.round(shown / step) * step;
+        if (snapped < 0.0) {
+            snapped = 0.0;
+        }
+        _pendingWeight = Units.toKg(snapped.toFloat());
     }
 
     public function setWeight(weight as Float) as Void {
@@ -249,11 +264,15 @@ class AppController {
         _recorder.updateTotals(engine.summary(now()));
         syncPendingValues(exercise);
         _persist();
-        vibrate(50, 40);
+        Haptics.setLogged();
         // Always return to the set page: the next thing the athlete does is the
         // next set, not read metrics.
         _exercisePage = Tuning.PAGE_SET;
-        startRest(exercise.restDuration);
+        var rest = exercise.restDuration;
+        if (rest <= 0) {
+            rest = Settings.restDefault();
+        }
+        startRest(rest);
     }
 
     // ------------------------------------------------------------------
@@ -288,7 +307,7 @@ class AppController {
         }
         if (_rest.isRunning() && _rest.tick()) {
             // Reached zero exactly on this tick — notify once.
-            vibrate(100, 400);
+            Haptics.restOver();
         }
         WatchUi.requestUpdate();
     }
@@ -376,19 +395,5 @@ class AppController {
         }
     }
 
-    //! Haptic feedback, where the device has a vibration motor.
-    public function vibrate(intensity as Number, durationMs as Number) as Void {
-        if (!(Attention has :vibrate)) {
-            return;
-        }
-        var settings = System.getDeviceSettings();
-        if (settings has :vibrateOn && !settings.vibrateOn) {
-            return;
-        }
-        try {
-            Attention.vibrate([new Attention.VibeProfile(intensity, durationMs)] as Array<Attention.VibeProfile>);
-        } catch (e) {
-            // vibration is never essential
-        }
-    }
 }
+

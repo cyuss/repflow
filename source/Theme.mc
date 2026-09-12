@@ -48,6 +48,21 @@ module Theme {
         }
     }
 
+    //! The font small captions are set in.
+    //!
+    //! Garmin lets the wearer scale system text, and RepFlow cannot simply obey:
+    //! it measures its own space and picks the largest font that fits, so there
+    //! is nothing left to scale up on the big numbers. The captions are the part
+    //! that *is* fixed, so they are the part that answers the setting — one step
+    //! up when the wearer has asked for larger text.
+    //!
+    //! Callers pass the result through the same fitting arithmetic as before, so
+    //! a caption that no longer leaves room for its value simply loses the
+    //! contest and the value keeps the cell.
+    public function captionFont() as Graphics.FontDefinition {
+        return Device.fontScale() >= 1.2 ? Graphics.FONT_TINY : Graphics.FONT_XTINY;
+    }
+
     // ------------------------------------------------------------------
     // Font ladders, largest first. pickFont walks down until the text fits.
     // Built on demand rather than held as module constants so they cost no
@@ -539,18 +554,18 @@ module Theme {
         valueColor as Number
     ) as Number {
         var valueFont = Graphics.FONT_TINY;
-        var captionFont = Graphics.FONT_XTINY;
+        var capFont = captionFont();
         dc.setColor(valueColor, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, top, valueFont, value, Graphics.TEXT_JUSTIFY_CENTER);
         var y = top + dc.getFontHeight(valueFont);
         dc.setColor(COLOR_DIM, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, y, captionFont, caption, Graphics.TEXT_JUSTIFY_CENTER);
-        return y + dc.getFontHeight(captionFont);
+        dc.drawText(cx, y, capFont, caption, Graphics.TEXT_JUSTIFY_CENTER);
+        return y + dc.getFontHeight(capFont);
     }
 
     //! Height drawMiniField needs.
     public function miniFieldHeight(dc as Graphics.Dc) as Number {
-        return dc.getFontHeight(Graphics.FONT_TINY) + dc.getFontHeight(Graphics.FONT_XTINY);
+        return dc.getFontHeight(Graphics.FONT_TINY) + dc.getFontHeight(captionFont());
     }
 
     //! Time of day, small and dim, in the strip below the action bar.
@@ -659,16 +674,28 @@ module Theme {
     // ------------------------------------------------------------------
 
     //! Format a weight without a pointless trailing ".0": 55 / 57.5
-    public function formatWeight(weight as Float) as String {
+    //! A number to at most one decimal, with no trailing ".0".
+    //!
+    //! Separate from formatWeight because this half is pure arithmetic and the
+    //! other half depends on the athlete's unit setting. Tested directly.
+    public function formatNumber(value as Float) as String {
         // Work in tenths as integers: Math.floor/round return Double, and
         // comparing those against a Float trips the type checker.
-        var tenths = Math.round(weight * 10.0).toNumber();
+        var tenths = Math.round(value * 10.0).toNumber();
         var whole = tenths / 10;
         var frac = tenths % 10;
         if (frac == 0) {
             return whole.toString();
         }
         return whole.toString() + "." + frac.toString();
+    }
+
+    //! A stored load, in the unit the athlete reads.
+    //!
+    //! Everything upstream of here is kilograms — FIT, history, the engine —
+    //! and the conversion happens once, at the moment it becomes text.
+    public function formatWeight(weight as Float) as String {
+        return formatNumber(Units.fromKg(weight));
     }
 
     //! "1:05:23" or "42:07"
@@ -683,11 +710,21 @@ module Theme {
     }
 
     //! Large volumes read better without every digit: 3.2 t above a tonne.
+    //! Session volume. Tonnes once it stops fitting, because a strength session
+    //! reaches five figures of kilograms quickly and "12450" is unreadable at
+    //! arm's length.
     public function formatVolume(kg as Float) as String {
-        if (kg >= 1000.0) {
-            var tenths = Math.round(kg / 100.0).toNumber();
-            return (tenths / 10).toString() + "." + (tenths % 10).toString() + " t";
+        var shown = Units.fromKg(kg);
+        if (shown >= 1000.0) {
+            var tenths = Math.round(shown / 100.0).toNumber();
+            var big = (tenths / 10).toString() + "." + (tenths % 10).toString();
+            // Tonnes in metric, because that is what a tonne is. In pounds
+            // there is no such unit, so it stays pounds with a thousands mark —
+            // "kilopounds" is not something anybody says in a gym.
+            return Units.imperial()
+                ? big + "k " + Units.label()
+                : big + " t";
         }
-        return formatWeight(kg) + " kg";
+        return formatNumber(shown) + " " + Units.label();
     }
 }

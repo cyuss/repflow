@@ -611,18 +611,31 @@ function testUsableWidthStaysOnScreen(logger as Test.Logger) as Boolean {
 //! Formatting helpers, which the layout sizes itself around.
 (:test)
 function testFormatting(logger as Test.Logger) as Boolean {
-    Test.assertEqual(Theme.formatWeight(55.0), "55");
-    Test.assertEqual(Theme.formatWeight(57.5), "57.5");
+    // Number formatting is unit-free; the conversion is tested separately,
+    // because what formatWeight prints depends on the athlete's setting.
+    Test.assertEqual(Theme.formatNumber(55.0), "55");
+    Test.assertEqual(Theme.formatNumber(57.5), "57.5");
+    Test.assertEqual(Theme.formatNumber(0.0), "0");
+    Test.assertEqual(Theme.formatNumber(1.25), "1.3");   // rounded to a tenth
     Test.assertEqual(Theme.formatWeight(0.0), "0");
-    Test.assertEqual(Theme.formatWeight(1.25), "1.3");   // rounded to a tenth
 
     Test.assertEqual(Theme.formatDuration(0), "0:00");
     Test.assertEqual(Theme.formatDuration(67), "1:07");
     Test.assertEqual(Theme.formatDuration(3723), "1:02:03");
 
-    // Volume switches to tonnes so the number stays short on a small screen.
-    Test.assertEqual(Theme.formatVolume(960.0), "960 kg");
-    Test.assertEqual(Theme.formatVolume(2970.0), "3.0 t");
+    // Volume gets a big unit once the number would run long, so the test
+    // states the property rather than a literal: what "long" means depends on
+    // whether the athlete reads kilos or pounds.
+    var small = Units.imperial() ? 100.0 : 960.0;
+    Test.assert(Units.fromKg(small) < 1000.0);
+    Test.assertEqual(Theme.formatVolume(small),
+        Theme.formatNumber(Units.fromKg(small)) + " " + Units.label());
+
+    var large = 9000.0;
+    Test.assert(Units.fromKg(large) >= 1000.0);
+    var big = Theme.formatVolume(large);
+    Test.assert(big.find(Units.imperial() ? "k " : " t") != null);
+    Test.assert(big.length() <= 8);   // it exists to stay short
     return true;
 }
 
@@ -930,10 +943,44 @@ function testWeightTenthsRoundTrip(logger as Test.Logger) as Boolean {
         Test.assertEqual(Tuning.toTenths(weights[i]) / 10.0, weights[i]);
     }
 
-    // A whole-kilogram step is what the editor applies, so stepping up and back
-    // down has to land exactly where it started.
+    // The editor's step comes from the athlete's settings now, so what has to
+    // hold is that stepping up and back down lands exactly where it started,
+    // whatever the step is.
+    var step = Units.step();
+    Test.assert(step > 0.0);
     var start = 57.5;
-    Test.assertEqual(start + Tuning.WEIGHT_STEP, 58.5);
-    Test.assertEqual((start + Tuning.WEIGHT_STEP) - Tuning.WEIGHT_STEP, start);
+    Test.assertEqual((start + step) - step, start);
+    return true;
+}
+
+//! Device capability reads must never use a symbol the device does not have.
+//!
+//! `DeviceSettings.fontScale` does not exist on a Fenix 6 Pro, and reading it
+//! there raises "Symbol Not Found" — a Monkey C runtime error, which is not an
+//! Exception and is not caught by the try/catch that was wrapped around it.
+//! The app died on the first screen it drew. Nothing but running the code on
+//! the device catches that, so it runs here.
+(:test)
+function testDeviceCapabilitiesAreSafeToRead(logger as Test.Logger) as Boolean {
+    Test.assert(Device.screenSize() > 0);
+    Test.assert(Device.fontScale() > 0.0);
+    Test.assert(Device.stroke(8) >= 1);
+    var tier = Device.tier();
+    Test.assert(tier == Device.TIER_LEAN || tier == Device.TIER_RICH);
+    Device.animates();
+    Device.isHighRes();
+
+    // And the settings underneath them, including the defaults that apply when
+    // nothing has ever been written from the phone.
+    Test.assert(Settings.restDefault() >= 10);
+    Test.assert(Settings.weightStepTenths() >= 1);
+    Test.assert(Units.step() > 0.0);
+    Test.assert(Units.label().length() > 0);
+    Settings.haptics();
+    Settings.repCounter();
+
+    // Kilograms in, kilograms out, whichever unit is being displayed.
+    var kg = 57.5;
+    Test.assert((Units.toKg(Units.fromKg(kg)) - kg).abs() < 0.01);
     return true;
 }

@@ -7,11 +7,28 @@ import Toybox.Math;
 //! not expose class-level `const` through the class name.
 module Tuning {
 
-    //! Weight adjustment step, in kg.
-    const WEIGHT_STEP = 1.0;
-
     //! Seconds added or removed by UP/DOWN on the rest screen.
     const REST_STEP = 15;
+
+    //! How much faster the load moves when the athlete is clearly holding the
+    //! button down rather than tapping it. Going 60 to 100 kg one kilo at a
+    //! time is forty presses; this turns it into eight.
+    const COARSE_MULTIPLIER = 5;
+    //! Two adjustments closer together than this are a hold, not two taps.
+    const COARSE_WINDOW_MS = 350;
+
+    // ------------------------------------------------------------------
+    // Settings vocabulary. The numeric values are written by the phone app and
+    // stored, so they must never be reordered.
+    // ------------------------------------------------------------------
+
+    const UNITS_AUTO = 0;
+    const UNITS_METRIC = 1;
+    const UNITS_STATUTE = 2;
+
+    const ANIM_AUTO = 0;
+    const ANIM_OFF = 1;
+    const ANIM_ON = 2;
 
     // ------------------------------------------------------------------
     // Exercise data screens, paged with UP/DOWN like a native Garmin activity.

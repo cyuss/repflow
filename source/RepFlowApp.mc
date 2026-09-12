@@ -15,6 +15,13 @@ class RepFlowApp extends Application.AppBase {
     public function onStart(state as Dictionary?) as Void {
     }
 
+    //! The phone wrote new settings. Drop the cached copies so the next read
+    //! picks them up; nothing else has to know.
+    public function onSettingsChanged() as Void {
+        Settings.invalidate();
+        WatchUi.requestUpdate();
+    }
+
     //! Persist whatever is in progress. The app may be backgrounded at any time.
     public function onStop(state as Dictionary?) as Void {
         AppController.instance().onAppStop();

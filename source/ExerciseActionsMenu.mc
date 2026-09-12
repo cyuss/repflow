@@ -22,7 +22,7 @@ module ExerciseActionsMenu {
             WatchUi.loadResource(Rez.Strings.EditSet) as String,
             exercise.plannedReps().toString() + " x " +
                 Theme.formatWeight(exercise.plannedWeight()) + " " +
-                (WatchUi.loadResource(Rez.Strings.Kg) as String),
+                Units.label(),
             ACTION_EDIT_SET, {}));
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.ActionSkipForNow) as String, null, ACTION_SKIP_FOR_NOW, {}));

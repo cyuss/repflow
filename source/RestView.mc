@@ -94,7 +94,7 @@ class RestView extends WatchUi.View {
 
         var detail = next.plannedReps().toString() + " x " +
             Theme.formatWeight(next.plannedWeight()) + " " +
-            (WatchUi.loadResource(Rez.Strings.Kg) as String);
+            Units.label();
         Theme.drawFitted(dc, y, detail,
             [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_ACCENT);
     }

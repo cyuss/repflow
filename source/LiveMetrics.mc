@@ -70,6 +70,9 @@ module LiveMetrics {
         if (hr == null) {
             return null;
         }
+        if (!(UserProfile has :getHeartRateZones)) {
+            return null;
+        }
         try {
             var zones = UserProfile.getHeartRateZones(UserProfile.HR_ZONE_SPORT_GENERIC);
             if (zones == null || zones.size() < 6) {

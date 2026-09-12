@@ -1,0 +1,69 @@
+<resources xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+
+    <!--
+      Settings the athlete edits in Garmin Connect on the phone, not on a 260 px
+      screen. Every one of them has a default that makes the app work without
+      ever opening this pane.
+
+      Weights are stored in TENTHS OF A KILO as a Number rather than as a Float:
+      Connect IQ float properties round-trip through the phone app, and a step
+      of 2.5 kg coming back as 2.4999998 would be visible on the watch.
+    -->
+    <properties>
+        <property id="restDefault"       type="number">90</property>
+        <property id="weightStepTenths"  type="number">10</property>
+        <property id="units"             type="number">0</property>
+        <property id="haptics"           type="boolean">true</property>
+        <property id="repCounter"        type="boolean">false</property>
+        <property id="animations"        type="number">0</property>
+    </properties>
+
+    <strings>
+        <string id="SetRestDefault">Default rest (seconds)</string>
+        <string id="SetWeightStep">Weight step (tenths of a kg / 0.1 lb)</string>
+        <string id="SetUnits">Weight units</string>
+        <string id="SetUnitsAuto">Follow the watch</string>
+        <string id="SetUnitsMetric">Kilograms</string>
+        <string id="SetUnitsStatute">Pounds</string>
+        <string id="SetHaptics">Vibration</string>
+        <string id="SetRepCounter">Count reps automatically</string>
+        <string id="SetAnimations">Animation</string>
+        <string id="SetAnimAuto">Follow the watch</string>
+        <string id="SetAnimOff">Off</string>
+        <string id="SetAnimOn">On</string>
+    </strings>
+
+    <settings>
+        <setting propertyKey="@Properties.restDefault" title="@Strings.SetRestDefault">
+            <settingConfig type="numeric" min="10" max="900" />
+        </setting>
+
+        <setting propertyKey="@Properties.weightStepTenths" title="@Strings.SetWeightStep">
+            <settingConfig type="numeric" min="1" max="250" />
+        </setting>
+
+        <setting propertyKey="@Properties.units" title="@Strings.SetUnits">
+            <settingConfig type="list">
+                <listEntry value="0">@Strings.SetUnitsAuto</listEntry>
+                <listEntry value="1">@Strings.SetUnitsMetric</listEntry>
+                <listEntry value="2">@Strings.SetUnitsStatute</listEntry>
+            </settingConfig>
+        </setting>
+
+        <setting propertyKey="@Properties.haptics" title="@Strings.SetHaptics">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <setting propertyKey="@Properties.repCounter" title="@Strings.SetRepCounter">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <setting propertyKey="@Properties.animations" title="@Strings.SetAnimations">
+            <settingConfig type="list">
+                <listEntry value="0">@Strings.SetAnimAuto</listEntry>
+                <listEntry value="1">@Strings.SetAnimOff</listEntry>
+                <listEntry value="2">@Strings.SetAnimOn</listEntry>
+            </settingConfig>
+        </setting>
+    </settings>
+</resources>

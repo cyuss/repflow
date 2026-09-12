@@ -1,6 +1,7 @@
 import Toybox.Lang;
 import Toybox.Graphics;
 import Toybox.WatchUi;
+import Toybox.System;
 
 //! Edit the weight and the reps of the upcoming set, on one screen.
 //!
@@ -39,12 +40,15 @@ class SetEditorView extends WatchUi.View {
     private var _focus as Number;
     private var _returnTo as Number;
     private var _mode as Number;
+    //! System.getTimer() at the last load adjustment, for hold detection.
+    private var _lastAdjustMs as Number;
 
     public function initialize(exercise as Exercise, returnTo as Number, mode as Number) {
         View.initialize();
         _exercise = exercise;
         _returnTo = returnTo;
         _mode = mode;
+        _lastAdjustMs = 0;
         // Confirming a set starts on the reps: the load is usually what was
         // planned, the reps are what actually came out.
         _focus = mode == Tuning.EDITOR_CONFIRM_LOG
@@ -74,12 +78,24 @@ class SetEditorView extends WatchUi.View {
     }
 
     //! Nudge whichever value is focused.
+    //!
+    //! Presses arriving faster than a person taps are a held button, and the
+    //! load moves five times as far for each one. Going 60 to 100 kg is forty
+    //! taps at one kilo a press; this makes it eight.
+    //!
+    //! Only the load accelerates. Reps live between about 1 and 30, where a
+    //! five-rep jump overshoots more often than it helps.
     public function adjust(direction as Number) as Void {
         var controller = AppController.instance();
         if (_focus == Tuning.FOCUS_REPS) {
             controller.adjustReps(direction);
+            _lastAdjustMs = 0;
         } else {
-            controller.adjustWeight(direction);
+            var now = System.getTimer();
+            var held = _lastAdjustMs != 0 &&
+                (now - _lastAdjustMs) < Tuning.COARSE_WINDOW_MS;
+            _lastAdjustMs = now;
+            controller.adjustWeight(held ? direction * Tuning.COARSE_MULTIPLIER : direction);
         }
         WatchUi.requestUpdate();
     }
@@ -141,7 +157,7 @@ class SetEditorView extends WatchUi.View {
 
         _drawCell(dc, left, top, half, height,
             Theme.formatWeight(controller.pendingWeight()),
-            (WatchUi.loadResource(Rez.Strings.Kg) as String).toUpper(),
+            Units.label().toUpper(),
             _focus == Tuning.FOCUS_WEIGHT);
 
         _drawCell(dc, left + half, top, half, height,

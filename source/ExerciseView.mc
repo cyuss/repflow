@@ -179,7 +179,7 @@ class ExerciseView extends WatchUi.View {
         }
         FieldGrid.drawPair(dc, top + inset, height,
             Theme.formatWeight(controller.pendingWeight()),
-            (WatchUi.loadResource(Rez.Strings.Kg) as String).toUpper(),
+            Units.label().toUpper(),
             Theme.COLOR_TEXT,
             controller.pendingReps().toString(),
             WatchUi.loadResource(Rez.Strings.FieldReps) as String,

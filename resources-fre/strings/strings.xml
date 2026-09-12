@@ -1,6 +1,7 @@
 <strings>
     <string id="AppName">RepFlow</string>
     <string id="Kg">kg</string>
+    <string id="Lb">lb</string>
     <string id="ChooseWorkout">Choisir seance</string>
     <string id="SetLabel">Serie</string>
     <string id="CompleteSet">VALIDER SERIE</string>
@@ -54,4 +55,17 @@
     <string id="AvgHr">FC moy</string>
     <string id="MaxHr">FC max</string>
     <string id="Saved">Enregistre</string>
+    <!-- Reglages, edites dans l'application Garmin Connect -->
+    <string id="SetRestDefault">Repos par defaut (secondes)</string>
+    <string id="SetWeightStep">Pas de charge (dixiemes de kg / 0,1 lb)</string>
+    <string id="SetUnits">Unite de charge</string>
+    <string id="SetUnitsAuto">Suivre la montre</string>
+    <string id="SetUnitsMetric">Kilogrammes</string>
+    <string id="SetUnitsStatute">Livres</string>
+    <string id="SetHaptics">Vibration</string>
+    <string id="SetRepCounter">Compter les repetitions</string>
+    <string id="SetAnimations">Animation</string>
+    <string id="SetAnimAuto">Suivre la montre</string>
+    <string id="SetAnimOff">Desactivee</string>
+    <string id="SetAnimOn">Activee</string>
 </strings>

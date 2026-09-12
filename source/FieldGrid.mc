@@ -46,7 +46,7 @@ module FieldGrid {
     //! Exposed because the layout tests measure against it — they check the real
     //! arithmetic rather than a copy of it.
     public function valueArea(dc as Graphics.Dc, height as Number) as Number {
-        var captionHeight = dc.getFontHeight(Graphics.FONT_XTINY);
+        var captionHeight = dc.getFontHeight(Theme.captionFont());
         var area = height - captionHeight - height / 16 - height / 20;
         if (area < captionHeight) {
             return height;   // no room for a caption; the value takes the cell
@@ -64,7 +64,7 @@ module FieldGrid {
         caption as String,
         valueColor as Number
     ) as Void {
-        var captionFont = Graphics.FONT_XTINY;
+        var captionFont = Theme.captionFont();
         var captionHeight = dc.getFontHeight(captionFont);
         var area = valueArea(dc, height);
 

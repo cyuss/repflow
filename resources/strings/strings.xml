@@ -9,6 +9,7 @@
     <string id="CompleteSet">COMPLETE SET</string>
     <string id="LogSet">LOG SET</string>
     <string id="Kg">kg</string>
+    <string id="Lb">lb</string>
     <string id="Reps">reps</string>
 
     <!-- Data field captions. Short and uppercase: they sit under a big value

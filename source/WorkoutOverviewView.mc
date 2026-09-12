@@ -50,7 +50,7 @@ class WorkoutOverviewView extends WatchUi.Menu2 {
             // has no glyph for a middot and draws a "?" box instead.
             var sub = ex.completedSetCount().toString() + "/" + ex.targetSets.toString() +
                 "    " + Theme.formatWeight(ex.plannedWeight()) +
-                " " + (WatchUi.loadResource(Rez.Strings.Kg) as String);
+                " " + Units.label();
             addItem(new WatchUi.IconMenuItem(
                 ex.name, sub, ex.id, new StateIcon(ex.state, iconSize), {}));
         }
