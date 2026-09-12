@@ -234,6 +234,62 @@ earlier answers.
 
 ---
 
+## Confirmed against a working implementation
+
+After this study was written, a shipping Garmin/Hevy app was found and read in
+full: **[zweihochzehn/garmin-hevy-app](https://github.com/zweihochzehn/garmin-hevy-app)**
+— a Connect IQ app for the Venu 2 that pulls Hevy routines, guides the sets, and
+posts the workout back. It is not affiliated with this project. Reading it
+independently confirmed every conclusion above, and taught four things this
+study had missed.
+
+**Confirmed:**
+
+- `Communications` + `Fit` are the only permissions it needs. Live heart rate
+  and calories come from `Toybox.Activity`, which the SDK's permission table
+  does not list — `Sensor` covers `Toybox.Sensor` and is not required for HR.
+- `pageSize` really does cap at 10; they page and cap at 50 routines.
+- **Connect IQ cannot write structured strength sets into a FIT.** Their ADR
+  calls it "confirmed as an unresolved Garmin forum request". They write **no
+  developer fields at all** and accept that sets do not appear in the Garmin
+  activity.
+- A response that is too large is a real failure mode: they keep the history
+  fetch to five workouts because "a big page would be a slow BLE transfer and
+  can exceed the response size limit".
+
+**Learned, and now fixed in RepFlow:**
+
+1. **A running `ActivityRecording` blocks Garmin's sleep tracking.** Verified by
+   them on a physical Venu 2: leaving the app mid-workout left the recording
+   running and cost a night of sleep data. RepFlow only ever closed the
+   recording in `finishWorkout`, so swiping out mid-session left it dangling.
+   `AppController.onAppStop` now closes it on every exit — saved if any set was
+   logged, discarded otherwise.
+2. **Never round a load the athlete has not touched.** RepFlow snapped the
+   inherited weight to the displayed unit's step grid, which on a statute watch
+   is a kg→lb→kg round trip: a routine's 20.0 kg became 19.96 kg before a rep
+   was performed. Rounding now happens only where the athlete chooses a value.
+3. **"No target weight" is not zero.** Their app shows "–" and logs `null`;
+   RepFlow stores 0.0 and would log a fabricated zero. Hevy's `weight_kg` is
+   nullable, so this matters the moment anything is posted. **Not yet fixed** —
+   it needs a nullable weight through the model and a schema bump, and is listed
+   below.
+4. **Practical details worth copying**: an API key typed on a watch has no
+   hyphens, so strip non-alphanumerics and re-insert the 8-4-4-4-12 form;
+   negative response codes are Connect IQ transport errors and positive ones are
+   HTTP, so 401/403 means the key and anything ≤ 0 means the phone; persist the
+   payload *before* the first send and clear it only on 200/201, matched by
+   `start_time`; keep the pending store a queue, not a slot.
+
+**Where they went further:** they fetch the athlete's recent workouts from Hevy
+to pre-fill "what did I lift last time", rather than relying on the watch's own
+history. That works from the first session on a new watch, where RepFlow's local
+history is empty.
+
+**Where RepFlow goes further:** they follow the routine's order. RepFlow's whole
+reason to exist — selecting any exercise at any time, deferring an occupied
+machine — is not something their flow does.
+
 ## What it would take to build
 
 | Piece | Where | Size |
@@ -244,7 +300,8 @@ earlier answers.
 | Session → POST body, queued in Storage | new | medium |
 | `ServiceDelegate.onActivityCompleted` + temporal retry | new, `(:background)` | medium |
 | `fitContributions` so Garmin Connect draws the laps | done | — |
-| Two permissions: `Communications`, `Background` | `manifest.xml` | small |
+| Nullable "no target weight" through the model | `Exercise`, schema v3 | medium |
+| One permission: `Communications` (`Background` only if syncing without opening the app) | `manifest.xml` | small |
 
 The one piece that cannot be designed from documentation is whether a string
 lap field renders in Garmin Connect. Everything else is specified.

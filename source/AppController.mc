@@ -304,12 +304,16 @@ class AppController {
     }
 
     //! Pre-fill the editable weight/reps from the exercise's inheritance rules.
-    //! Pre-fill the editable weight/reps from the exercise's inheritance rules.
     //!
-    //! The load is snapped to the step grid of whatever unit the athlete reads.
-    //! A 55 kg template default is 121.3 lb, and a plan that opens on 121.3
-    //! looks like a measurement rather than a suggestion. What was actually
-    //! lifted is never snapped — only what is about to be.
+    //! **An inherited load is never rounded.** It used to be snapped to the step
+    //! grid of the displayed unit, which reads better — but on a statute watch
+    //! that is a kg to lb to kg round trip, and it rewrites a routine's 20.0 kg
+    //! as 19.96 kg before a single rep is performed. The athlete never touched
+    //! it, so nothing may change it.
+    //!
+    //! Rounding happens where the athlete actually chooses a value, in
+    //! `adjustWeight`: what they dialled is on the grid, and what they inherited
+    //! is exactly what was inherited.
     public function syncPendingValues(exercise as Exercise) as Void {
         var weight = exercise.plannedWeight();
 
@@ -327,7 +331,7 @@ class AppController {
             }
         }
 
-        _pendingWeight = Units.snap(weight);
+        _pendingWeight = weight;
         _pendingReps = exercise.plannedReps();
     }
 
@@ -637,10 +641,33 @@ class AppController {
     }
 
     //! Called from RepFlowApp.onStop — never lose a workout to a backgrounded app.
+    //! Called from RepFlowApp.onStop — never lose a workout to a backgrounded app.
+    //!
+    //! **The recording must never be left running.** A watch with an activity in
+    //! progress does not track sleep, so an athlete who swipes out of RepFlow
+    //! mid-workout and goes to bed loses the whole night. The FIT file is
+    //! therefore closed on every path out: saved if any set was logged, since a
+    //! short strength activity is better than a lost one, and discarded when
+    //! nothing was performed.
+    //!
+    //! This costs nothing on resume. A recording cannot be reattached after a
+    //! restart in any case — see docs/API_LIMITATIONS.md — so resumeWorkout was
+    //! already starting a fresh one.
     public function onAppStop() as Void {
         stopTicker();
         _stopRepCounting();
         _persist();
+
+        var engine = _engine;
+        var logged = false;
+        if (engine != null) {
+            logged = engine.summary(now()).completedSets > 0;
+        }
+        if (logged) {
+            _recorder.stopAndSave();
+        } else {
+            _recorder.stopAndDiscard();
+        }
     }
 
     // ------------------------------------------------------------------

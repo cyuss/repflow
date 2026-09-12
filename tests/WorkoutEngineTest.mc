@@ -1850,3 +1850,38 @@ function testLastSessionsLoadFillsABlankRoutine(logger as Test.Logger) as Boolea
     Test.assert(a.completedSetCount() > 0);
     return true;
 }
+
+//! An inherited load reaches the editor unchanged.
+//!
+//! It used to be snapped to the step grid of the displayed unit, which reads
+//! better and is wrong: on a statute watch that is a kg to lb to kg round trip,
+//! and it rewrites a routine's 20.0 kg as 19.96 kg before a single rep is
+//! performed. The athlete never touched it, so nothing may change it.
+//!
+//! Found by reading another developer's Garmin/Hevy app, which had hit the same
+//! bug and documented it.
+(:test)
+function testInheritedLoadIsNotRounded(logger as Test.Logger) as Boolean {
+    var controller = AppController.instance();
+
+    // Values that survive no round trip: 20 kg is 44.09 lb, 22.25 is 49.05.
+    var awkward = [20.0, 22.25, 39.0, 57.5, 0.0] as Array<Float>;
+    for (var i = 0; i < awkward.size(); i++) {
+        var ex = new Exercise("x", "Test", 3, 10, awkward[i], 60);
+        controller.syncPendingValues(ex);
+        Test.assertEqual(controller.pendingWeight(), awkward[i]);
+    }
+
+    // What the athlete dials *is* rounded — that value is their choice, and it
+    // should land on the grid they chose.
+    var ex2 = new Exercise("y", "Test", 3, 10, 20.0, 60);
+    controller.syncPendingValues(ex2);
+    controller.adjustWeight(1);
+    var step = Units.step();
+    var shown = Units.fromKg(controller.pendingWeight());
+    var grid = ((shown / step + 0.5).toNumber()).toFloat() * step;
+    var off = shown - grid;
+    if (off < 0.0) { off = -off; }
+    Test.assert(off < 0.01);
+    return true;
+}
