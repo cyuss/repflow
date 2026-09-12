@@ -11,6 +11,8 @@ module ExerciseActionsMenu {
     const ACTION_SKIP_FOR_NOW = "defer";
     const ACTION_OVERVIEW = "overview";
     const ACTION_MARK_DONE = "done";
+    const ACTION_ADD_SET = "addset";
+    const ACTION_SUBSTITUTE = "sub";
     const ACTION_UNDO_SET = "undo";
     const ACTION_END = "end";
 
@@ -26,6 +28,12 @@ module ExerciseActionsMenu {
             ACTION_EDIT_SET, {}));
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.ActionSkipForNow) as String, null, ACTION_SKIP_FOR_NOW, {}));
+        // The machine is taken for good, not just for now.
+        menu.addItem(new WatchUi.MenuItem(
+            WatchUi.loadResource(Rez.Strings.Substitute) as String, null, ACTION_SUBSTITUTE, {}));
+        menu.addItem(new WatchUi.MenuItem(
+            WatchUi.loadResource(Rez.Strings.AddSet) as String,
+            (exercise.targetSets + 1).toString() + " x", ACTION_ADD_SET, {}));
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.ActionOverview) as String, null, ACTION_OVERVIEW, {}));
         if (exercise.completedSetCount() > 0) {
@@ -60,6 +68,15 @@ class ExerciseActionsDelegate extends WatchUi.Menu2InputDelegate {
             // PENDING — resumable, never counted as completed or abandoned.
             controller.deferExercise(_exercise.id);
             _showOverview();
+            return;
+        }
+        if (id.equals(ExerciseActionsMenu.ACTION_SUBSTITUTE)) {
+            ExercisePicker.open(ExercisePicker.FOR_SUBSTITUTE, _exercise.id);
+            return;
+        }
+        if (id.equals(ExerciseActionsMenu.ACTION_ADD_SET)) {
+            controller.addSet(_exercise.id);
+            _backToExercise();
             return;
         }
         if (id.equals(ExerciseActionsMenu.ACTION_OVERVIEW)) {

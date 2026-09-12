@@ -81,4 +81,19 @@
     <string id="MuscleCalves">Mollets</string>
     <string id="MuscleCore">Gainage</string>
     <string id="MuscleOther">Autre</string>
+
+    <!-- Editeur de seance -->
+    <string id="PickMuscle">Groupe musculaire</string>
+    <string id="AddExercise">Ajouter un exercice</string>
+    <string id="SaveWorkout">Enregistrer</string>
+    <string id="DeleteWorkout">Supprimer la seance</string>
+    <string id="NewWorkout">Nouvelle seance</string>
+    <string id="WeightLabel">Charge</string>
+    <string id="RestLabel">Repos</string>
+    <string id="MoveUp">Monter</string>
+    <string id="MoveDown">Descendre</string>
+    <string id="RemoveExercise">Retirer</string>
+    <string id="EditWorkout">Modifier la seance</string>
+    <string id="Substitute">Remplacer</string>
+    <string id="AddSet">Ajouter une serie</string>
 </strings>

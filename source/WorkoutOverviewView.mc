@@ -54,6 +54,14 @@ class WorkoutOverviewView extends WatchUi.Menu2 {
             addItem(new WatchUi.IconMenuItem(
                 ex.name, sub, ex.id, new StateIcon(ex.state, iconSize), {}));
         }
+        // An unplanned exercise is half of all sessions, so it lives here
+        // rather than behind the per-exercise menu.
+        addItem(new WatchUi.MenuItem(
+            WatchUi.loadResource(Rez.Strings.AddExercise) as String,
+            null,
+            ITEM_ADD_EXERCISE,
+            {}
+        ));
         // End the workout from the bottom of the list — no nested menu needed.
         addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.ActionEndWorkout) as String,
@@ -64,6 +72,7 @@ class WorkoutOverviewView extends WatchUi.Menu2 {
     }
 
     public static const ITEM_END_WORKOUT = "__end__";
+    public static const ITEM_ADD_EXERCISE = "__add__";
 }
 
 class WorkoutOverviewDelegate extends WatchUi.Menu2InputDelegate {
@@ -76,6 +85,10 @@ class WorkoutOverviewDelegate extends WatchUi.Menu2InputDelegate {
         var id = item.getId() as String;
         if (id.equals(WorkoutOverviewView.ITEM_END_WORKOUT)) {
             EndWorkoutFlow.request();
+            return;
+        }
+        if (id.equals(WorkoutOverviewView.ITEM_ADD_EXERCISE)) {
+            ExercisePicker.open(ExercisePicker.FOR_SESSION, null);
             return;
         }
         // Any exercise, any time — including completed and skipped ones.

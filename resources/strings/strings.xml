@@ -88,4 +88,19 @@
     <string id="MuscleCalves">Calves</string>
     <string id="MuscleCore">Core</string>
     <string id="MuscleOther">Other</string>
+
+    <!-- Workout editor -->
+    <string id="PickMuscle">Muscle group</string>
+    <string id="AddExercise">Add exercise</string>
+    <string id="SaveWorkout">Save workout</string>
+    <string id="DeleteWorkout">Delete workout</string>
+    <string id="NewWorkout">New workout</string>
+    <string id="WeightLabel">Weight</string>
+    <string id="RestLabel">Rest</string>
+    <string id="MoveUp">Move up</string>
+    <string id="MoveDown">Move down</string>
+    <string id="RemoveExercise">Remove</string>
+    <string id="EditWorkout">Edit workout</string>
+    <string id="Substitute">Substitute</string>
+    <string id="AddSet">Add a set</string>
 </strings>

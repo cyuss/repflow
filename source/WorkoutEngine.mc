@@ -18,6 +18,8 @@ import Toybox.Lang;
 //!   any         --skipExercise--> SKIPPED
 //!   any         --forceCompleteExercise--> COMPLETED
 //!   SKIPPED     --select--> ACTIVE                (change of mind)
+//!   COMPLETED   --addSet--> ACTIVE or PENDING     (one more than planned)
+//!   any         --substituteExercise--> SKIPPED   (moved on, sets kept)
 //!
 //! It holds no UI, no timers and no Garmin recording state, so it is fully
 //! unit-testable (see tests/WorkoutEngineTest.mc).
@@ -162,6 +164,81 @@ class WorkoutEngine {
     // ------------------------------------------------------------------
     // Queries used by the UI
     // ------------------------------------------------------------------
+
+    // ------------------------------------------------------------------
+    // Changing the workout while it is running
+    //
+    // The gym floor does not respect a plan: a machine is taken for the third
+    // time, or an exercise turns out to feel wrong today. All three of these
+    // are list operations rather than rewrites, because navigation is by stable
+    // id and nothing anywhere holds a position.
+    // ------------------------------------------------------------------
+
+    //! Add an exercise that was not in the plan. Returns false on a duplicate id.
+    public function addExercise(exercise as Exercise) as Boolean {
+        if (_session.workout.findExercise(exercise.id) != null) {
+            return false;
+        }
+        _session.workout.exercises.add(exercise);
+        return true;
+    }
+
+    //! Replace `exerciseId` with `replacement`, in place.
+    //!
+    //! Sets already performed stay with the exercise they were performed on, so
+    //! the old one is kept when it has any — swapping mid-exercise must not
+    //! erase work. It is marked SKIPPED instead, which is the truth: the
+    //! athlete moved on from it.
+    public function substituteExercise(exerciseId as String, replacement as Exercise) as Boolean {
+        var list = _session.workout.exercises;
+        var index = _session.workout.indexOf(exerciseId);
+        if (index < 0 || _session.workout.findExercise(replacement.id) != null) {
+            return false;
+        }
+        var old = list[index];
+        if (old.completedSetCount() > 0) {
+            old.state = EX_SKIPPED;
+            list.add(replacement);
+        } else {
+            // Nothing was performed, so it can simply take the old one's place
+            // and its position in the plan.
+            var rebuilt = [] as Array<Exercise>;
+            for (var i = 0; i < list.size(); i++) {
+                rebuilt.add(i == index ? replacement : list[i]);
+            }
+            _session.workout.exercises = rebuilt;
+            if (_session.currentExerciseId != null &&
+                (_session.currentExerciseId as String).equals(exerciseId)) {
+                _session.currentExerciseId = replacement.id;
+                replacement.state = EX_ACTIVE;
+            }
+        }
+        return true;
+    }
+
+    //! One more set than the plan asked for, on an exercise that earned it.
+    //!
+    //! Raising the target is what actually happens here, because "sets done out
+    //! of sets planned" is on three screens and an extra set that did not move
+    //! the target would read as an off-by-one everywhere.
+    public function addSet(exerciseId as String) as Boolean {
+        var ex = _session.workout.findExercise(exerciseId);
+        if (ex == null) {
+            return false;
+        }
+        ex.targetSets += 1;
+        ex.forcedComplete = false;
+        if (ex.state == EX_COMPLETED) {
+            // It has work left again, so it cannot stay COMPLETED. Which of the
+            // two unfinished states it takes depends on whether the athlete is
+            // standing at it right now.
+            var currentId = _session.currentExerciseId;
+            ex.state = (currentId != null && (currentId as String).equals(exerciseId))
+                ? EX_ACTIVE
+                : EX_PENDING;
+        }
+        return true;
+    }
 
     //! Exercises the athlete still has work left on.
     //!

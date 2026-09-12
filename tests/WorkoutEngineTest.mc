@@ -984,3 +984,240 @@ function testDeviceCapabilitiesAreSafeToRead(logger as Test.Logger) as Boolean {
     Test.assert((Units.toKg(Units.fromKg(kg)) - kg).abs() < 0.01);
     return true;
 }
+
+//! Changing the workout while it runs: add, substitute, and one more set.
+//!
+//! All three exist because the gym floor does not respect a plan. All three
+//! must leave every set already performed exactly where it was — losing work to
+//! a layout change would be far worse than the inconvenience they fix.
+(:test)
+function testAddingAnExerciseMidWorkout(logger as Test.Logger) as Boolean {
+    var engine = TestSupport.newEngine();
+    engine.selectExercise("A");
+    engine.completeCurrentSet(10, 50.0, TestSupport.T0);
+
+    var extra = new Exercise("D", "Exercise D", 3, 12, 20.0, 60);
+    extra.muscle = Muscle.SHOULDERS;
+    Test.assert(engine.addExercise(extra));
+    Test.assertEqual(engine.getWorkout().exercises.size(), 4);
+
+    // A duplicate id is refused: two exercises answering to one name would make
+    // "select any exercise at any time" ambiguous.
+    Test.assert(!engine.addExercise(new Exercise("D", "Again", 1, 1, 1.0, 1)));
+    Test.assertEqual(engine.getWorkout().exercises.size(), 4);
+
+    // The set already performed is untouched, and the new one is selectable.
+    Test.assertEqual(TestSupport.exerciseOf(engine, "A").completedSetCount(), 1);
+    Test.assert(engine.selectExercise("D"));
+    Test.assertEqual(TestSupport.stateOf(engine, "D"), EX_ACTIVE);
+    Test.assertEqual(TestSupport.stateOf(engine, "A"), EX_PENDING);
+    return true;
+}
+
+//! Substituting an untouched exercise replaces it in place.
+(:test)
+function testSubstituteUntouchedExercise(logger as Test.Logger) as Boolean {
+    var engine = TestSupport.newEngine();
+    engine.selectExercise("B");
+
+    var replacement = new Exercise("B2", "Exercise B2", 3, 10, 45.0, 90);
+    Test.assert(engine.substituteExercise("B", replacement));
+
+    // It takes the old one's place in the plan, and the selection with it.
+    Test.assertEqual(engine.getWorkout().exercises.size(), 3);
+    Test.assertEqual(engine.getWorkout().indexOf("B2"), 1);
+    Test.assert(engine.getWorkout().findExercise("B") == null);
+    Test.assert(engine.currentExerciseId() != null);
+    Test.assert((engine.currentExerciseId() as String).equals("B2"));
+    Test.assertEqual(TestSupport.stateOf(engine, "B2"), EX_ACTIVE);
+    return true;
+}
+
+//! Substituting an exercise that has sets on it keeps them.
+//!
+//! Two sets of rows already done are a fact about the session. The exercise is
+//! marked SKIPPED — the athlete moved on from it — and the replacement is
+//! added, rather than the work being deleted to tidy the list.
+(:test)
+function testSubstituteKeepsWorkAlreadyDone(logger as Test.Logger) as Boolean {
+    var engine = TestSupport.newEngine();
+    engine.selectExercise("B");
+    engine.completeCurrentSet(12, 40.0, TestSupport.T0);
+
+    var replacement = new Exercise("B2", "Exercise B2", 3, 10, 45.0, 90);
+    Test.assert(engine.substituteExercise("B", replacement));
+
+    Test.assertEqual(engine.getWorkout().exercises.size(), 4);
+    Test.assertEqual(TestSupport.stateOf(engine, "B"), EX_SKIPPED);
+    Test.assertEqual(TestSupport.exerciseOf(engine, "B").completedSetCount(), 1);
+    Test.assertEqual(TestSupport.exerciseOf(engine, "B").totalVolume(), 480.0);
+
+    // The skipped exercise stops counting as work outstanding, and its volume
+    // still counts towards the session.
+    var summary = engine.summary(TestSupport.T0 + 60);
+    Test.assertEqual(summary.completedSets, 1);
+    Test.assertEqual(summary.totalVolume, 480.0);
+    return true;
+}
+
+//! An extra set raises the target, because "3/4" is on three screens.
+(:test)
+function testAddSetRaisesTheTarget(logger as Test.Logger) as Boolean {
+    var engine = TestSupport.newEngine();
+    engine.selectExercise("A");
+    TestSupport.completeSets(engine, 2);
+    Test.assertEqual(TestSupport.stateOf(engine, "A"), EX_COMPLETED);
+    Test.assert(engine.isWorkoutComplete() == false);   // B and C remain
+
+    Test.assert(engine.addSet("A"));
+    var a = TestSupport.exerciseOf(engine, "A");
+    Test.assertEqual(a.targetSets, 3);
+    Test.assertEqual(a.completedSetCount(), 2);
+    Test.assertEqual(a.currentSetNumber(), 3);
+    Test.assert(!a.hasReachedTargetSets());
+
+    // It has work outstanding again, and it is the one under the athlete's
+    // hands, so it is ACTIVE rather than PENDING.
+    Test.assertEqual(TestSupport.stateOf(engine, "A"), EX_ACTIVE);
+
+    // Performing it completes the exercise again.
+    engine.completeCurrentSet(8, 60.0, TestSupport.T0 + 300);
+    Test.assertEqual(TestSupport.stateOf(engine, "A"), EX_COMPLETED);
+
+    Test.assert(!engine.addSet("nope"));
+    return true;
+}
+
+//! Adding a set to an exercise the athlete is not standing at leaves it pending.
+(:test)
+function testAddSetToAnotherExerciseLeavesItPending(logger as Test.Logger) as Boolean {
+    var engine = TestSupport.newEngine();
+    engine.selectExercise("A");
+    TestSupport.completeSets(engine, 2);
+    engine.selectExercise("B");
+
+    Test.assert(engine.addSet("A"));
+    Test.assertEqual(TestSupport.stateOf(engine, "A"), EX_PENDING);
+    Test.assertEqual(TestSupport.stateOf(engine, "B"), EX_ACTIVE);
+
+    // And it is back among the things still owed.
+    Test.assertEqual(engine.unfinishedExercises().size(), 3);
+    return true;
+}
+
+//! The catalogue is data the app depends on, so its shape is checked.
+(:test)
+function testCatalogueIsWellFormed(logger as Test.Logger) as Boolean {
+    var groups = Muscle.browseOrder();
+    var total = 0;
+    var seen = {} as Dictionary;
+
+    for (var g = 0; g < groups.size(); g++) {
+        var rows = ExerciseCatalogue.forMuscle(groups[g]);
+        Test.assert(rows.size() > 0);
+        Test.assert(Muscle.name(groups[g]).length() > 0);
+
+        for (var i = 0; i < rows.size(); i++) {
+            var row = rows[i] as Array;
+            Test.assertEqual(row.size(), 5);
+            var id = row[ExerciseCatalogue.F_ID] as String;
+            Test.assert(id.length() > 0);
+            // ids must be unique catalogue-wide
+            Test.assert(!seen.hasKey(id));
+            seen.put(id, true);
+            Test.assert((row[ExerciseCatalogue.F_NAME] as String).length() > 0);
+            Test.assert((row[ExerciseCatalogue.F_REPS] as Number) > 0);
+            Test.assert((row[ExerciseCatalogue.F_WEIGHT] as Number) >= 0);
+            Test.assert((row[ExerciseCatalogue.F_REST] as Number) > 0);
+
+            // And a row has to become a usable exercise.
+            var ex = ExerciseCatalogue.toExercise(row, groups[g], 3, 0);
+            Test.assertEqual(ex.id, id);
+            Test.assertEqual(ex.muscle, groups[g]);
+            Test.assertEqual(ex.targetSets, 3);
+            total++;
+        }
+    }
+    Test.assert(total >= 60);
+
+    // The same movement twice in one workout gets a distinct id that still
+    // points back at the movement.
+    var row0 = ExerciseCatalogue.forMuscle(Muscle.CHEST)[0] as Array;
+    var second = ExerciseCatalogue.toExercise(row0, Muscle.CHEST, 3, 2);
+    Test.assert(!second.id.equals(row0[ExerciseCatalogue.F_ID] as String));
+    Test.assertEqual(ExerciseCatalogue.movementId(second.id),
+        row0[ExerciseCatalogue.F_ID] as String);
+    Test.assertEqual(ExerciseCatalogue.movementId("plain_id"), "plain_id");
+    return true;
+}
+
+//! Naming a workout from its contents, so nobody has to type on a watch.
+//!
+//! A lifter names a session after what is in it. Two groups when the session is
+//! genuinely split, one when a group dominates — "Chest + Biceps" is useful,
+//! "Chest + Core" for five pressing exercises and one plank is noise.
+(:test)
+function testWorkoutNamingFromContents(logger as Test.Logger) as Boolean {
+    var empty = new Workout("u_1", "x", [] as Array<Exercise>);
+    Test.assert(WorkoutEditor.suggestName(empty).length() > 0);
+
+    var chest = new Exercise("c_bench", "Bench Press", 4, 8, 60.0, 120);
+    chest.muscle = Muscle.CHEST;
+    var fly = new Exercise("c_cable_fly", "Cable Fly", 3, 12, 15.0, 60);
+    fly.muscle = Muscle.CHEST;
+    var curl = new Exercise("bi_bb_curl", "Barbell Curl", 3, 10, 30.0, 60);
+    curl.muscle = Muscle.BICEPS;
+    var plank = new Exercise("co_plank", "Plank", 1, 1, 0.0, 60);
+    plank.muscle = Muscle.CORE;
+
+    // Seven chest sets against three biceps: both earn a mention.
+    var split = new Workout("u_2", "x", [chest, fly, curl] as Array<Exercise>);
+    Test.assertEqual(WorkoutEditor.suggestName(split),
+        Muscle.name(Muscle.CHEST) + " + " + Muscle.name(Muscle.BICEPS));
+
+    // Seven chest sets against one plank: the plank is not the session.
+    var dominated = new Workout("u_3", "x", [chest, fly, plank] as Array<Exercise>);
+    Test.assertEqual(WorkoutEditor.suggestName(dominated), Muscle.name(Muscle.CHEST));
+
+    // A workout of untagged exercises falls back rather than naming itself
+    // "Other" — which is what a session restored from schema v1 looks like.
+    var untagged = new Exercise("x", "Something", 3, 10, 20.0, 60);
+    var unknown = new Workout("u_4", "x", [untagged] as Array<Exercise>);
+    Test.assertEqual(WorkoutEditor.suggestName(unknown),
+        WorkoutEditor.suggestName(empty));
+    return true;
+}
+
+//! Built-in exercise ids come from the catalogue.
+//!
+//! This is what lets "Lat Pulldown" in the shipped Back session and "Lat
+//! Pulldown" added by hand three weeks later be the same movement to history
+//! and to records. A built-in that invented its own id would silently split an
+//! athlete's progression in two.
+(:test)
+function testBuiltInWorkoutsUseCatalogueIds(logger as Test.Logger) as Boolean {
+    var known = {} as Dictionary;
+    var groups = Muscle.browseOrder();
+    for (var g = 0; g < groups.size(); g++) {
+        var rows = ExerciseCatalogue.forMuscle(groups[g]);
+        for (var i = 0; i < rows.size(); i++) {
+            known.put((rows[i] as Array)[ExerciseCatalogue.F_ID] as String, groups[g]);
+        }
+    }
+
+    var workouts = [WorkoutRepository.backAndTriceps(),
+                    WorkoutRepository.chestAndBiceps(),
+                    WorkoutRepository.legs()] as Array<Workout>;
+    for (var w = 0; w < workouts.size(); w++) {
+        var list = workouts[w].exercises;
+        Test.assert(list.size() > 0);
+        for (var i = 0; i < list.size(); i++) {
+            var ex = list[i];
+            var movement = ExerciseCatalogue.movementId(ex.id);
+            Test.assert(known.hasKey(movement));
+            // And the muscle tag has to agree with the catalogue's.
+            Test.assertEqual(ex.muscle, known.get(movement) as Number);
+        }
+    }
+    return true;
+}

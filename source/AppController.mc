@@ -208,6 +208,40 @@ class AppController {
     // persistence stays in this layer and the views never touch storage.
     // ------------------------------------------------------------------
 
+    //! Add an exercise the plan did not have (4.6).
+    public function addExercise(exercise as Exercise) as Boolean {
+        var engine = _engine;
+        if (engine == null || !engine.addExercise(exercise)) {
+            return false;
+        }
+        _persist();
+        return true;
+    }
+
+    //! Swap one exercise for another (4.5) — the machine is taken for good.
+    public function substituteExercise(exerciseId as String, replacement as Exercise) as Boolean {
+        var engine = _engine;
+        if (engine == null || !engine.substituteExercise(exerciseId, replacement)) {
+            return false;
+        }
+        _persist();
+        return true;
+    }
+
+    //! One more set than the plan asked for (2.6).
+    public function addSet(exerciseId as String) as Boolean {
+        var engine = _engine;
+        if (engine == null || !engine.addSet(exerciseId)) {
+            return false;
+        }
+        var ex = engine.currentExercise();
+        if (ex != null && ex.id.equals(exerciseId)) {
+            syncPendingValues(ex);
+        }
+        _persist();
+        return true;
+    }
+
     //! "Skip for now" — the machine is busy. Stays PENDING and resumable.
     public function deferExercise(exerciseId as String) as Boolean {
         var engine = _engine;
