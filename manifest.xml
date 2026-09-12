@@ -72,6 +72,10 @@
     <!-- Body Battery, read at the start and end of a workout for the recap.
          Garmin's own number: RepFlow reads it and never estimates one. -->
     <iq:uses-permission id="SensorHistory"/>
+    <!-- Raw accelerometer, for counting repetitions from the wrist. Only
+         registered while the set screen is showing and only when the athlete
+         has switched it on: 25 Hz costs battery. -->
+    <iq:uses-permission id="Sensor"/>
         </iq:permissions>
 
         <iq:languages>

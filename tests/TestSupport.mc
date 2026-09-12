@@ -2,6 +2,7 @@ import Toybox.Lang;
 import Toybox.Test;
 import Toybox.Graphics;
 import Toybox.System;
+import Toybox.Math;
 
 //! Shared helpers for the RepFlow unit tests.
 //!
@@ -34,6 +35,29 @@ module TestSupport {
 
     public function exerciseOf(engine as WorkoutEngine, id as String) as Exercise {
         return engine.getWorkout().findExercise(id) as Exercise;
+    }
+
+    //! Feed the rep counter a sine-like oscillation.
+    //!
+    //! `reps` cycles of `samplesPerRep` samples each, swinging `amplitude`
+    //! milli-g either side of gravity. It is the shape a wrist traces under a
+    //! moving weight: one smooth rise and fall per repetition.
+    public function feedOscillation(
+        counter as RepCounter,
+        reps as Number,
+        samplesPerRep as Number,
+        amplitude as Number
+    ) as Void {
+        for (var rep = 0; rep < reps; rep++) {
+            for (var i = 0; i < samplesPerRep; i++) {
+                var phase = (Math.PI * 2.0 * i.toFloat()) / samplesPerRep.toFloat();
+                var swing = (amplitude.toFloat() * Math.sin(phase)).toNumber();
+                counter.feed(
+                    [0] as Array<Number>,
+                    [1000 + swing] as Array<Number>,
+                    [0] as Array<Number>);
+            }
+        }
     }
 
     //! An off-screen Dc the size of THIS device's screen, with its real font

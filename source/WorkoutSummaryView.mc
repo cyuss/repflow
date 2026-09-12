@@ -61,7 +61,19 @@ class WorkoutSummaryView extends WatchUi.View {
         _page = 0;
     }
 
+    //! The recap earns an entrance: it is the one screen nobody is mid-set on.
+    public function onShow() as Void {
+        Animator.start(420);
+    }
+
+    public function onHide() as Void {
+        Animator.stop();
+    }
+
     public function turnPage(delta as Number) as Void {
+        // Each page draws itself once, finished. Re-animating on every swipe
+        // would put motion between the athlete and a number they are reading.
+        Animator.stop();
         _page = (_page + delta + PAGE_COUNT) % PAGE_COUNT;
         WatchUi.requestUpdate();
     }
@@ -72,7 +84,8 @@ class WorkoutSummaryView extends WatchUi.View {
 
         var planned = _summary.plannedSets;
         Theme.drawProgressRing(dc,
-            planned > 0 ? _summary.completedSets.toFloat() / planned.toFloat() : 0.0,
+            (planned > 0 ? _summary.completedSets.toFloat() / planned.toFloat() : 0.0)
+                * Animator.value(),
             _saved ? Theme.COLOR_DONE : Theme.COLOR_SKIPPED);
 
         var y = Theme.drawFitted(dc, h / 16, _workout.name,
@@ -281,7 +294,7 @@ class WorkoutSummaryView extends WatchUi.View {
                 Graphics.TEXT_JUSTIFY_LEFT);
 
             var barTop = y + (lineHeight - barHeight) / 2;
-            var filled = (barWidth * volume) / peak;
+            var filled = ((barWidth * volume) / peak) * Animator.value();
             if (filled < 3) {
                 filled = 3;
             }
@@ -366,7 +379,7 @@ class WorkoutSummaryView extends WatchUi.View {
             dc.fillRectangle(barLeft, barTop + barHeight - 2, barWidth, 2);
 
             if (seconds > 0) {
-                var filled = (barWidth * seconds) / peak;
+                var filled = ((barWidth * seconds) / peak) * Animator.value();
                 if (filled < 3) {
                     filled = 3;
                 }
@@ -500,7 +513,8 @@ class WorkoutSummaryView extends WatchUi.View {
         dc.fillRectangle(left, barTop, width, barHeight);
 
         if (done > 0 && target > 0) {
-            var filled = done >= target ? width : (width * done) / target;
+            var full = done >= target ? width : (width * done) / target;
+            var filled = full * Animator.value();
             dc.setColor(color, Graphics.COLOR_TRANSPARENT);
             dc.fillRectangle(left, barTop, filled, barHeight);
         }

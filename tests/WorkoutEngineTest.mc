@@ -1421,3 +1421,111 @@ function testRecoveryOnlyCountsTheFirstMinute(logger as Test.Logger) as Boolean 
     Test.assert(rec.best() == 10);
     return true;
 }
+
+//! Synthetic waveforms for the rep counter.
+//!
+//! Waving a watch is not a test. These feed the counter the shape a lifted
+//! weight actually makes at the wrist — one smooth oscillation per repetition —
+//! and check that it finds them, and more importantly that it does not find
+//! repetitions that are not there.
+(:test)
+function testRepCounterCountsCleanReps(logger as Test.Logger) as Boolean {
+    var counter = new RepCounter();
+    // Ten reps at two seconds each: 50 samples per rep at 25 Hz.
+    TestSupport.feedOscillation(counter, 10, 50, 400);
+    // Rhythm detection cannot be exact — the first rep primes the detector —
+    // so the contract is "within one", not "exactly ten".
+    var n = counter.count();
+    Test.assert(n >= 9 && n <= 10);
+    return true;
+}
+
+//! A still wrist counts nothing. This is the failure that would lose trust.
+(:test)
+function testRepCounterIgnoresStillness(logger as Test.Logger) as Boolean {
+    var counter = new RepCounter();
+    // Gravity only, with a little sensor noise on top.
+    for (var i = 0; i < 500; i++) {
+        var jitter = (i % 7) - 3;          // +/-3 milli-g
+        counter.feed([jitter] as Array<Number>, [1000 + jitter] as Array<Number>,
+            [0] as Array<Number>);
+    }
+    Test.assertEqual(counter.count(), 0);
+    Test.assert(counter.samplesSeen() == 500);
+    return true;
+}
+
+//! Slow, small movement — walking to the rack — is not a set.
+(:test)
+function testRepCounterIgnoresSmallMovement(logger as Test.Logger) as Boolean {
+    var counter = new RepCounter();
+    TestSupport.feedOscillation(counter, 20, 50, 40);   // well under the floor
+    Test.assertEqual(counter.count(), 0);
+    return true;
+}
+
+//! One rep cannot be counted twice by bouncing.
+//!
+//! A bar rebounding off the chest makes a second, smaller peak inside the same
+//! repetition. The refractory period is what stops it scoring.
+(:test)
+function testRepCounterRefractoryPeriod(logger as Test.Logger) as Boolean {
+    var counter = new RepCounter();
+    // Reps far faster than any human can perform: 4 samples each, ~6 per second.
+    TestSupport.feedOscillation(counter, 30, 4, 600);
+    // Whatever it finds must respect the minimum period, so it cannot be
+    // anywhere near thirty.
+    Test.assert(counter.count() <= 12);
+    return true;
+}
+
+//! Reset clears everything, because a new set starts at zero.
+(:test)
+function testRepCounterReset(logger as Test.Logger) as Boolean {
+    var counter = new RepCounter();
+    TestSupport.feedOscillation(counter, 8, 50, 400);
+    Test.assert(counter.count() > 0);
+
+    counter.reset();
+    Test.assertEqual(counter.count(), 0);
+    Test.assertEqual(counter.samplesSeen(), 0);
+
+    // Missing axes are survivable: the sensor can hand back null.
+    Test.assertEqual(counter.feed(null, null, null), 0);
+    Test.assertEqual(counter.feed([1] as Array<Number>, null, null), 0);
+    // And mismatched lengths use the shortest rather than reading off the end.
+    counter.feed([1, 2, 3] as Array<Number>, [1] as Array<Number>, [1, 2] as Array<Number>);
+    Test.assertEqual(counter.samplesSeen(), 1);
+    return true;
+}
+
+//! Nothing animates on a watch that cannot spare the frames, and `value()` is
+//! safe to multiply by unconditionally.
+//!
+//! The whole point of the design is that views have no branch of their own: a
+//! lean device draws the finished frame because value() is 1.0, not because the
+//! drawing code asked whether it should animate.
+(:test)
+function testAnimatorIsAlwaysSafeToMultiplyBy(logger as Test.Logger) as Boolean {
+    Animator.stop();
+    Test.assert(!Animator.isRunning());
+    Test.assertEqual(Animator.value(), 1.0);
+
+    Animator.start(200);
+    // On a lean device this started nothing at all, and value() is still 1.0.
+    // On a rich one it is somewhere in (0, 1]. Either way it is a usable
+    // multiplier, which is the contract the views rely on.
+    var v = Animator.value();
+    Test.assert(v > 0.0 && v <= 1.0);
+
+    Animator.stop();
+    Test.assertEqual(Animator.value(), 1.0);
+
+    // A zero or negative duration is a no-op, not a division by zero.
+    Animator.start(0);
+    Test.assertEqual(Animator.value(), 1.0);
+    Animator.start(-5);
+    Test.assertEqual(Animator.value(), 1.0);
+    Animator.stop();
+    return true;
+}

@@ -40,6 +40,20 @@ class ExerciseView extends WatchUi.View {
         View.initialize();
     }
 
+    //! Counting repetitions means the accelerometer at 25 Hz, so it runs only
+    //! while this screen is actually in front of the athlete.
+    public function onShow() as Void {
+        AppController.instance().updateRepCounting();
+        // The ring sweeps out to where the exercise actually is. Nothing moves
+        // on the devices that cannot spare the frames — see Animator.
+        Animator.start(280);
+    }
+
+    public function onHide() as Void {
+        AppController.instance().updateRepCounting();
+        Animator.stop();
+    }
+
     public function onUpdate(dc as Graphics.Dc) as Void {
         Theme.clear(dc);
         var controller = AppController.instance();
@@ -101,7 +115,7 @@ class ExerciseView extends WatchUi.View {
 
         // Progress on the rim: the one area a round screen gives away free.
         Theme.drawProgressRing(dc,
-            target > 0 ? done.toFloat() / target.toFloat() : 0.0,
+            (target > 0 ? done.toFloat() / target.toFloat() : 0.0) * Animator.value(),
             Theme.COLOR_DONE);
 
         // No action button. START logs the set, and a button saying so was only
@@ -177,13 +191,25 @@ class ExerciseView extends WatchUi.View {
             height = available;
             inset = 0;
         }
+        // When the wrist is counting, the reps cell shows what it has counted
+        // rather than what was planned — because that is the number START is
+        // about to put in front of the athlete. It is shown in the warm colour
+        // so it is visibly a measurement rather than the plan.
+        var counted = controller.countedReps();
+        var repsText = controller.pendingReps().toString();
+        var repsColor = Theme.COLOR_ACCENT;
+        if (counted != null && (counted as Number) > 0) {
+            repsText = (counted as Number).toString();
+            repsColor = Theme.COLOR_WARM;
+        }
+
         FieldGrid.drawPair(dc, top + inset, height,
             Theme.formatWeight(controller.pendingWeight()),
             Units.label().toUpper(),
             Theme.COLOR_TEXT,
-            controller.pendingReps().toString(),
+            repsText,
             WatchUi.loadResource(Rez.Strings.FieldReps) as String,
-            Theme.COLOR_ACCENT);
+            repsColor);
     }
 
     //! Page 2 — live Garmin metrics, in Garmin's four-field round layout:
@@ -284,6 +310,8 @@ class ExerciseDelegate extends WatchUi.BehaviorDelegate {
         if (exercise == null) {
             return true;
         }
+        // Whatever the wrist counted becomes the value the editor opens on.
+        AppController.instance().applyCountedReps();
         SetEditor.confirm(exercise);
         return true;
     }

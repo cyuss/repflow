@@ -6,6 +6,7 @@ import Toybox.Time;
 import Toybox.Attention;
 import Toybox.System;
 import Toybox.Math;
+import Toybox.Sensor;
 
 //! Wires the workout engine, the rest timer, Garmin recording and persistence
 //! together, and owns screen transitions.
@@ -25,6 +26,10 @@ class AppController {
     private var _zones as ZoneTracker;
     //! Beats dropped between sets, off the same tick as the zone chart.
     private var _recovery as RecoveryTracker;
+    //! Repetitions counted from the wrist, when the athlete has asked for it.
+    private var _reps as RepCounter;
+    //! True while the accelerometer listener is registered.
+    private var _counting as Boolean;
     //! Garmin's Body Battery when the workout started, for the recap. Read
     //! once, because a session is what moves it and a per-tick read would cost
     //! a sensor-history query every second for a number that changes hourly.
@@ -54,6 +59,8 @@ class AppController {
         _ticker = null;
         _zones = new ZoneTracker();
         _recovery = new RecoveryTracker();
+        _reps = new RepCounter();
+        _counting = false;
         _batteryStart = null;
         _bests = {} as Dictionary;
         _bestRecord = History.RECORD_NONE;
@@ -91,6 +98,101 @@ class AppController {
 
     public function bodyBatteryStart() as Number? {
         return _batteryStart;
+    }
+
+    //! Repetitions counted so far in this set, or null when nothing is counting.
+    //!
+    //! Null rather than zero when the counter is off or has seen no samples:
+    //! "not counting" and "counted none" are different, and showing a confident
+    //! 0 for the first would be a lie.
+    public function countedReps() as Number? {
+        if (!_counting || _reps.samplesSeen() == 0) {
+            return null;
+        }
+        return _reps.count();
+    }
+
+    //! Take the counted repetitions as the value to log, and start again.
+    //!
+    //! Called the instant the athlete says the set is over, so the editor opens
+    //! showing what was counted. They confirm or correct it with the press they
+    //! were making anyway — the count is never written on its own.
+    public function applyCountedReps() as Void {
+        var counted = countedReps();
+        if (counted != null && counted > 0) {
+            _pendingReps = counted as Number;
+        }
+        _reps.reset();
+    }
+
+    //! Start or stop counting, from whatever just changed.
+    //!
+    //! One place decides, because four things can change the answer — the
+    //! setting, the rest timer, the visible page and whether a workout is
+    //! running — and a listener left registered would drain the battery at
+    //! 25 Hz for the rest of the day.
+    public function updateRepCounting() as Void {
+        var wanted = Settings.repCounter() &&
+            _engine != null &&
+            !_rest.isRunning() &&
+            _exercisePage == Tuning.PAGE_SET;
+        if (wanted == _counting) {
+            return;
+        }
+        if (wanted) {
+            _startRepCounting();
+        } else {
+            _stopRepCounting();
+        }
+    }
+
+    private function _startRepCounting() as Void {
+        if (!(Sensor has :registerSensorDataListener)) {
+            return;
+        }
+        try {
+            Sensor.registerSensorDataListener(method(:onAccelData), {
+                :period => 1,
+                :accelerometer => {
+                    :enabled => true,
+                    :sampleRate => RepCounter.SAMPLE_RATE
+                }
+            });
+            _reps.reset();
+            _counting = true;
+        } catch (e) {
+            // Not every device delivers high-frequency accelerometer data.
+            _counting = false;
+        }
+    }
+
+    private function _stopRepCounting() as Void {
+        if (!_counting) {
+            return;
+        }
+        _counting = false;
+        try {
+            if (Sensor has :unregisterSensorDataListener) {
+                Sensor.unregisterSensorDataListener();
+            }
+        } catch (e) {
+            // nothing useful to do
+        }
+    }
+
+    //! Accelerometer batch. Kept as short as possible: this runs at 1 Hz with
+    //! 25 samples in it, on top of everything else the watch is doing.
+    public function onAccelData(data as Sensor.SensorData) as Void {
+        if (!_counting) {
+            return;
+        }
+        var accel = data.accelerometerData;
+        if (accel == null) {
+            return;
+        }
+        if (_reps.feed(accel.x, accel.y, accel.z) > 0) {
+            WatchUi.requestUpdate();
+        }
     }
 
     //! Records as they stood when this workout began, plus anything set since.
@@ -145,6 +247,8 @@ class AppController {
     public function turnExercisePage(delta as Number) as Void {
         var count = Tuning.PAGE_COUNT;
         _exercisePage = (_exercisePage + delta + count) % count;
+        // Counting runs only while the set page is showing.
+        updateRepCounting();
     }
 
     public static function now() as Number {
@@ -207,6 +311,7 @@ class AppController {
         _exercisePage = Tuning.PAGE_SET;
         _startTicker();
         _persist();
+        updateRepCounting();
         return true;
     }
 
@@ -325,6 +430,7 @@ class AppController {
         _exercisePage = Tuning.PAGE_SET;
         _startTicker();
         _persist();
+        updateRepCounting();
         return true;
     }
 
@@ -383,6 +489,7 @@ class AppController {
     public function startRest(durationSec as Number) as Void {
         _rest.start(durationSec);
         _recovery.startRest();
+        updateRepCounting();
         _startTicker();   // already running during a workout; harmless to re-arm
         WatchUi.switchToView(new RestView(), new RestDelegate(), WatchUi.SLIDE_UP);
     }
@@ -424,6 +531,7 @@ class AppController {
     public function endRest() as Void {
         _rest.skip();
         _recovery.endRest();
+        updateRepCounting();
 
         var engine = _engine;
         if (engine != null) {
@@ -455,6 +563,7 @@ class AppController {
             return;
         }
         stopTicker();
+        _stopRepCounting();
         var finishedAt = now();
         var summary = engine.finishWorkout(finishedAt);
         _recorder.updateTotals(summary);
@@ -493,6 +602,7 @@ class AppController {
     //! Called from RepFlowApp.onStop — never lose a workout to a backgrounded app.
     public function onAppStop() as Void {
         stopTicker();
+        _stopRepCounting();
         _persist();
     }
 
