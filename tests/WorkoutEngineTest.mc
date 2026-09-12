@@ -791,6 +791,78 @@ function testGridPrimitivesDraw(logger as Test.Logger) as Boolean {
     return true;
 }
 
+//! Paint every page of the end-of-workout recap, with data and without it.
+//!
+//! The two charts — time in zone, and progress per exercise — are the only
+//! drawing in the app that scales one number against another, which is where
+//! a division by zero or an empty array turns into an uncatchable runtime
+//! error. The simulator never reports a heart rate, so a populated zone chart
+//! is drawn here or nowhere.
+(:test)
+function testSummaryPagesDraw(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+    var engine = TestSupport.newEngine();
+    engine.selectExercise("A");
+    engine.completeCurrentSet(10, 50.0, TestSupport.T0);
+    engine.selectExercise("B");
+    engine.skipExercise("B");
+    var summary = engine.finishWorkout(TestSupport.T0 + 1800);
+
+    var zones = new ZoneTracker();
+    for (var i = 0; i < 120; i++) { zones.sample(2); }
+    for (var i = 0; i < 45; i++) { zones.sample(4); }
+    for (var i = 0; i < 30; i++) { zones.sample(null); }
+
+    var view = new WorkoutSummaryView(summary, engine.getWorkout(), zones, true);
+    for (var page = 0; page < WorkoutSummaryView.PAGE_COUNT; page++) {
+        view.onUpdate(dc);
+        view.turnPage(1);
+    }
+
+    // And the same screens with nothing to show: no zone ever reached, and a
+    // workout that was ended before a single set was logged.
+    var empty = new WorkoutSummaryView(
+        new SessionSummary(), TestSupport.abcWorkout(), new ZoneTracker(), false);
+    for (var page = 0; page < WorkoutSummaryView.PAGE_COUNT; page++) {
+        empty.onUpdate(dc);
+        empty.turnPage(1);
+    }
+    return true;
+}
+
+//! Time in zone: the accumulator, and the empty case the chart has to handle.
+//!
+//! Seconds the watch could not place — no strap, no zones on the profile — are
+//! counted as sampled but belong to no bar. A chart that folded them into a
+//! zone would report effort that was never measured.
+(:test)
+function testZoneTrackerCountsOnlyWhatItSaw(logger as Test.Logger) as Boolean {
+    var zones = new ZoneTracker();
+    Test.assertEqual(zones.total(), 0);
+    Test.assertEqual(zones.peakSeconds(), 0);
+    Test.assert(zones.peakZone() == null);
+
+    for (var i = 0; i < 10; i++) { zones.sample(3); }
+    for (var i = 0; i < 4; i++) { zones.sample(5); }
+    for (var i = 0; i < 6; i++) { zones.sample(null); }   // sensor acquiring
+    zones.sample(0);                                       // out of range
+    zones.sample(9);
+
+    Test.assertEqual(zones.secondsIn(3), 10);
+    Test.assertEqual(zones.secondsIn(5), 4);
+    Test.assertEqual(zones.secondsIn(1), 0);
+    Test.assertEqual(zones.secondsIn(0), 0);
+    Test.assertEqual(zones.secondsIn(6), 0);
+    Test.assertEqual(zones.total(), 14);
+    Test.assertEqual(zones.sampled(), 22);
+    Test.assert(zones.peakZone() == 3);
+    Test.assertEqual(zones.peakSeconds(), 10);
+    return true;
+}
+
 //! Draw every exercise-state icon, at a menu-sized canvas.
 //!
 //! Each state takes a different drawing path — disc, ring, polygon, bars — and

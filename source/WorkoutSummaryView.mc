@@ -6,7 +6,8 @@ import Toybox.WatchUi;
 //!
 //!   Page 1 — the work        time, sets done / planned, reps, volume
 //!   Page 2 — the body        Garmin's calories and heart rate
-//!   Page 3 — the exercises   what was actually done, exercise by exercise
+//!   Page 3 — time in zones   the bar chart a Fenix shows after any activity
+//!   Page 4 — the exercises   what was actually done, exercise by exercise
 //!
 //! It carries no buttons. Save and discard were answered in the stop menu
 //! before this screen opened (see EndWorkoutFlow); a SAVE button here asked a
@@ -21,17 +22,24 @@ import Toybox.WatchUi;
 //! rather than a fabricated zero when the device does not provide them.
 class WorkoutSummaryView extends WatchUi.View {
 
-    public const PAGE_COUNT = 3;
+    public static const PAGE_COUNT = 4;
 
     private var _summary as SessionSummary;
     private var _workout as Workout;
+    private var _zones as ZoneTracker;
     private var _saved as Boolean;
     private var _page as Number;
 
-    public function initialize(summary as SessionSummary, workout as Workout, saved as Boolean) {
+    public function initialize(
+        summary as SessionSummary,
+        workout as Workout,
+        zones as ZoneTracker,
+        saved as Boolean
+    ) {
         View.initialize();
         _summary = summary;
         _workout = workout;
+        _zones = zones;
         _saved = saved;
         _page = 0;
     }
@@ -70,6 +78,8 @@ class WorkoutSummaryView extends WatchUi.View {
         if (_page == 1) {
             _drawBodyPage(dc, top, bottom);
         } else if (_page == 2) {
+            _drawZonesPage(dc, top, bottom);
+        } else if (_page == 3) {
             _drawExercisesPage(dc, top, bottom);
         } else {
             _drawWorkPage(dc, top, bottom);
@@ -142,22 +152,114 @@ class WorkoutSummaryView extends WatchUi.View {
             Theme.COLOR_ACCENT);
     }
 
+    //! Time in heart rate zone, as a bar chart — the screen a Fenix shows at
+    //! the end of any activity, so this one does not feel like a different
+    //! watch.
+    //!
+    //!   Z5  ###              0:24
+    //!   Z4  #########        1:12
+    //!   Z3  ##############   2:05
+    //!
+    //! Zone 5 on top, counting down, the way Garmin orders it. Bars are scaled
+    //! against the busiest zone rather than the workout's length: a strength
+    //! session spends most of its time resting, and scaling to the clock would
+    //! leave every bar a stub.
+    //!
+    //! With nothing to show — no strap, no zones on the profile — the page says
+    //! so instead of drawing five empty bars that look like a zero-effort
+    //! session.
+    private function _drawZonesPage(dc as Graphics.Dc, top as Number, bottom as Number) as Void {
+        var caption = WatchUi.loadResource(Rez.Strings.FieldZones) as String;
+        var peak = _zones.peakSeconds();
+        if (peak <= 0) {
+            FieldGrid.drawSingle(dc, top, bottom - top, LiveMetrics.NO_VALUE, caption,
+                Theme.COLOR_SKIPPED);
+            return;
+        }
+
+        var font = Graphics.FONT_XTINY;
+        var lineHeight = dc.getFontHeight(font);
+        var rowHeight = lineHeight + lineHeight / 5;
+        var used = rowHeight * ZoneTracker.ZONE_COUNT;
+
+        var available = bottom - top;
+        var y = top + (available - used) / 2;
+        if (y < top) {
+            y = top;
+        }
+
+        // One margin for the block, measured at its narrowest row, minus the
+        // column the page dots live in.
+        var width = Theme.bandWidth(dc, y, used) - dc.getWidth() / 14;
+        var left = (dc.getWidth() - width - dc.getWidth() / 14) / 2;
+
+        var labelWidth = dc.getTextWidthInPixels("Z5", font);
+        var timeWidth = dc.getTextWidthInPixels("00:00", font);
+        var gap = dc.getWidth() / 26;
+        var barLeft = left + labelWidth + gap;
+        var barWidth = width - labelWidth - timeWidth - gap * 2;
+        var barHeight = (lineHeight * 50) / 100;
+
+        if (barWidth < 4) {
+            return;
+        }
+
+        for (var zone = ZoneTracker.ZONE_COUNT; zone >= 1; zone--) {
+            var seconds = _zones.secondsIn(zone);
+            var color = Theme.zoneColor(zone);
+
+            dc.setColor(seconds > 0 ? Theme.COLOR_TEXT : Theme.COLOR_SKIPPED,
+                Graphics.COLOR_TRANSPARENT);
+            dc.drawText(left, y, font, "Z" + zone.toString(), Graphics.TEXT_JUSTIFY_LEFT);
+
+            var barTop = y + (lineHeight - barHeight) / 2;
+            // The empty track keeps the five rows reading as one chart even
+            // when only two of them have any time in them.
+            dc.setColor(Theme.COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+            dc.fillRectangle(barLeft, barTop + barHeight - 2, barWidth, 2);
+
+            if (seconds > 0) {
+                var filled = (barWidth * seconds) / peak;
+                if (filled < 3) {
+                    filled = 3;
+                }
+                dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+                dc.fillRectangle(barLeft, barTop, filled, barHeight);
+            }
+
+            dc.setColor(seconds > 0 ? color : Theme.COLOR_SKIPPED,
+                Graphics.COLOR_TRANSPARENT);
+            dc.drawText(left + width, y, font, Theme.formatDuration(seconds),
+                Graphics.TEXT_JUSTIFY_RIGHT);
+
+            y += rowHeight;
+        }
+    }
+
     //! What was actually done, exercise by exercise.
     //!
-    //!   Lat Pulldown        4/4
-    //!   Seated Row          2/4
-    //!   Face Pull           0/4
+    //!   Lat Pulldown                4/4
+    //!   ==============================
+    //!   Seated Row                  2/4
+    //!   ===============---------------
     //!
-    //! The count is coloured by the exercise's final state, so a glance
-    //! separates finished from parked from skipped without a legend.
+    //! Each row carries its own progress bar: sets done against sets targeted,
+    //! in the colour of the exercise's final state. The numbers alone made the
+    //! page a table; the bars make the shape of the session readable at arm's
+    //! length — which exercise was finished, which was cut short, which was
+    //! never touched — without reading a single digit.
     //!
-    //! Each row measures its own usable width: a round screen narrows towards
-    //! the bottom, and a row that fits at the top of the list would run into
-    //! the bezel at the end of it.
+    //! It is the same bar idiom as the time-in-zone chart one page back, on
+    //! purpose: two charts that behave the same way read as one screen.
     private function _drawExercisesPage(dc as Graphics.Dc, top as Number, bottom as Number) as Void {
         var font = Graphics.FONT_XTINY;
         var lineHeight = dc.getFontHeight(font);
-        var rowHeight = lineHeight + lineHeight / 4;
+        var barHeight = lineHeight / 6;
+        if (barHeight < 3) {
+            barHeight = 3;
+        }
+        var barGap = lineHeight / 6;
+        var rowHeight = lineHeight + barGap + barHeight + lineHeight / 3;
         var list = _workout.exercises;
 
         var available = bottom - top;
@@ -192,8 +294,7 @@ class WorkoutSummaryView extends WatchUi.View {
 
         for (var i = 0; i < shown; i++) {
             var ex = list[i];
-            var count = ex.completedSetCount().toString() + "/" + ex.targetSets.toString();
-            _drawRow(dc, y, font, left, width, ex.name, count, Theme.stateColor(ex.state));
+            _drawRow(dc, y, font, left, width, barGap, barHeight, ex);
             y += rowHeight;
         }
 
@@ -205,7 +306,7 @@ class WorkoutSummaryView extends WatchUi.View {
         }
     }
 
-    //! One list row: name on the left, count on the right.
+    //! One list row: name on the left, count on the right, progress underneath.
     //!
     //! The block's right end stops short of the page dots. They live in a
     //! column down the right edge, and a right-aligned "0/4" ran into them.
@@ -215,19 +316,37 @@ class WorkoutSummaryView extends WatchUi.View {
         font as Graphics.FontDefinition,
         left as Number,
         width as Number,
-        name as String,
-        count as String,
-        countColor as Number
+        barGap as Number,
+        barHeight as Number,
+        exercise as Exercise
     ) as Void {
+        var done = exercise.completedSetCount();
+        var target = exercise.targetSets;
+        var count = done.toString() + "/" + target.toString();
+        var color = Theme.stateColor(exercise.state);
+
         var gap = width / 16;
         var countWidth = dc.getTextWidthInPixels(count, font);
 
-        dc.setColor(countColor, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
         dc.drawText(left + width, y, font, count, Graphics.TEXT_JUSTIFY_RIGHT);
 
-        dc.setColor(Theme.COLOR_TEXT, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(left, y, font, _clip(dc, name, font, width - countWidth - gap),
+        // A skipped exercise is a fact about the session, not a headline.
+        dc.setColor(exercise.state == EX_SKIPPED ? Theme.COLOR_DIM : Theme.COLOR_TEXT,
+            Graphics.COLOR_TRANSPARENT);
+        dc.drawText(left, y, font,
+            _clip(dc, exercise.name, font, width - countWidth - gap),
             Graphics.TEXT_JUSTIFY_LEFT);
+
+        var barTop = y + dc.getFontHeight(font) + barGap;
+        dc.setColor(Theme.COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
+        dc.fillRectangle(left, barTop, width, barHeight);
+
+        if (done > 0 && target > 0) {
+            var filled = done >= target ? width : (width * done) / target;
+            dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+            dc.fillRectangle(left, barTop, filled, barHeight);
+        }
     }
 
     //! Shorten `text` until it fits `maxWidth`, ending in a dot so the athlete

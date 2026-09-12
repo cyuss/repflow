@@ -54,11 +54,11 @@ class StateIcon extends WatchUi.Drawable {
         // reserved. So the dot is placed by hand: right of the canvas centre,
         // which puts clear space between it and the bezel without closing the
         // gap to the label.
-        // Centred in the canvas, and not much more than half of it across.
+        // Left of the canvas centre, and not much more than half of it across.
         // Menu2 clips the icon to the column it reserved, which is narrower
         // than the Drawable it was handed: a dot pushed towards the right of
         // the canvas came back with a flat side. Verified in the simulator.
-        var cx = x + w / 2;
+        var cx = x + (w * 44) / 100;
         // A menu row is two lines — name over "1/4  55 kg" — but the icon area
         // is anchored to the first of them, which leaves the dot reading high
         // against the row as a whole. A nudge down centres it on the pair.

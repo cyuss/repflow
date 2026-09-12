@@ -92,9 +92,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Garmin-style stop menu**: keep training / save / discard, with the safe
   answer first, replacing a SAVE button on the recap that asked a question
   already answered
-- **Three-page workout recap**: the work (time, sets done against planned, reps,
+- **Four-page workout recap**: the work (time, sets done against planned, reps,
   volume), the body (calories, average and maximum heart rate, load per set),
-  and the exercises one by one with their final state
+  **time in heart rate zone as a bar chart** — the screen a Fenix shows after
+  any activity — and the exercises one by one, each with its own progress bar
+- `ZoneTracker` — seconds in each heart rate zone, counted off the same 1 Hz
+  tick that drives the rest timer. Connect IQ reports the *current* heart rate
+  and nothing about how long it has been where, so RepFlow counts it itself;
+  seconds the watch could not place belong to no bar
 
 #### Garmin integration
 

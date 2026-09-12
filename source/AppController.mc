@@ -19,6 +19,9 @@ class AppController {
     private var _recorder as GarminRecorder;
     private var _rest as RestTimer;
     private var _ticker as Timer.Timer?;
+    //! Time in heart rate zone, counted off the same 1 Hz tick. Garmin shows
+    //! this at the end of its own activities and gives no API to read it back.
+    private var _zones as ZoneTracker;
     //! Weight/reps the athlete has dialled in for the set about to be performed.
     private var _pendingWeight as Float;
     private var _pendingReps as Number;
@@ -35,6 +38,7 @@ class AppController {
         _recorder = new GarminRecorder();
         _rest = new RestTimer();
         _ticker = null;
+        _zones = new ZoneTracker();
         _pendingWeight = 0.0;
         _pendingReps = 0;
         _exercisePage = 0;
@@ -56,6 +60,10 @@ class AppController {
 
     public function engine() as WorkoutEngine? {
         return _engine;
+    }
+
+    public function zoneTracker() as ZoneTracker {
+        return _zones;
     }
 
     public function restTimer() as RestTimer {
@@ -105,6 +113,7 @@ class AppController {
     public function startWorkout(workout as Workout) as Void {
         var session = new WorkoutSession(workout, now());
         _engine = new WorkoutEngine(session);
+        _zones = new ZoneTracker();
         _exerciseStartedAt = now();
         _recorder.start(workout.name);
         _startTicker();
@@ -116,6 +125,7 @@ class AppController {
     //! so a new recording is started for the remainder of the workout.
     public function resumeWorkout(session as WorkoutSession) as Void {
         _engine = new WorkoutEngine(session);
+        _zones = new ZoneTracker();
         _recorder.start(session.workout.name);
         var ex = session.currentExercise();
         if (ex != null) {
@@ -273,6 +283,9 @@ class AppController {
     //! 1 Hz tick. Drives the rest countdown, and keeps the exercise timer and
     //! the live metric pages moving while the athlete is working.
     public function onTick() as Void {
+        if (_engine != null) {
+            _zones.sample(LiveMetrics.heartRateZone());
+        }
         if (_rest.isRunning() && _rest.tick()) {
             // Reached zero exactly on this tick — notify once.
             vibrate(100, 400);
@@ -334,7 +347,7 @@ class AppController {
         }
         _engine = null;
 
-        var view = new WorkoutSummaryView(summary, workout, save);
+        var view = new WorkoutSummaryView(summary, workout, _zones, save);
         WatchUi.switchToView(view, new WorkoutSummaryDelegate(view), WatchUi.SLIDE_UP);
     }
 
