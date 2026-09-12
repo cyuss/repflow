@@ -36,6 +36,7 @@ module Settings {
         _haptics = null;
         _repCounter = null;
         _animations = null;
+        Units.invalidate();
         Device.invalidate();
     }
 

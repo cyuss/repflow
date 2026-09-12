@@ -20,8 +20,9 @@ import Toybox.System;
 //! responsive, while a linear one reads as slow.
 module Animator {
 
-    //! ~30 fps. Faster is not visible on a MIP display and costs frames.
-    const FRAME_MS = 33;
+    //! 20 fps. Connect IQ clamps a Timer to a 50 ms minimum and says so in the
+    //! log, so asking for 33 was asking for 50 while looking like a mistake.
+    const FRAME_MS = 50;
 
     //! A module cannot hand `method(:onFrame)` to a Timer — there is no self to
     //! bind it to — so one object exists purely to own that callback.

@@ -68,6 +68,7 @@ class WorkoutSummaryView extends WatchUi.View {
 
     public function onHide() as Void {
         Animator.stop();
+        Marquee.stop();
     }
 
     public function turnPage(delta as Number) as Void {
@@ -88,9 +89,9 @@ class WorkoutSummaryView extends WatchUi.View {
                 * Animator.value(),
             _saved ? Theme.COLOR_DONE : Theme.COLOR_SKIPPED);
 
-        var y = Theme.drawFitted(dc, h / 16, _workout.name,
+        var y = Marquee.drawFitted(dc, h / 16, _workout.name,
             [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_TEXT);
+            Theme.COLOR_TEXT, Theme.usableWidth(dc, h / 16));
 
         // A record is the headline when there is one. "Workout done" is true
         // of every session; "2 records" is true of this one.
@@ -127,6 +128,7 @@ class WorkoutSummaryView extends WatchUi.View {
         }
 
         Theme.drawPageDots(dc, PAGE_COUNT, _page);
+        Marquee.endFrame();
     }
 
     //! Duration leads full width — "1:02:34" needs it — with sets and reps

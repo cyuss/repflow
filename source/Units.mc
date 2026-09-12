@@ -17,23 +17,40 @@ module Units {
 
     const LB_PER_KG = 2.2046226;
 
+    //! Resolved once. `System.getDeviceSettings()` is not free and this is
+    //! asked several times per drawn frame — once per weight on screen.
+    //! Cleared by Settings.invalidate(), which is what onSettingsChanged calls.
+    var _imperial as Boolean? = null;
+
+    public function invalidate() as Void {
+        _imperial = null;
+    }
+
     //! True when loads should be shown in pounds.
+    //!
+    //! The athlete's own setting wins; otherwise the watch's. Someone who has
+    //! already told their Fenix they think in kilos should not have to tell
+    //! RepFlow as well.
     public function imperial() as Boolean {
+        var cached = _imperial;
+        if (cached != null) {
+            return cached;
+        }
+        var resolved = false;
         var choice = Settings.units();
-        if (choice == Tuning.UNITS_METRIC) {
-            return false;
-        }
         if (choice == Tuning.UNITS_STATUTE) {
-            return true;
+            resolved = true;
+        } else if (choice == Tuning.UNITS_AUTO) {
+            // `has` rather than try/catch: a device that does not report a
+            // weight unit raises a Monkey C runtime error on the read, and
+            // those are not Exceptions. See docs/API_LIMITATIONS.md.
+            var settings = System.getDeviceSettings();
+            if (settings has :weightUnits) {
+                resolved = settings.weightUnits == System.UNIT_STATUTE;
+            }
         }
-        // `has` rather than try/catch: a device that does not report a weight
-        // unit raises a Monkey C runtime error on the read, and those are not
-        // Exceptions. See docs/API_LIMITATIONS.md.
-        var settings = System.getDeviceSettings();
-        if (!(settings has :weightUnits)) {
-            return false;
-        }
-        return settings.weightUnits == System.UNIT_STATUTE;
+        _imperial = resolved;
+        return resolved;
     }
 
     //! A stored load, in whatever the athlete reads.

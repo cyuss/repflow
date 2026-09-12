@@ -17,6 +17,9 @@ class RepFlowApp extends Application.AppBase {
 
     //! The phone wrote new settings. Drop the cached copies so the next read
     //! picks them up; nothing else has to know.
+    //! Settings changed — either the athlete's, written from the phone, or the
+    //! watch's own. Drop every cached answer so the next read picks them up;
+    //! nothing else in the app has to know.
     public function onSettingsChanged() as Void {
         Settings.invalidate();
         WatchUi.requestUpdate();

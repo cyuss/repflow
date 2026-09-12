@@ -1512,11 +1512,12 @@ function testAnimatorIsAlwaysSafeToMultiplyBy(logger as Test.Logger) as Boolean 
     Test.assertEqual(Animator.value(), 1.0);
 
     Animator.start(200);
-    // On a lean device this started nothing at all, and value() is still 1.0.
-    // On a rich one it is somewhere in (0, 1]. Either way it is a usable
-    // multiplier, which is the contract the views rely on.
+    // On a lean device this started nothing at all and value() is still 1.0.
+    // On a rich one it is in [0, 1] — and 0.0 on the very first frame is the
+    // point: the ring grows from nothing. Either way it is a multiplier a view
+    // can use without asking any questions, which is the whole contract.
     var v = Animator.value();
-    Test.assert(v > 0.0 && v <= 1.0);
+    Test.assert(v >= 0.0 && v <= 1.0);
 
     Animator.stop();
     Test.assertEqual(Animator.value(), 1.0);
@@ -1563,5 +1564,117 @@ function testPlannedLoadSnapsToTheStepGrid(logger as Test.Logger) as Boolean {
 
     // Negative input cannot produce a negative load.
     Test.assert(Units.snap(-10.0) >= 0.0);
+    return true;
+}
+
+//! Scrolling text: the offset must stay inside its travel, and the timer must
+//! stop itself when nothing needs it.
+//!
+//! The offset is the whole of the arithmetic — get it wrong and the name either
+//! runs off the end and never comes back, or jitters at the boundary. It is
+//! computed from the millisecond clock, so the test walks a whole cycle rather
+//! than checking one instant.
+(:test)
+function testMarqueeStopsWhenNothingOverflows(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+    Marquee.stop();
+    Test.assert(!Marquee.isRunning());
+
+    var size = TestSupport.screenSize();
+    var fonts = [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>;
+
+    // A short name fits, is drawn still, and starts nothing.
+    Marquee.draw(dc, size / 4, "Squat", fonts, Theme.COLOR_TEXT, Theme.usableWidth(dc, size / 4));
+    Marquee.endFrame();
+    Test.assert(!Marquee.isRunning());
+
+    // A name far too long for any font in the ladder has to move.
+    var long = "Single-Leg Romanian Deadlift With A Very Long Name Indeed";
+    Marquee.draw(dc, size / 4, long, fonts, Theme.COLOR_TEXT, Theme.usableWidth(dc, size / 4));
+    Test.assert(Marquee.isRunning());
+
+    // And the frame after it leaves the screen, it stops again. A timer left
+    // running at 10 fps for the rest of the workout is exactly the kind of cost
+    // this app cannot afford.
+    Marquee.endFrame();
+    Marquee.draw(dc, size / 4, "Squat", fonts, Theme.COLOR_TEXT, Theme.usableWidth(dc, size / 4));
+    Marquee.endFrame();
+    Test.assert(!Marquee.isRunning());
+    return true;
+}
+
+//! The scroll offset never leaves [0, overflow], and visits both ends.
+(:test)
+function testMarqueeOffsetStaysInRange(logger as Test.Logger) as Boolean {
+    var overflow = 120;
+    var travel = overflow * Marquee.MS_PER_PIXEL;
+    var period = (Marquee.PAUSE_MS + travel) * 2;
+
+    var sawStart = false;
+    var sawEnd = false;
+    // Walk a whole cycle in 40 ms steps; the arithmetic is pure, so the phase
+    // can be driven directly rather than by waiting.
+    for (var t = 0; t < period; t += 40) {
+        var offset = Marquee.offsetAt(t, overflow);
+        Test.assert(offset >= 0);
+        Test.assert(offset <= overflow);
+        if (offset == 0) { sawStart = true; }
+        if (offset == overflow) { sawEnd = true; }
+    }
+    Test.assert(sawStart);
+    Test.assert(sawEnd);
+
+    // Nothing to scroll means no movement, and no division by zero.
+    Test.assertEqual(Marquee.offsetAt(0, 0), 0);
+    Test.assertEqual(Marquee.offsetAt(99999, -5), 0);
+    return true;
+}
+
+//! Every catalogue name is either legible still, or scrolls.
+//!
+//! This is the test that would have caught the first version of the marquee,
+//! which shrank names until they fitted and therefore never scrolled at all.
+//! It asserts the rule that matters: the name is drawn at the ladder's largest
+//! font, and the long ones move.
+(:test)
+function testLongCatalogueNamesScroll(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+    var size = TestSupport.screenSize();
+    var y = size / 4;
+    var maxWidth = Theme.usableWidth(dc, y);
+    var fonts = [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>;
+
+    var scrolled = 0;
+    var still = 0;
+    var groups = Muscle.browseOrder();
+    for (var g = 0; g < groups.size(); g++) {
+        var rows = ExerciseCatalogue.forMuscle(groups[g]);
+        for (var i = 0; i < rows.size(); i++) {
+            var name = (rows[i] as Array)[ExerciseCatalogue.F_NAME] as String;
+            Marquee.stop();
+            Marquee.draw(dc, y, name, fonts, Theme.COLOR_TEXT, maxWidth);
+            if (Marquee.isRunning()) {
+                scrolled++;
+            } else {
+                still++;
+                // A still name must genuinely fit at full size, not be clipped.
+                Test.assert(dc.getTextWidthInPixels(name, fonts[0]) <= maxWidth);
+            }
+            Marquee.endFrame();
+        }
+    }
+    Marquee.stop();
+
+    // Most names fit; some do not. Both halves have to be true, or the rule is
+    // doing nothing: all-still would mean names are still being shrunk, and
+    // all-scrolling would mean the screen never holds anything at rest.
+    Test.assert(still > scrolled);
+    Test.assert(still > 0);
     return true;
 }

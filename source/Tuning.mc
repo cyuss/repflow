@@ -42,6 +42,12 @@ module Tuning {
     const PAGE_WORKOUT = 2;
     const PAGE_COUNT = 3;
 
+    //! The rest screen uses the same three pages, in the same order, reached
+    //! with the same buttons. Page 0 is the countdown instead of the set; the
+    //! other two are identical. One paging model, whether you are working or
+    //! waiting — see MetricPages.
+    const REST_PAGE_COUNT = 3;
+
     // ------------------------------------------------------------------
     // Set editor focus
     // ------------------------------------------------------------------

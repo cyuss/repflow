@@ -134,6 +134,8 @@ The ten already in `store-assets/screenshots/` are a complete set:
 | `overview` | A finished exercise and three waiting — **this is the product** |
 | `set-editor` | Correcting the reps before they are logged |
 | `rest` | The countdown, the recovery figure, and what is next |
+| `rest-body` | The rest screen's second page — the same body metrics |
+| `rest-workout` | Its third — the session so far, without leaving the rest |
 | `stop-menu` | The Garmin-style keep training / save / discard |
 | `recap-work` | Time, sets against plan, reps, volume |
 | `recap-body` | Calories, heart rate, recovery, Body Battery |

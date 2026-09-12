@@ -70,12 +70,13 @@ class WorkoutListView extends WatchUi.View {
             blockTop = y;
         }
 
-        var afterName = Theme.drawFitted(dc, blockTop, workout.name,
-            Theme.fontsTitle(), Theme.COLOR_TEXT);
+        var afterName = Marquee.drawFitted(dc, blockTop, workout.name,
+            Theme.fontsTitle(), Theme.COLOR_TEXT, Theme.usableWidth(dc, blockTop));
         Theme.drawFitted(dc, afterName + gap, countText,
             [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_DIM);
 
         Theme.drawPageDots(dc, _workouts.size() + 1, _index);
+        Marquee.endFrame();
     }
 
     //! The last page: start from nothing and build as you go.

@@ -47,6 +47,10 @@ class AppController {
     //! Which data screen the exercise view is showing. Lives here rather than on
     //! the view so it survives rest screens and menu round-trips.
     private var _exercisePage as Number;
+    //! Which of the rest screen's three pages is showing. Kept here for the
+    //! same reason as the exercise page: it has to survive a trip through the
+    //! rest actions menu.
+    private var _restPage as Number;
     //! Epoch seconds when the current exercise was selected, for the on-screen
     //! exercise timer. Garmin owns the activity clock; this one answers a
     //! different question — how long have I been on THIS exercise.
@@ -68,6 +72,7 @@ class AppController {
         _pendingWeight = 0.0;
         _pendingReps = 0;
         _exercisePage = 0;
+        _restPage = 0;
         _exerciseStartedAt = 0;
     }
 
@@ -244,6 +249,15 @@ class AppController {
     }
 
     //! Page through the exercise data screens, wrapping at both ends.
+    public function restPage() as Number {
+        return _restPage;
+    }
+
+    public function turnRestPage(delta as Number) as Void {
+        var count = Tuning.REST_PAGE_COUNT;
+        _restPage = (_restPage + delta + count) % count;
+    }
+
     public function turnExercisePage(delta as Number) as Void {
         var count = Tuning.PAGE_COUNT;
         _exercisePage = (_exercisePage + delta + count) % count;
@@ -495,6 +509,7 @@ class AppController {
     public function startRest(durationSec as Number) as Void {
         _rest.start(durationSec);
         _recovery.startRest();
+        _restPage = 0;
         updateRepCounting();
         _startTicker();   // already running during a workout; harmless to re-arm
         WatchUi.switchToView(new RestView(), new RestDelegate(), WatchUi.SLIDE_UP);

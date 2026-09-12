@@ -52,6 +52,7 @@ class ExerciseView extends WatchUi.View {
     public function onHide() as Void {
         AppController.instance().updateRepCounting();
         Animator.stop();
+        Marquee.stop();
     }
 
     public function onUpdate(dc as Graphics.Dc) as Void {
@@ -68,22 +69,14 @@ class ExerciseView extends WatchUi.View {
 
         var page = controller.exercisePage();
         if (page == Tuning.PAGE_BODY) {
-            _drawBodyPage(dc, exercise);
+            MetricPages.drawBody(dc, exercise.name);
         } else if (page == Tuning.PAGE_WORKOUT) {
-            _drawWorkoutPage(dc, engine as WorkoutEngine);
+            MetricPages.drawWorkout(dc, engine as WorkoutEngine);
         } else {
             _drawSetPage(dc, controller, exercise);
         }
         Theme.drawPageDots(dc, Tuning.PAGE_COUNT, page);
-    }
-
-    //! Just a title and a rule, for the metric pages.
-    private function _drawCompactHeader(dc as Graphics.Dc, title as String) as Number {
-        var h = dc.getHeight();
-        var y = Theme.drawFitted(dc, h / 14, title, Theme.fontsTitle(), Theme.COLOR_TEXT);
-        y += h / 44;
-        FieldGrid.drawRule(dc, y);
-        return y + 1;
+        Marquee.endFrame();
     }
 
     //! Page 1 — the set you are about to do.
@@ -126,9 +119,9 @@ class ExerciseView extends WatchUi.View {
         Theme.drawClock(dc, clockTop);
 
         var top = Theme.drawHeartRateGauge(dc, h / 14);
-        top = Theme.drawFitted(dc, top + h / 60, exercise.name,
+        top = Marquee.draw(dc, top + h / 60, exercise.name,
             [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
-            Theme.COLOR_TEXT);
+            Theme.COLOR_TEXT, Theme.usableWidth(dc, top + h / 60));
         top += h / 40;
         FieldGrid.drawRule(dc, top);
         top += 1;
@@ -212,84 +205,6 @@ class ExerciseView extends WatchUi.View {
             repsColor);
     }
 
-    //! Page 2 — live Garmin metrics, in Garmin's four-field round layout:
-    //! a full-width band, a split middle, a full-width band.
-    //!
-    //! Heart rate leads because it is the number worth a glance mid-set, and
-    //! the elapsed time sits full width at the bottom because "1:02:34" is far
-    //! too wide for half a cell on a round screen.
-    private function _drawBodyPage(dc as Graphics.Dc, exercise as Exercise) as Void {
-        var h = dc.getHeight();
-        var top = _drawCompactHeader(dc, exercise.name);
-        var bottom = h - h / 13;
-
-        var timer = LiveMetrics.timerSeconds();
-
-        var edge = FieldGrid.edgeHeight(top, bottom);
-        var middleTop = top + edge;
-        var bottomTop = bottom - edge;
-
-        Theme.drawHeartRateField(dc, top, edge,
-            WatchUi.loadResource(Rez.Strings.FieldHr) as String);
-
-        FieldGrid.drawRule(dc, middleTop);
-        FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
-            LiveMetrics.format(LiveMetrics.averageHeartRate()),
-            WatchUi.loadResource(Rez.Strings.FieldAvgHr) as String,
-            Theme.COLOR_HR,
-            LiveMetrics.format(LiveMetrics.calories()),
-            WatchUi.loadResource(Rez.Strings.FieldKcal) as String,
-            Theme.COLOR_WARM);
-
-        FieldGrid.drawRule(dc, bottomTop);
-        FieldGrid.drawSingle(dc, bottomTop, edge,
-            timer != null ? Theme.formatDuration(timer) : LiveMetrics.NO_VALUE,
-            WatchUi.loadResource(Rez.Strings.FieldTime) as String,
-            Theme.COLOR_TEXT);
-    }
-
-    //! Page 3 — what the session has accumulated so far, same round layout.
-    //! Volume leads full width ("3.2 t", "12 450 kg"); sets and reps are short
-    //! enough to share the middle.
-    private function _drawWorkoutPage(dc as Graphics.Dc, engine as WorkoutEngine) as Void {
-        var h = dc.getHeight();
-        var summary = engine.summary(AppController.now());
-
-        var top = _drawCompactHeader(dc, engine.getWorkout().name);
-
-        var done = 0;
-        var list = engine.getWorkout().exercises;
-        for (var i = 0; i < list.size(); i++) {
-            if (list[i].state == EX_COMPLETED) {
-                done++;
-            }
-        }
-
-        var bottom = h - h / 13;
-        var edge = FieldGrid.edgeHeight(top, bottom);
-        var middleTop = top + edge;
-        var bottomTop = bottom - edge;
-
-        FieldGrid.drawSingle(dc, top, edge,
-            Theme.formatVolume(summary.totalVolume),
-            WatchUi.loadResource(Rez.Strings.FieldVolume) as String,
-            Theme.COLOR_ACCENT);
-
-        FieldGrid.drawRule(dc, middleTop);
-        FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
-            summary.completedSets.toString(),
-            WatchUi.loadResource(Rez.Strings.FieldSets) as String,
-            Theme.COLOR_DONE,
-            summary.totalReps.toString(),
-            WatchUi.loadResource(Rez.Strings.FieldReps) as String,
-            Theme.COLOR_TEXT);
-
-        FieldGrid.drawRule(dc, bottomTop);
-        FieldGrid.drawSingle(dc, bottomTop, edge,
-            done.toString() + "/" + summary.exerciseCount.toString(),
-            WatchUi.loadResource(Rez.Strings.FieldExercises) as String,
-            Theme.COLOR_DONE);
-    }
 }
 
 class ExerciseDelegate extends WatchUi.BehaviorDelegate {

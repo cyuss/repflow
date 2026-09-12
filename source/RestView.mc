@@ -16,9 +16,28 @@ import Toybox.WatchUi;
 //!   | LAST 52 KG x 10 x 4 |   only before the first set of it
 //!   +---------------------+
 //!
+//! **UP and DOWN page, exactly as they do while you are working.** The rest
+//! screen is pages 0, 1 and 2 of the same three: the countdown, then the body,
+//! then the session — the last two identical to the exercise screen's.
+//!
+//! That decision cost something, and it is worth naming. UP/DOWN used to add
+//! and remove 15 seconds, and a watch has no spare buttons: paging and
+//! adjusting cannot both live there. Adjusting lost, for two reasons.
+//!
+//! The first is consistency. Every native Garmin activity pages with UP/DOWN,
+//! and so does RepFlow's own exercise screen. Having the same two buttons mean
+//! something else the moment a timer starts is a trap you fall into once per
+//! session, in the dark, mid-workout.
+//!
+//! The second is that adjusting stopped being the common case. Rest is per
+//! exercise and editable on the watch, with a default in the settings; the
+//! ad-hoc nudge is now the exception it always should have been. So it moved to
+//! MENU, where every other occasional action in this app already lives.
+//!
 //! Buttons:
-//!   START      skip rest and go straight back to the exercise
-//!   UP / DOWN  add / remove 15 s
+//!   START      rest is over, back to the exercise
+//!   UP / DOWN  previous / next page
+//!   MENU       rest actions — add or remove 15 s, skip, end workout
 //!   BACK       workout overview — go do a different exercise instead
 class RestView extends WatchUi.View {
 
@@ -26,9 +45,40 @@ class RestView extends WatchUi.View {
         View.initialize();
     }
 
+    public function onHide() as Void {
+        Marquee.stop();
+    }
+
     public function onUpdate(dc as Graphics.Dc) as Void {
         Theme.clear(dc);
         var controller = AppController.instance();
+        var page = controller.restPage();
+
+        if (page == Tuning.PAGE_BODY) {
+            var exercise = _next(controller);
+            MetricPages.drawBody(dc, exercise != null
+                ? (exercise as Exercise).name
+                : WatchUi.loadResource(Rez.Strings.Rest) as String);
+        } else if (page == Tuning.PAGE_WORKOUT) {
+            var engine = controller.engine();
+            if (engine != null) {
+                MetricPages.drawWorkout(dc, engine as WorkoutEngine);
+            }
+        } else {
+            _drawCountdown(dc, controller);
+        }
+
+        Theme.drawPageDots(dc, Tuning.REST_PAGE_COUNT, page);
+        Marquee.endFrame();
+    }
+
+    private function _next(controller as AppController) as Exercise? {
+        var engine = controller.engine();
+        return engine != null ? engine.suggestNextExercise() : null;
+    }
+
+    //! Page 1 — the countdown, and what it is for.
+    private function _drawCountdown(dc as Graphics.Dc, controller as AppController) as Void {
         var rest = controller.restTimer();
         var h = dc.getHeight();
 
@@ -63,15 +113,14 @@ class RestView extends WatchUi.View {
         controller as AppController
     ) as Void {
         var h = dc.getHeight();
-        var engine = controller.engine();
-        var next = engine != null ? engine.suggestNextExercise() : null;
+        var next = _next(controller);
 
         // What was done on this movement last time, but only before the first
         // set of it: once there is a set in this session, the planned load is
         // already the athlete's own and the older number is just noise.
         var lastLine = null as String?;
-        if (next != null && next.completedSetCount() == 0) {
-            lastLine = ExerciseActionsMenu.lastLine(next.id);
+        if (next != null && (next as Exercise).completedSetCount() == 0) {
+            lastLine = ExerciseActionsMenu.lastLine((next as Exercise).id);
         }
 
         // Reserve the bottom for "next up" only when there is one.
@@ -105,15 +154,17 @@ class RestView extends WatchUi.View {
         if (next == null) {
             return;
         }
+        var exercise = next as Exercise;
 
         FieldGrid.drawRule(dc, fieldBottom);
         var y = fieldBottom + h / 44;
-        y = Theme.drawFitted(dc, y, next.name, Theme.fontsBody(), Theme.COLOR_TEXT);
+        y = Marquee.draw(dc, y, exercise.name, Theme.fontsBody(), Theme.COLOR_TEXT,
+            Theme.usableWidth(dc, y));
 
-        var detail = (next.completedSetCount() + 1).toString() + "/" +
-            next.targetSets.toString() + "   " +
-            next.plannedReps().toString() + " x " +
-            Theme.formatPlannedWeight(next.plannedWeight()) + " " +
+        var detail = (exercise.completedSetCount() + 1).toString() + "/" +
+            exercise.targetSets.toString() + "   " +
+            exercise.plannedReps().toString() + " x " +
+            Theme.formatPlannedWeight(exercise.plannedWeight()) + " " +
             Units.label();
         y = Theme.drawFitted(dc, y, detail,
             [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.COLOR_ACCENT);
@@ -136,7 +187,7 @@ class RestView extends WatchUi.View {
         var cy = h / 2;
         var sweep = (360.0 * (1.0 - rest.progress())).toNumber();
 
-        dc.setPenWidth(7);
+        dc.setPenWidth(Device.stroke(27));
         dc.setColor(Theme.COLOR_SKIPPED, Graphics.COLOR_TRANSPARENT);
         dc.drawCircle(cx, cy, radius);
         if (sweep > 0) {
@@ -159,40 +210,102 @@ class RestDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
+    //! UP / DOWN page, the same way they do on the exercise screen.
     public function onPreviousPage() as Boolean {
-        AppController.instance().restTimer().extend(Tuning.REST_STEP);
+        AppController.instance().turnRestPage(-1);
         WatchUi.requestUpdate();
         return true;
     }
 
     public function onNextPage() as Boolean {
-        AppController.instance().restTimer().extend(-Tuning.REST_STEP);
+        AppController.instance().turnRestPage(1);
         WatchUi.requestUpdate();
         return true;
     }
 
-    //! BACK — go pick a different exercise while resting. This is what makes
-    //! supersets and "the machine is busy" work.
+    public function onMenu() as Boolean {
+        RestActionsMenu.show();
+        return true;
+    }
+
+    //! BACK — the overview, to go and do something else instead.
     public function onBack() as Boolean {
-        var controller = AppController.instance();
-        controller.stopTicker();
-        controller.restTimer().skip();
         WatchUi.switchToView(new WorkoutOverviewView(), new WorkoutOverviewDelegate(),
             WatchUi.SLIDE_RIGHT);
         return true;
     }
+}
 
-    //! MENU edits the set you are about to do. Deciding "next one at 57.5" is
-    //! what a rest is for, so it costs one press, not two.
-    public function onMenu() as Boolean {
-        var engine = AppController.instance().engine();
-        if (engine == null) {
-            return true;
+//! What you can do to a rest that is already running.
+//!
+//! This exists because UP and DOWN now page. Everything here was reachable
+//! before; it is reachable in one more press and, in exchange, the two buttons
+//! an athlete presses most mean the same thing on every screen in the app.
+module RestActionsMenu {
+
+    const ACTION_ADD = "add";
+    const ACTION_SUB = "sub";
+    const ACTION_SKIP = "skip";
+    const ACTION_END = "end";
+
+    public function show() as Void {
+        var rest = AppController.instance().restTimer();
+        var menu = new WatchUi.Menu2({
+            :title => WatchUi.loadResource(Rez.Strings.Rest) as String
+        });
+        // The current duration is the subtitle, so the menu answers "how long
+        // is this rest" before the athlete has changed anything.
+        menu.addItem(new WatchUi.MenuItem(
+            "+ " + Tuning.REST_STEP.toString() + " s",
+            Theme.formatDuration(rest.duration()), ACTION_ADD, {}));
+        menu.addItem(new WatchUi.MenuItem(
+            "- " + Tuning.REST_STEP.toString() + " s", null, ACTION_SUB, {}));
+        menu.addItem(new WatchUi.MenuItem(
+            WatchUi.loadResource(Rez.Strings.SkipRest) as String, null, ACTION_SKIP, {}));
+        menu.addItem(new WatchUi.MenuItem(
+            WatchUi.loadResource(Rez.Strings.ActionEndWorkout) as String, null,
+            ACTION_END, {}));
+        WatchUi.switchToView(menu, new RestActionsDelegate(), WatchUi.SLIDE_UP);
+    }
+}
+
+class RestActionsDelegate extends WatchUi.Menu2InputDelegate {
+
+    public function initialize() {
+        Menu2InputDelegate.initialize();
+    }
+
+    public function onSelect(item as WatchUi.MenuItem) as Void {
+        var controller = AppController.instance();
+        var id = item.getId() as String;
+
+        if (id.equals(RestActionsMenu.ACTION_ADD)) {
+            controller.restTimer().extend(Tuning.REST_STEP);
+            // Straight back to the countdown: adding time is a thing you do
+            // while watching the number it changes.
+            _back();
+            return;
         }
-        var exercise = engine.currentExercise();
-        if (exercise != null) {
-            SetEditor.open(exercise, Tuning.RETURN_REST);
+        if (id.equals(RestActionsMenu.ACTION_SUB)) {
+            controller.restTimer().extend(-Tuning.REST_STEP);
+            _back();
+            return;
         }
-        return true;
+        if (id.equals(RestActionsMenu.ACTION_SKIP)) {
+            controller.endRest();
+            return;
+        }
+        if (id.equals(RestActionsMenu.ACTION_END)) {
+            EndWorkoutFlow.request();
+            return;
+        }
+    }
+
+    public function onBack() as Void {
+        _back();
+    }
+
+    private function _back() as Void {
+        WatchUi.switchToView(new RestView(), new RestDelegate(), WatchUi.SLIDE_DOWN);
     }
 }
