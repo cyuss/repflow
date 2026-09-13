@@ -47,7 +47,12 @@ module FieldGrid {
     //! arithmetic rather than a copy of it.
     public function valueArea(dc as Graphics.Dc, height as Number) as Number {
         var captionHeight = dc.getFontHeight(Theme.captionFont());
-        var area = height - captionHeight - height / 16 - height / 20;
+        // A twenty-second of the band above and below, not a sixteenth and a
+        // twentieth. Those were chosen to keep the value off the caption and
+        // off the rules; what they mostly did was stand between the value and
+        // the next font size up. The caption is anchored to the bottom with its
+        // own inset, so this space is between the value and nothing.
+        var area = height - captionHeight - height / 22 - height / 22;
         if (area < captionHeight) {
             return height;   // no room for a caption; the value takes the cell
         }

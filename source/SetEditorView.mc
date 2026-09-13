@@ -140,19 +140,25 @@ class SetEditorView extends WatchUi.View {
             _exercise.completedSetCount());
 
         // A band for the + above the cells and one for the - below them.
-        var signBand = h / 9;
+        //
+        // A ninth of the screen each, for a sign drawn at half that. The two
+        // of them were taking a fifth of the page to hold two small marks,
+        // and the cost landed on the values between them: a cell that loses
+        // eighteen pixels loses a font size, and this is the screen where the
+        // athlete is looking straight at the number they are changing.
+        var signBand = h / 11;
         var bottom = h - h / 6;
         var cellsTop = y + signBand;
         var cellsBottom = bottom - signBand;
 
         // Confirming a set gives up a slice of the cells to the effort row.
         // Planning one keeps the whole band, because there is nothing to rate.
-        var rpeHeight = confirming ? (h * 15) / 100 : 0;
+        var rpeHeight = confirming ? (h * 13) / 100 : 0;
         cellsBottom -= rpeHeight;
 
         var focusCx = _drawCells(dc, cellsTop, cellsBottom, controller);
 
-        var signSize = (signBand * 55) / 100;
+        var signSize = (signBand * 62) / 100;
         Theme.drawSign(dc, focusCx, y + signBand / 2, signSize, true, Theme.colorAccent());
         Theme.drawSign(dc, focusCx, cellsBottom + signBand / 2, signSize, false,
             Theme.colorAccent());
