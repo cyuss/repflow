@@ -2720,3 +2720,44 @@ function testSettingsToggleUpdatesInPlace(logger as Test.Logger) as Boolean {
     Test.assert(AppSettingsMenu.stepLabel().length() > 0);
     return true;
 }
+
+//! Finishing a workout answers the athlete before it does the slow work.
+//!
+//! `finishWorkout` runs inside a menu's selection callback, and the screen does
+//! not repaint until it returns. Writing the FIT file — or deleting it — is the
+//! slowest thing this app does, and with the history writes in front of it the
+//! end of a workout was a visible stall on the menu the athlete had just
+//! pressed. It looked like the press had not registered, which is exactly the
+//! moment somebody presses again.
+//!
+//! So the recap goes up first and the recording is closed a tick later. What is
+//! asserted here is the part that must survive that split: whichever answer was
+//! given is still the answer if the app closes in between.
+(:test)
+function testDiscardSurvivesTheDeferral(logger as Test.Logger) as Boolean {
+    var controller = AppController.instance();
+    controller.startWorkout(TestSupport.abcWorkout());
+    controller.selectExercise("A");
+    controller.completeSet();
+
+    // The athlete discarded, and the app is closing before the deferred half
+    // has run. The recording must not be saved just because sets exist.
+    controller.finishWorkout(false);
+    Test.assert(controller.closingIsPending());
+    controller.onAppStop();
+    Test.assert(!controller.closingIsPending());
+
+    // And running it again is a no-op rather than a second stop.
+    controller.onClose();
+    Test.assert(!controller.closingIsPending());
+
+    // The same for a saved session.
+    controller.startWorkout(TestSupport.abcWorkout());
+    controller.selectExercise("A");
+    controller.completeSet();
+    controller.finishWorkout(true);
+    Test.assert(controller.closingIsPending());
+    controller.onClose();
+    Test.assert(!controller.closingIsPending());
+    return true;
+}

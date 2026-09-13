@@ -108,6 +108,8 @@ class OverviewTitle extends WatchUi.Drawable {
 
     public function draw(dc as Graphics.Dc) as Void {
         var height = dc.getHeight();
+        // Smaller than the rows: a title that competes with the list is a title
+        // that gets read instead of the list.
         var font = Theme.captionFont();
         var top = (height - dc.getFontHeight(font)) / 2;
         if (top < 0) {
@@ -141,6 +143,32 @@ module RowLayout {
         return usable < 1 ? 1 : usable;
     }
 
+    //! The biggest font a row's name can take, given the row it sits in.
+    //!
+    //! The name and the "2/4  20 kg" line under it have to share the row with
+    //! air between them. Everything else follows from the row height, which is
+    //! why this is here rather than written down as a constant: the same rule
+    //! gives a 260px Fenix and a 454px Epix each the size their rows can hold.
+    public function nameFont(
+        dc as Graphics.Dc,
+        rowHeight as Number,
+        subFont as Graphics.FontDefinition
+    ) as Graphics.FontDefinition {
+        var room = rowHeight - dc.getFontHeight(subFont) - rowHeight / 16;
+        var ladder = [
+            Graphics.FONT_MEDIUM,
+            Graphics.FONT_SMALL,
+            Graphics.FONT_TINY,
+            Graphics.FONT_XTINY
+        ] as Array<Graphics.FontDefinition>;
+        for (var i = 0; i < ladder.size(); i++) {
+            if (dc.getFontHeight(ladder[i]) <= room) {
+                return ladder[i];
+            }
+        }
+        return ladder[ladder.size() - 1];
+    }
+
     //! The icon column, mirrored as a margin on the right.
     public function gutter(dc as Graphics.Dc) as Number {
         return dc.getWidth() / 5;
@@ -171,8 +199,14 @@ class ExerciseMenuItem extends WatchUi.CustomMenuItem {
         var height = dc.getHeight();
         var focused = isFocused();
 
-        var nameFont = Theme.captionFont();
+        // The largest name that fits the row's height, not a fixed small one.
+        //
+        // Width is no longer a reason to go smaller — a long name scrolls, and
+        // that is the whole reason this menu is drawn by hand. Sizing the name
+        // to the caption font left rows a third the height they had room for:
+        // legible on a desk, not from a bench at arm's length.
         var subFont = Theme.captionFont();
+        var nameFont = RowLayout.nameFont(dc, height, subFont);
         var nameHeight = dc.getFontHeight(nameFont);
         var subHeight = dc.getFontHeight(subFont);
         var gap = height / 16;
@@ -238,7 +272,9 @@ class ActionMenuItem extends WatchUi.CustomMenuItem {
     }
 
     public function draw(dc as Graphics.Dc) as Void {
-        var font = Theme.captionFont();
+        // The same size as an exercise row's name: an action in this list is a
+        // row like any other, and a smaller one reads as disabled.
+        var font = RowLayout.nameFont(dc, dc.getHeight(), Theme.captionFont());
         var top = (dc.getHeight() - dc.getFontHeight(font)) / 2;
         if (top < 0) {
             top = 0;

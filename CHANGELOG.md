@@ -58,6 +58,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   done. It costs no presses: START still logs from any field. Recorded per set,
   never inherited, carried to Hevy and into the FIT as a developer field.
 
+### Fixed
+
+- Ending a workout no longer stalls on the Save/Discard menu. Closing the FIT
+  file is the slowest thing the app does and it was happening before the recap
+  was drawn, inside the menu's own selection callback — so the menu sat there
+  looking like the press had not registered.
+- Exercise list rows take the largest font their height allows instead of the
+  caption font. Width is no longer a reason to shrink one: a long name scrolls.
+
 ### Changed
 
 - Importing Hevy routines says how many the watch had no room for, instead of

@@ -852,19 +852,7 @@ class AppController {
         // Take what the recap needs before the engine is released: stopping the
         // recording drops it, and the per-exercise breakdown reads from it.
         var workout = engine.getWorkout();
-
-        if (save) {
-            _recorder.stopAndSave();
-        } else {
-            _recorder.stopAndDiscard();
-        }
-
-        // Discarding is about the Garmin recording, not about the training.
-        // A session the athlete performed is logged to Hevy either way — it is
-        // queued first, so a phone in a locker costs nothing.
         var startedAt = engine.getSession().startedAt;
-        HevySync.sendSession(workout, startedAt, finishedAt);
-
         _engine = null;
 
         // Read once, here, rather than from a draw call: the recap pages are
@@ -873,6 +861,78 @@ class AppController {
         var view = new WorkoutSummaryView(summary, workout, _zones, weekly,
             _records, _batteryStart, _recovery.best(), save);
         WatchUi.switchToView(view, new WorkoutSummaryDelegate(view), WatchUi.SLIDE_UP);
+
+        // Closing the recording and queueing the session for Hevy happen after
+        // the recap is on screen, not before it.
+        //
+        // This whole method runs inside a menu's selection callback, and the
+        // screen does not repaint until it returns. Writing the FIT file — or
+        // deleting it — is the slowest thing the app ever does, and with the
+        // history writes in front of it the end of a workout was a visible
+        // stall on the menu the athlete had just pressed. It looked like the
+        // press had not registered, which is exactly the moment to press again.
+        //
+        // Neither of these feeds the recap, so neither has to be waited for.
+        _closing = save ? CLOSE_SAVE : CLOSE_DISCARD;
+        _closingWorkout = workout;
+        _closingStartedAt = startedAt;
+        _closingFinishedAt = finishedAt;
+        _armCloser();
+    }
+
+    //! Nothing to close, the recording is being saved, or it is being dropped.
+    private static const CLOSE_NONE = 0;
+    private static const CLOSE_SAVE = 1;
+    private static const CLOSE_DISCARD = 2;
+
+    private var _closing as Number = CLOSE_NONE;
+    private var _closingWorkout as Workout?;
+    private var _closingStartedAt as Number = 0;
+    private var _closingFinishedAt as Number = 0;
+    private var _closer as Timer.Timer?;
+
+    //! Run the slow half of finishing, one tick after the recap is drawn.
+    private function _armCloser() as Void {
+        if (_closer == null) {
+            _closer = new Timer.Timer();
+        }
+        (_closer as Timer.Timer).start(method(:onClose), 50, false);
+    }
+
+    //! Is a recording still waiting to be closed? For the tests, which cannot
+    //! observe a FIT file.
+    public function closingIsPending() as Boolean {
+        return _closing != CLOSE_NONE;
+    }
+
+    //! The slow half of finishing a workout. Public because a Timer needs it.
+    //!
+    //! Safe to lose: if the app is killed between the recap appearing and this
+    //! running, the session is already in the history and the recording is
+    //! closed by `onAppStop` — which is where a dangling recording gets dealt
+    //! with anyway, because one left open blocks the watch's sleep tracking.
+    public function onClose() as Void {
+        var closing = _closing;
+        _closing = CLOSE_NONE;
+        if (closing == CLOSE_NONE) {
+            return;
+        }
+
+        if (closing == CLOSE_SAVE) {
+            _recorder.stopAndSave();
+        } else {
+            _recorder.stopAndDiscard();
+        }
+
+        // Discarding is about the Garmin recording, not about the training.
+        // A session the athlete performed is logged to Hevy either way — it is
+        // queued first, so a phone in a locker costs nothing.
+        var workout = _closingWorkout;
+        if (workout != null) {
+            HevySync.sendSession(workout as Workout, _closingStartedAt,
+                _closingFinishedAt);
+        }
+        _closingWorkout = null;
     }
 
     //! Write the Garmin activity and return to the workout list.
@@ -900,6 +960,16 @@ class AppController {
         stopTicker();
         _stopRepCounting();
         _persist();
+
+        // An answer already given wins. If the athlete pressed Save or Discard
+        // and the app is closing before the deferred half ran, honour what they
+        // chose rather than re-deciding it from the set count — a workout
+        // discarded on purpose must not be saved because it happened to contain
+        // sets.
+        if (_closing != CLOSE_NONE) {
+            onClose();
+            return;
+        }
 
         var engine = _engine;
         var logged = false;
