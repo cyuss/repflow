@@ -25,3 +25,9 @@ keys/
 .env
 .env.local
 scripts/.env
+
+# Backend virtualenv and build artefacts. The Garmin session token lives in
+# ~/.garminconnect, outside the repo, and must never be committed either.
+backend/.venv/
+backend/*.egg-info/
+backend/**/__pycache__/

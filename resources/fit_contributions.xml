@@ -23,6 +23,7 @@
          11   set               lap
          12   reps              lap
          13   weight            lap
+         14   rest              lap   (seconds before this set)
 
       displayInChart is false throughout. A chart is record-level and numeric,
       and RepFlow writes nothing per second worth plotting that Garmin does not
@@ -40,6 +41,8 @@
         <string id="fit_set_label">Set</string>
         <string id="fit_lap_reps_label">Reps</string>
         <string id="fit_lap_weight_label">Weight</string>
+        <string id="fit_lap_rest_label">Rest</string>
+        <string id="fit_seconds_units">s</string>
         <string id="fit_no_units">-</string>
     </strings>
 
@@ -81,5 +84,16 @@
                   precision="1"
                   dataLabel="@Strings.fit_lap_weight_label"
                   unitLabel="@Strings.fit_volume_units" />
+        <!--
+          The rest taken before this set. A lap covers the rest and the set
+          together, so this is what lets the two be separated afterwards —
+          both by a reader of the lap table and by backend/, which turns it
+          into Garmin's own work/rest split.
+        -->
+        <fitField id="14" sortOrder="7" displayInChart="false"
+                  displayInActivitySummary="false" displayInActivityLaps="true"
+                  precision="0"
+                  dataLabel="@Strings.fit_lap_rest_label"
+                  unitLabel="@Strings.fit_seconds_units" />
     </fitContributions>
 </resources>

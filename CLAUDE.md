@@ -69,6 +69,8 @@ Full detail: `docs/ARCHITECTURE.md`.
 | `source/SetListRenderer.mc` | The Hevy-style set list — the main screen |
 | `source/FieldGrid.mc` | Round-screen data field layout |
 | `tests/WorkoutEngineTest.mc` | The product promise, executable |
+| `backend/` | Optional: fills Garmin Connect's native exercise table after the fact |
+| `backend/tests/test_watch_contract.py` | Fails when Monkey C and Python disagree about the FIT fields |
 | `manifest.xml` | App UUID and supported products — handle with care |
 
 ## Garmin constraints — no-fake-API rule
@@ -85,7 +87,10 @@ Then record what you found in `docs/API_LIMITATIONS.md`.
 Verified limitations you must not paper over:
 
 - Connect IQ **cannot write native per-set FIT `set` messages**. RepFlow marks
-  one lap per set and writes developer fields. Do not claim otherwise.
+  one lap per set and writes developer fields. Do not claim otherwise. Garmin
+  Connect's own exercise table, work/rest split and muscle map are drawn from
+  those messages, which is why they are empty for a RepFlow activity until
+  `backend/` fills them in from the other side.
 - `ActivityRecording.Session` has **no pause/resume** — `stop()`/`start()`.
 - A recording **cannot be reattached** after an app restart.
 - Garmin Connect workouts **cannot be read or reordered** from Connect IQ.
@@ -112,7 +117,8 @@ Fenix 9 at all, even though `fenix9pro47mm` and `fenix9pro51mm` build fine).
 | Environment check | `make doctor` |
 | Build | `make build [DEVICE=id]` |
 | Build everything | `make build-all` |
-| Tests | `make test` |
+| Tests (watch + backend) | `make test` |
+| Backend setup | `make backend-setup` |
 | Simulator | `make sim [DEVICE=id]` |
 | List device ids | `make devices` |
 | Sideload to watch | `make sideload DEVICE=id` |

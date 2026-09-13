@@ -12,6 +12,8 @@
         <string id="fit_set_label">Serie</string>
         <string id="fit_lap_reps_label">Repetitions</string>
         <string id="fit_lap_weight_label">Charge</string>
+        <string id="fit_lap_rest_label">Repos</string>
+        <string id="fit_seconds_units">s</string>
         <string id="fit_no_units">-</string>
     </strings>
 </resources>

@@ -43,10 +43,18 @@ class GarminRecorder {
     private const FIELD_LAP_SET = 11;
     private const FIELD_LAP_REPS = 12;
     private const FIELD_LAP_WEIGHT = 13;
+    private const FIELD_LAP_REST = 14;
 
-    //! Longest exercise name written to a lap. The catalogue's longest is
-    //! "Bulgarian Split Squat" at 21; a string field has to declare a size.
-    private const EXERCISE_NAME_MAX = 24;
+    //! Longest exercise name written to a lap. A string field has to declare a
+    //! size, and the name that comes back out of this field is what the
+    //! backend in `backend/` matches against Garmin's exercise enum — so a
+    //! truncation here is a mis-identified exercise there.
+    //!
+    //! RepFlow's own catalogue tops out at 21 ("Bulgarian Split Squat"), but
+    //! imported names are longer: Hevy's "Triceps Extension (Cable)" is 25 and
+    //! was being cut to "Triceps Extension (Cable". 40 covers every name in the
+    //! athlete's routines with room to spare, and costs 16 bytes per lap.
+    private const EXERCISE_NAME_MAX = 40;
 
     private var _session as ActivityRecording.Session?;
     private var _setsField as FitContributor.Field?;
@@ -56,6 +64,7 @@ class GarminRecorder {
     private var _lapSetField as FitContributor.Field?;
     private var _lapRepsField as FitContributor.Field?;
     private var _lapWeightField as FitContributor.Field?;
+    private var _lapRestField as FitContributor.Field?;
     private var _started as Boolean;
 
     public function initialize() {
@@ -67,6 +76,7 @@ class GarminRecorder {
         _lapSetField = null;
         _lapRepsField = null;
         _lapWeightField = null;
+        _lapRestField = null;
         _started = false;
     }
 
@@ -132,6 +142,14 @@ class GarminRecorder {
                 "weight", FIELD_LAP_WEIGHT, FitContributor.DATA_TYPE_FLOAT,
                 { :mesgType => FitContributor.MESG_TYPE_LAP, :units => "kg" }
             );
+            // How long the athlete rested before this set. A RepFlow lap is
+            // closed when a set is logged, so it spans the rest *plus* the
+            // set; without this number the two cannot be told apart after the
+            // fact, and Garmin Connect's work/rest split has nothing to read.
+            _lapRestField = session.createField(
+                "rest", FIELD_LAP_REST, FitContributor.DATA_TYPE_UINT16,
+                { :mesgType => FitContributor.MESG_TYPE_LAP, :units => "s" }
+            );
         } catch (e) {
             // Developer fields are a bonus; the activity itself still records.
             _setsField = null;
@@ -141,6 +159,7 @@ class GarminRecorder {
             _lapSetField = null;
             _lapRepsField = null;
             _lapWeightField = null;
+            _lapRestField = null;
         }
     }
 
@@ -174,7 +193,8 @@ class GarminRecorder {
         exerciseName as String,
         setNumber as Number,
         reps as Number,
-        weightKg as Float?
+        weightKg as Float?,
+        restSeconds as Number
     ) as Boolean {
         var session = _session;
         if (session == null || !_started) {
@@ -199,6 +219,12 @@ class GarminRecorder {
             // recording a zero, which would read as "lifted nothing".
             if (_lapWeightField != null && weightKg != null) {
                 (_lapWeightField as FitContributor.Field).setData(weightKg as Float);
+            }
+            // Zero is a real answer here — the first set of a session, or a
+            // superset taken straight through — so unlike the load it is
+            // written rather than left out.
+            if (_lapRestField != null && restSeconds >= 0) {
+                (_lapRestField as FitContributor.Field).setData(restSeconds);
             }
         } catch (e) {
             // Carry on: the lap itself is worth more than the labels on it.

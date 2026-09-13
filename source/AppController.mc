@@ -26,6 +26,20 @@ class AppController {
     private var _zones as ZoneTracker;
     //! Beats dropped between sets, off the same tick as the zone chart.
     private var _recovery as RecoveryTracker;
+    //! Epoch second the current rest began, or 0 when not resting.
+    private var _restBeganAt as Number;
+    //! How long the athlete actually rested before the set about to be logged.
+    //!
+    //! Measured wall-clock from entering the rest screen to leaving it, not
+    //! read off the countdown: a timer that expires while the athlete is still
+    //! queueing for the rack understates the rest, and one that is skipped
+    //! early overstates it. Zero for the first set of a session, and for a
+    //! superset taken straight through.
+    //!
+    //! It exists because a RepFlow lap covers the rest *and* the set, so
+    //! without this number nothing downstream can separate the two. See
+    //! docs/garmin-strength-integration-poc.md.
+    private var _restedSec as Number;
     //! Repetitions counted from the wrist, when the athlete has asked for it.
     private var _reps as RepCounter;
     //! True while the accelerometer listener is registered.
@@ -64,6 +78,8 @@ class AppController {
         _engine = null;
         _recorder = new GarminRecorder();
         _rest = new RestTimer();
+        _restBeganAt = 0;
+        _restedSec = 0;
         _ticker = null;
         _zones = new ZoneTracker();
         _recovery = new RecoveryTracker();
@@ -361,6 +377,9 @@ class AppController {
         if (!engine.selectExercise(exerciseId)) {
             return false;
         }
+        // Choosing an exercise is the other way off the rest screen, and the
+        // wait is over the moment it happens.
+        _closeRest();
         var ex = engine.currentExercise();
         if (ex != null) {
             syncPendingValues(ex);
@@ -520,7 +539,9 @@ class AppController {
         engine.completeCurrentSet(reps, weight, at);
         // The lap carries what the set was, so Garmin Connect's lap table reads
         // as a set list rather than as a row of anonymous split times.
-        _recorder.markSet(exercise.name, setNumber, reps, weight);
+        _recorder.markSet(exercise.name, setNumber, reps, weight, _restedSec);
+        // Attribute a rest interval to exactly one set.
+        _restedSec = 0;
         _recorder.updateTotals(engine.summary(at));
         syncPendingValues(exercise);
         _persist();
@@ -553,11 +574,27 @@ class AppController {
 
     public function startRest(durationSec as Number) as Void {
         _rest.start(durationSec);
+        _restBeganAt = now();
         _recovery.startRest();
         _restPage = 0;
         updateRepCounting();
         _startTicker();   // already running during a workout; harmless to re-arm
         WatchUi.switchToView(new RestView(), new RestDelegate(), WatchUi.SLIDE_UP);
+    }
+
+    //! Stop counting rest, and remember how much of it there was.
+    //!
+    //! Called from every way out of the rest screen, not just the timer
+    //! finishing: an athlete who leaves to pick a different exercise has
+    //! stopped resting, and leaving the interval open would charge the wait to
+    //! whatever set is logged next.
+    private function _closeRest() as Void {
+        if (_restBeganAt == 0) {
+            return;
+        }
+        var elapsed = now() - _restBeganAt;
+        _restedSec = elapsed > 0 ? elapsed : 0;
+        _restBeganAt = 0;
     }
 
     private function _startTicker() as Void {
@@ -596,6 +633,7 @@ class AppController {
     //! the athlete a trip through the overview after every exercise.
     public function endRest() as Void {
         _rest.skip();
+        _closeRest();
         _recovery.endRest();
         updateRepCounting();
 

@@ -19,8 +19,8 @@ export DEVICE
 export TYPECHECK
 
 .PHONY: help doctor bootstrap key devices devices-all devices-missing \
-        build build-all test sim sim-fresh sim-attach shot sideload \
-        clean package release-check
+        build build-all test test-watch test-backend sim sim-fresh sim-attach \
+        shot sideload clean package release-check backend-setup
 
 help: ## Show this help
 	@echo "RepFlow — your workout, your order."
@@ -58,8 +58,19 @@ build: ## Build a signed PRG for $(DEVICE)
 build-all: ## Build every device declared in manifest.xml and installed locally
 	@scripts/build.sh --all
 
-test: ## Run the unit tests in the simulator
+test: test-watch test-backend ## Run every test — watch app and backend
+
+test-watch: ## Run the watch app's unit tests in the simulator
 	@scripts/test.sh $(DEVICE)
+
+test-backend: ## Run the Garmin Connect backend's tests (skipped if not set up)
+	@scripts/test-backend.sh
+
+backend-setup: ## Create the backend virtualenv and install it
+	@python3 -m venv backend/.venv
+	@backend/.venv/bin/pip -q install --upgrade pip
+	@backend/.venv/bin/pip -q install -e 'backend[dev]'
+	@echo "[OK]   backend ready — backend/.venv/bin/repflow-garmin --help"
 
 sim: ## Pick a device and launch RepFlow in the simulator
 	@REPFLOW_DETACH=1 scripts/run-simulator.sh $(SIM_DEVICE)

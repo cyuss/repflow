@@ -5,6 +5,31 @@ All notable changes to RepFlow are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `backend/` — `repflow-garmin`, an optional command-line tool that fills in
+  Garmin Connect's **native** exercise table for an activity RepFlow recorded.
+  It downloads the activity's original FIT, reads the per-lap developer fields
+  the watch already writes, resolves each exercise against Garmin's 1527-movement
+  enum, and writes the set list into the existing activity — no second activity,
+  and the heart rate, calories and timing the watch measured are untouched.
+  Works retroactively on every RepFlow activity ever recorded. Outside Garmin's
+  terms of service; `backend/README.md` says so plainly and says what it costs.
+- A `rest` developer FIT field (id 14) on every lap: the seconds actually rested
+  before that set. A RepFlow lap spans the rest *and* the set, so without it
+  Garmin's Work Time / Rest Time split has nothing to read.
+- `make test` now runs the backend's tests alongside the watch app's, and skips
+  them cleanly on a machine where the backend is not set up.
+
+### Changed
+
+- Exercise names written to the FIT may now be 40 characters rather than 24.
+  Imported Hevy names were being truncated — "Triceps Extension (Cable)" became
+  "Triceps Extension (Cable" — and a truncated name is a mis-identified exercise
+  when it is read back.
+
 ## [1.0.0] - 2026-09-12
 
 ### Added

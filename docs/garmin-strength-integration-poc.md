@@ -23,7 +23,7 @@ measured against the same data rather than against three different ones.
 |---|---|---|---|---|---|---|---|---|
 | **A — Connect IQ `ActivityRecording`** | ✅ real FIT, strength | ⚠️ developer field | ⚠️ 1 lap/set | ⚠️ developer field | ⚠️ developer field | ❌ Connect IQ section only | ❌ none | ✅ **shipped** |
 | **B — native FIT `set` messages from the watch** | — | ❌ | ❌ | ❌ | ❌ | — | — | ❌ **impossible** |
-| **C — backend generating FIT + upload** | ✅ real FIT, strength | ✅ native | ✅ native | ✅ native | ✅ native | ✅ **muscle map + set table** | ⚠️ yes, unsanctioned | ⚠️ needs a server |
+| **C — native sets written into the recorded activity** | ✅ real FIT, strength | ✅ native | ✅ native | ✅ native | ✅ native | ✅ **muscle map + set table** | ⚠️ yes, unsanctioned | ✅ **implemented, `backend/`** |
 
 ⚠️ in the "Private API" column is the whole cost of route C, and it is discussed
 under that heading.
@@ -263,35 +263,85 @@ That produces a perfect Garmin Connect result — and **destroys RepFlow's reaso
 to exist**, because the native player owns the order. No deferring an occupied
 machine, no choosing any exercise at any time. It is the opposite trade.
 
-### The route that actually works
+### The route that actually works — and it is better than uploading a file
 
-[hevy2garmin](https://github.com/intergalacticwiseguy/hevy2garmin) does exactly
-what this POC needs, in production, today:
+The obvious move is the one [hevy2garmin](https://github.com/intergalacticwiseguy/hevy2garmin)
+makes: build a complete FIT file server-side, with `ExerciseTitleMessage` +
+`SetMessage` per set, and upload it through `garminconnect`'s
+`client.upload_activity`. It works, in production, today.
 
-- maps 433+ Hevy exercises to **Garmin FIT exercise categories**
-- builds a FIT file with `ExerciseTitleMessage` + `SetMessage` per set, plus
-  `RecordMessage` heart-rate samples
-- uploads it with `garminconnect` → `client.upload_activity(fit_path)`
+But it creates a **second activity**. RepFlow has already recorded one, with the
+athlete's real heart rate, their real calories, their real timing — and an
+uploaded duplicate has none of that unless the file reproduces it, after which
+there are two activities and one of them has to be deleted.
 
-`upload_activity` is the **reverse-engineered Garmin Connect web endpoint**, not
-a program API. That is the ⚠️ in the table:
+There is a better endpoint, and it is the one Garmin Connect's own web client
+uses when a person edits a strength activity by hand:
 
-- no Garmin approval, no agreement, works for an individual today
-- **unsanctioned**: it can break without notice, and it is outside Garmin's terms
-- it needs the user's Garmin Connect credentials, which is a real security
-  burden for anyone but the user themselves
+```
+GET  /activity-service/activity/{id}/exerciseSets
+PUT  /activity-service/activity/{id}/exerciseSets
+```
 
-For RepFlow specifically, the pieces already built carry most of this: `HevyMap`
-produces exactly the exercise/set/rep/weight structure a FIT builder needs, and
-`HevySync` already posts it. A backend would consume the same payload.
+The PUT writes native exercise sets **into an activity that already exists**.
+So the activity RepFlow recorded keeps everything it measured, and only the set
+table is filled in. Nothing is uploaded twice and nothing has to be deleted.
+
+The body, confirmed against a payload posted by a Garmin Connect user and
+against what `cyberjunky/python-garminconnect` sends:
+
+```json
+{"activityId": 4172875329,
+ "exerciseSets": [
+   {"exercises": [{"category": "BENCH_PRESS",
+                   "name": "BARBELL_BENCH_PRESS",
+                   "probability": 100.0}],
+    "duration": 26.9,
+    "repetitionCount": 8,
+    "weight": 80000.0,
+    "setType": "ACTIVE",
+    "startTime": "2026-09-13T12:07:33.0",
+    "wktStepIndex": null}]}
+```
+
+Weight in **grams**. `setType` is `ACTIVE` or `REST`, which is what feeds Work
+Time and Rest Time. Semantics are replace-all.
+
+Two properties make this materially better than the upload route:
+
+- **The source data is already on Garmin's servers.** RepFlow writes the
+  exercise, set number, reps and load as developer fields on every lap, and
+  developer fields are self-describing — the FIT file carries its own field
+  definitions. Downloading the original activity and reading them back needs no
+  Hevy, no watch change, and no capture at the time. **Every RepFlow activity
+  ever recorded can be filled in retroactively.**
+- **It is additive.** The heart rate, calories and duration the watch measured
+  are untouched.
 
 ### What is missing, concretely
 
-1. A server. RepFlow is currently a watch app with no infrastructure.
-2. An exercise → FIT category map. RepFlow's catalogue has 82 movements with
-   muscle groups; Garmin's `exercise_category` enum is a different vocabulary.
-3. Garmin Connect authentication per user.
-4. A decision about operating an unsanctioned integration.
+1. Garmin Connect authentication per athlete. There is no way around signing in
+   as the person whose activity it is.
+2. An exercise → Garmin enum map. Garmin validates `(category, name)` against
+   its own catalogue — 1527 movements in 47 categories — and rejects the whole
+   request for one unknown value. The category is also what draws the muscle
+   map, so a confident wrong answer is worse than an unspecific right one.
+3. A decision about operating outside Garmin's terms of service.
+
+### Implemented
+
+`backend/` does all three. `repflow-garmin fill` downloads the activity's
+original FIT, reads RepFlow's laps out of it, resolves each exercise against
+Garmin's enum, and PUTs the set list. RepFlow's own eighty movements are mapped
+by hand — fuzzy matching filed "Barbell Curl" as a barbell *wrist* curl and
+"Back Extension" under resistance bands, both plausible and both the wrong
+muscle group — and anything unrecognisable is reported rather than guessed. See
+[`../backend/README.md`](../backend/README.md).
+
+The watch gained one field for this: `rest`, the seconds the athlete actually
+rested before each set. A RepFlow lap is closed when a set is logged, so it
+spans the rest *and* the set; without that number the two cannot be separated
+afterwards, and Garmin's Work Time / Rest Time have nothing to read.
 
 ---
 
@@ -309,10 +359,10 @@ opposite directions, and the ordering matters:
 - Route **C**'s *official* half — the Training API — buys a native activity by
   handing the order back to Garmin's player. That fails the first requirement
   outright, so it is not a candidate.
-- Route **C**'s *working* half — generate FIT server-side and upload — preserves
-  navigation completely, because it acts after the session is over. It is the
-  only way to get the muscle map. It costs a server and sits outside Garmin's
-  terms.
+- Route **C**'s *working* half — write native exercise sets into the activity
+  RepFlow already recorded — preserves navigation completely, because it acts
+  after the session is over. It is the only way to get the muscle map. It costs
+  a Garmin Connect sign-in and sits outside Garmin's terms.
 - Route **A** preserves navigation, ships today, needs nothing, and gives the
   athlete every physiological metric plus a labelled set list in the Connect IQ
   section.
@@ -325,10 +375,10 @@ per-muscle analytics. That is the same split Rack uses — set detail in a
 companion app, physiology in Garmin Connect — with the difference that Hevy is
 an app the athlete already keeps their training in.
 
-**Next, if the muscle map proves to matter more than the absence of a server:**
-route C as an opt-in. The session already leaves the watch as a Hevy payload;
-a backend subscribes to it, builds the FIT, and uploads. Nothing on the watch
-changes, and an athlete who does not want it is unaffected.
+**Next (done):** route C as an opt-in, in `backend/`. It reads the activity
+Garmin already stores rather than anything the watch sends, so an athlete who
+never runs it is unaffected and one who runs it a year late gets the same
+result.
 
 **Before either:** settle the two things documentation cannot.
 
