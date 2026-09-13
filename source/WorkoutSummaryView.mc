@@ -23,7 +23,7 @@ import Toybox.WatchUi;
 //! rather than a fabricated zero when the device does not provide them.
 class WorkoutSummaryView extends WatchUi.View {
 
-    public static const PAGE_COUNT = 5;
+    public static const PAGE_COUNT = 7;
 
     private var _summary as SessionSummary;
     private var _workout as Workout;
@@ -31,7 +31,8 @@ class WorkoutSummaryView extends WatchUi.View {
     //! Whole kilograms per muscle group for the week this session fell in,
     //! read once at construction — the pages repaint on every tick.
     private var _weekly as Array<Number>;
-    private var _records as Number;
+    //! What was beaten this session: `[name, History.RECORD_*, reps, kg]` rows.
+    private var _records as Array;
     //! Garmin's Body Battery when the session began, for the before-and-after.
     private var _batteryStart as Number?;
     //! Best one-minute heart rate recovery this session.
@@ -44,7 +45,7 @@ class WorkoutSummaryView extends WatchUi.View {
         workout as Workout,
         zones as ZoneTracker,
         weekly as Array<Number>,
-        records as Number,
+        records as Array,
         batteryStart as Number?,
         recovery as Number?,
         saved as Boolean
@@ -99,9 +100,9 @@ class WorkoutSummaryView extends WatchUi.View {
             ? WatchUi.loadResource(Rez.Strings.SummaryTitle) as String
             : WatchUi.loadResource(Rez.Strings.SummaryDiscarded) as String;
         var statusColor = _saved ? Theme.colorDone() : Theme.colorFaint();
-        if (_saved && _records > 0) {
-            status = _records.toString() + " " +
-                (WatchUi.loadResource(_records == 1
+        if (_saved && _records.size() > 0) {
+            status = _records.size().toString() + " " +
+                (WatchUi.loadResource(_records.size() == 1
                     ? Rez.Strings.RecordOne
                     : Rez.Strings.RecordMany) as String);
             statusColor = Theme.colorWarm();
@@ -122,6 +123,10 @@ class WorkoutSummaryView extends WatchUi.View {
         } else if (_page == 3) {
             _drawExercisesPage(dc, top, bottom);
         } else if (_page == 4) {
+            _drawEffortPage(dc, top, bottom);
+        } else if (_page == 5) {
+            _drawRecordsPage(dc, top, bottom);
+        } else if (_page == 6) {
             _drawWeekPage(dc, top, bottom);
         } else {
             _drawWorkPage(dc, top, bottom);
@@ -171,25 +176,36 @@ class WorkoutSummaryView extends WatchUi.View {
     //! how hard the session actually was on the athlete, rather than how much
     //! iron moved.
     //!
-    //! The two RepFlow numbers sit in the **middle** band, which is the widest
-    //! one on a round screen and the only one "BODY BATT" fits in. On a Fenix 6
-    //! Pro the bottom band gives each caption 56px and that label needs 77, so
-    //! it grew into "REC" beside it — reported from a real watch. Garmin's own
-    //! two heart rate figures moved down in its place: "AVG HR" and "MAX HR"
-    //! are 50px and comfortable there.
+    //! What the session cost the athlete, rather than how much iron moved.
     //!
-    //! The arrangement also reads better than it did. Recovery and Body Battery
-    //! answer what the session cost the athlete, which is the question this page
-    //! exists for, and they now sit where the eye lands first.
+    //!            88
+    //!        BODY BATT
+    //!     -21    |    212
+    //!    REC HR  |    KCAL
+    //!     128    |    156
+    //!     AVG    |    MAX
+    //!
+    //! **Body Battery takes the full-width band**, and that is a layout decision
+    //! before it is an editorial one. On a round screen the three bands are not
+    //! the same width: the single one spans the middle of the glass, the pair
+    //! below it gets 91px a cell, and the bottom pair gets 64. "BODY BATT" needs
+    //! 77px, so anywhere but the full-width band it either collides with its
+    //! neighbour or has to be abbreviated into something that reads as the
+    //! watch's own battery.
+    //!
+    //! It earns the position anyway: it is the one number that answers what the
+    //! session took out of you, which is the question this page exists for.
+    //!
+    //! The heart rate pair is captioned **AVG** and **MAX**, not "AVG HR" and
+    //! "MAX HR". At 50px in a 64px cell those two left seven pixels either side
+    //! of the divider and read as touching on a real watch — reported, then
+    //! measured. They sit together, in the heart rate colour, one page below a
+    //! recovery figure also labelled HR; the two dropped words are carried by
+    //! everything around them.
     private function _drawBodyPage(dc as Graphics.Dc, top as Number, bottom as Number) as Void {
         var edge = FieldGrid.edgeHeight(top, bottom);
         var middleTop = top + edge;
         var bottomTop = bottom - edge;
-
-        FieldGrid.drawSingle(dc, top, edge,
-            LiveMetrics.format(LiveMetrics.calories()),
-            WatchUi.loadResource(Rez.Strings.FieldKcal) as String,
-            Theme.colorWarm());
 
         // Best beats dropped in a minute of rest, and what the session cost in
         // Body Battery. Both are "--" when the watch could not measure them,
@@ -211,14 +227,18 @@ class WorkoutSummaryView extends WatchUi.View {
             batteryColor = Theme.colorDone();
         }
 
+        FieldGrid.drawSingle(dc, top, edge, batteryText,
+            WatchUi.loadResource(Rez.Strings.FieldBattery) as String,
+            batteryColor);
+
         FieldGrid.drawRule(dc, middleTop);
         FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
             recoveryText,
             WatchUi.loadResource(Rez.Strings.FieldRecovery) as String,
             _recovery == null ? Theme.colorFaint() : Theme.colorDone(),
-            batteryText,
-            WatchUi.loadResource(Rez.Strings.FieldBattery) as String,
-            batteryColor);
+            LiveMetrics.format(LiveMetrics.calories()),
+            WatchUi.loadResource(Rez.Strings.FieldKcal) as String,
+            Theme.colorWarm());
 
         FieldGrid.drawRule(dc, bottomTop);
         FieldGrid.drawPair(dc, bottomTop, edge,
@@ -228,6 +248,227 @@ class WorkoutSummaryView extends WatchUi.View {
             LiveMetrics.format(LiveMetrics.maxHeartRate()),
             WatchUi.loadResource(Rez.Strings.FieldMaxHr) as String,
             Theme.colorHr());
+    }
+
+    //! How hard the session felt, set by set.
+    //!
+    //!            8.2
+    //!           AVG RPE
+    //!        ▁▃▅▆▇▆▅█
+    //!        first        last
+    //!
+    //! One bar per rated set, in the order they were performed, at the height
+    //! of its rating and in its colour. A list of numbers would say what each
+    //! set cost; the shape says whether the session held together — a ramp
+    //! means you built into it, a wall of nines from the second set means you
+    //! opened too heavy, and neither is visible any other way.
+    //!
+    //! Unrated sets are drawn as a mark on the baseline rather than skipped, so
+    //! the chart keeps the session's real length and a gap reads as "not rated"
+    //! instead of "did not happen".
+    private function _drawEffortPage(dc as Graphics.Dc, top as Number, bottom as Number) as Void {
+        var rated = [] as Array;      // Float? per performed set, in order
+        var sum = 0.0;
+        var count = 0;
+        var list = _workout.exercises;
+        for (var i = 0; i < list.size(); i++) {
+            var sets = list[i].sets;
+            for (var j = 0; j < sets.size(); j++) {
+                var set = sets[j];
+                if (!set.completed) {
+                    continue;
+                }
+                rated.add(set.rpe);
+                if (set.rpe != null) {
+                    sum += set.rpe as Float;
+                    count++;
+                }
+            }
+        }
+
+        var caption = WatchUi.loadResource(Rez.Strings.FieldRpe) as String;
+        if (count == 0) {
+            // Nothing was rated. Saying "--" is true; drawing an empty chart
+            // would look like a rendering fault.
+            FieldGrid.drawSingle(dc, top, bottom - top, LiveMetrics.NO_VALUE, caption,
+                Theme.colorFaint());
+            return;
+        }
+
+        var average = sum / count;
+        var edge = FieldGrid.edgeHeight(top, bottom);
+        FieldGrid.drawSingle(dc, top, edge, Rpe.format(_nearestRung(average)),
+            WatchUi.loadResource(Rez.Strings.AvgRpe) as String, Rpe.color(_nearestRung(average)));
+        FieldGrid.drawRule(dc, top + edge);
+        _drawEffortChart(dc, top + edge, bottom, rated);
+    }
+
+    //! The rung nearest a computed average, so it can be drawn and coloured.
+    //!
+    //! An average of 8.2 is not a rating anybody gave; it is arithmetic over
+    //! ratings. Snapping it to the ladder is what lets it share the scale's
+    //! colours and its "8.5 not 8.50" formatting, and it never claims more
+    //! precision than the eight rungs have.
+    private function _nearestRung(value as Float) as Float {
+        var best = Rpe.SCALE[0];
+        var gap = (value - best).abs();
+        for (var i = 1; i < Rpe.SCALE.size(); i++) {
+            var candidate = Rpe.SCALE[i];
+            var distance = (value - candidate).abs();
+            if (distance < gap) {
+                best = candidate;
+                gap = distance;
+            }
+        }
+        return best;
+    }
+
+    private function _drawEffortChart(
+        dc as Graphics.Dc,
+        top as Number,
+        bottom as Number,
+        rated as Array
+    ) as Void {
+        var count = rated.size();
+        if (count <= 0) {
+            return;
+        }
+        var height = bottom - top;
+        var inset = height / 8;
+        var chartTop = top + inset;
+        var baseline = bottom - inset;
+        var span = baseline - chartTop;
+        if (span <= 4) {
+            return;
+        }
+
+        // The page-dot gutter off both sides, as every chart on these pages
+        // does, so the block stays centred.
+        var gutter = dc.getWidth() / 14;
+        var width = Theme.bandWidth(dc, chartTop, span) - gutter;
+        var left = (dc.getWidth() - width) / 2;
+        var pitch = width / count;
+        var barWidth = (pitch * 62) / 100;
+        if (barWidth < 2) {
+            barWidth = 2;
+        }
+
+        // The bottom of the scale is RPE 6, not zero. A chart that started at
+        // zero would spend three quarters of its height on effort nobody logs,
+        // and every session would look identically hard.
+        var rungs = Rpe.size();
+        for (var i = 0; i < count; i++) {
+            var x = left + i * pitch + (pitch - barWidth) / 2;
+            var value = rated[i] as Float?;
+            var rung = Rpe.indexOf(value);
+            if (rung < 0) {
+                // Unrated: a mark on the baseline, so the set still occupies
+                // its place in the session.
+                dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
+                Theme.fillBar(dc, x, baseline - 2, barWidth, 2);
+                continue;
+            }
+            var barHeight = (span * (rung + 1)) / rungs;
+            barHeight = (barHeight * Animator.value()).toNumber();
+            if (barHeight < 2) {
+                barHeight = 2;
+            }
+            dc.setColor(Rpe.colorAt(rung), Graphics.COLOR_TRANSPARENT);
+            Theme.fillBar(dc, x, baseline - barHeight, barWidth, barHeight);
+        }
+
+        dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
+        dc.fillRectangle(left, baseline, width, 1);
+    }
+
+    //! What was beaten today, and by how much.
+    //!
+    //!        2 RECORDS
+    //!     Bench Press
+    //!     WEIGHT   82.5 kg
+    //!     Lat Pulldown
+    //!     EST 1RM  95 kg
+    //!
+    //! A count on the first page says "2 records" and leaves the athlete to work
+    //! out which lift and by what, which is the whole of what they want to know.
+    //! This names them.
+    //!
+    //! Records are rare, so the empty state is the common one and it says so
+    //! plainly rather than showing an empty list.
+    private function _drawRecordsPage(dc as Graphics.Dc, top as Number, bottom as Number) as Void {
+        if (_records.size() == 0) {
+            FieldGrid.drawSingle(dc, top, bottom - top,
+                LiveMetrics.NO_VALUE,
+                WatchUi.loadResource(Rez.Strings.RecordMany) as String,
+                Theme.colorFaint());
+            return;
+        }
+
+        var font = Graphics.FONT_XTINY;
+        var lineHeight = dc.getFontHeight(font);
+        var rowHeight = lineHeight * 2 + lineHeight / 3;
+        var available = bottom - top;
+
+        var shown = _records.size();
+        var rows = available / rowHeight;
+        if (rows < 1) {
+            return;
+        }
+        var truncated = false;
+        if (shown > rows) {
+            shown = rows - 1;
+            truncated = true;
+        }
+        if (shown < 1) {
+            shown = 1;
+            truncated = _records.size() > 1;
+        }
+
+        var used = (shown + (truncated ? 1 : 0)) * rowHeight;
+        var y = top + (available - (used - lineHeight / 3)) / 2;
+        if (y < top) {
+            y = top;
+        }
+
+        var gutter = dc.getWidth() / 14;
+        var width = Theme.bandWidth(dc, y, used) - gutter;
+        var left = (dc.getWidth() - width) / 2;
+
+        for (var i = 0; i < shown; i++) {
+            var row = _records[i] as Array;
+            Theme.drawClippedAt(dc, left, y, row[0] as String, font,
+                Theme.colorText(), width);
+
+            var kind = WatchUi.loadResource(_recordLabel(row[1] as Number)) as String;
+            dc.setColor(Theme.colorWarm(), Graphics.COLOR_TRANSPARENT);
+            dc.drawText(left, y + lineHeight, font, kind, Graphics.TEXT_JUSTIFY_LEFT);
+
+            var weight = row[3] as Float?;
+            if (weight != null) {
+                dc.setColor(Theme.colorAccent(), Graphics.COLOR_TRANSPARENT);
+                dc.drawText(left + width, y + lineHeight, font,
+                    Theme.formatWeight(weight as Float) + " " + Units.label(),
+                    Graphics.TEXT_JUSTIFY_RIGHT);
+            }
+            y += rowHeight;
+        }
+
+        if (truncated) {
+            dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
+            dc.drawText(dc.getWidth() / 2, y, font,
+                "+" + (_records.size() - shown).toString(),
+                Graphics.TEXT_JUSTIFY_CENTER);
+        }
+    }
+
+    private function _recordLabel(kind as Number) as ResourceId {
+        if (kind == History.RECORD_WEIGHT) {
+            return Rez.Strings.RecordWeight;
+        }
+        if (kind == History.RECORD_1RM) {
+            return Rez.Strings.Record1RM;
+        }
+        return Rez.Strings.RecordVolume;
     }
 
     //! The week's volume, muscle group by muscle group.

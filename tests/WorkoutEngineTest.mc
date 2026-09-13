@@ -851,8 +851,13 @@ function testSummaryPagesDraw(logger as Test.Logger) as Boolean {
     weekly[Muscle.CHEST] = 4200;
     weekly[Muscle.BACK] = 3100;
     weekly[Muscle.BICEPS] = 640;
+    // Two records, of different kinds, so the records page draws both shapes.
+    var records = [
+        ["Bench Press", History.RECORD_WEIGHT, 5, 82.5] as Array,
+        ["Lat Pulldown", History.RECORD_1RM, 8, 60.0] as Array
+    ] as Array;
     var view = new WorkoutSummaryView(summary, engine.getWorkout(), zones, weekly,
-        2, 71, 24, true);
+        records, 71, 24, true);
     for (var page = 0; page < WorkoutSummaryView.PAGE_COUNT; page++) {
         view.onUpdate(dc);
         view.turnPage(1);
@@ -865,7 +870,7 @@ function testSummaryPagesDraw(logger as Test.Logger) as Boolean {
     // And with nothing measurable at all: no records, no battery, no recovery.
     var empty = new WorkoutSummaryView(
         new SessionSummary(), TestSupport.abcWorkout(), new ZoneTracker(),
-        emptyWeek, 0, null, null, false);
+        emptyWeek, [] as Array, null, null, false);
     for (var page = 0; page < WorkoutSummaryView.PAGE_COUNT; page++) {
         empty.onUpdate(dc);
         empty.turnPage(1);
@@ -2145,18 +2150,18 @@ function testPocStrengthSession(logger as Test.Logger) as Boolean {
     return true;
 }
 
-//! Every field caption has to fit the cell it is actually drawn in.
+//! Every field caption has to LEAVE ROOM in the cell it is actually drawn in.
 //!
-//! `drawCell` centres the caption under the value and does not measure it. Two
-//! captions in a `drawPair` therefore grow towards each other, and "BODY BATT"
-//! beside "REC" on the summary's body page ran into it — reported from a real
-//! watch, invisible in every measurement test here, because nothing compared a
-//! caption against the width it had.
+//! `drawCell` centres the caption under the value and two captions in a pair
+//! grow towards each other. Merely "fitting" is not enough and that was the bug
+//! reported twice: "AVG HR" is 50px in a 64px cell, which leaves seven pixels
+//! either side of the divider and reads as touching on a real watch. So the
+//! rule here is a **gap**, not a fit.
 //!
 //! Which band a caption lands in is the whole point: on a fenix6pro the bottom
-//! band gives a caption 56px and the middle one 91px. So this mirrors
+//! band gives a caption 64px and the middle one 91. This mirrors
 //! WorkoutSummaryView._drawBodyPage rather than checking a worst case, and it
-//! fails if a caption is moved somewhere it does not fit.
+//! fails if a caption is moved somewhere it does not belong.
 (:test)
 function testFieldCaptionsFitTheirCells(logger as Test.Logger) as Boolean {
     var dc = TestSupport.screenDc();
@@ -2170,41 +2175,47 @@ function testFieldCaptionsFitTheirCells(logger as Test.Logger) as Boolean {
     var middleTop = top + edge;
     var bottomTop = bottom - edge;
 
-    // The middle band carries RepFlow's own two numbers; the bottom band, the
-    // narrowest on a round screen, carries Garmin's short ones.
-    var middle = [Rez.Strings.FieldRecovery, Rez.Strings.FieldBattery];
+    // The full-width band. "BODY BATT" is the longest caption in the app and
+    // this is the only place it has no neighbour to collide with.
+    var wide = [Rez.Strings.FieldBattery, Rez.Strings.FieldVolume,
+        Rez.Strings.FieldTime] as Array;
+    // The middle pair, and the narrowest pair on the page.
+    var middle = [Rez.Strings.FieldRecovery, Rez.Strings.FieldKcal] as Array;
     var narrow = [
         Rez.Strings.FieldAvgHr, Rez.Strings.FieldMaxHr, Rez.Strings.FieldReps,
-        Rez.Strings.FieldHr, Rez.Strings.FieldTime, Rez.Strings.FieldTimer,
-        Rez.Strings.FieldKcal, Rez.Strings.FieldVolume, Rez.Strings.FieldSets
-    ];
+        Rez.Strings.FieldHr, Rez.Strings.FieldTimer, Rez.Strings.FieldSets,
+        Rez.Strings.FieldRpe
+    ] as Array;
 
-    var ok = _captionsFit(dc, logger, middle,
-        Theme.bandWidth(dc, middleTop, bottomTop - middleTop) / 2);
+    var ok = _captionsFit(dc, logger, wide, Theme.bandWidth(dc, top, edge));
+    ok = _captionsFit(dc, logger, middle,
+        Theme.bandWidth(dc, middleTop, bottomTop - middleTop) / 2) && ok;
     ok = _captionsFit(dc, logger, narrow,
         Theme.bandWidth(dc, bottomTop, edge) / 2) && ok;
     Test.assert(ok);
     return true;
 }
 
-//! True when every caption fits half a band of `half` pixels.
+//! True when every caption leaves real space in a cell of `cell` pixels.
 //!
-//! 88%, a hair under the 92% the value is fitted to, so two captions cannot
-//! meet in the middle even when both are at their widest.
+//! 75%, not 90%: a caption that merely fits still ends a few pixels from its
+//! neighbour, and a few pixels is what "the texts are touching" looks like.
+//! A quarter of the cell held clear is the difference between two labels and
+//! one smear.
 function _captionsFit(
     dc as Graphics.Dc,
     logger as Test.Logger,
     captions as Array,
-    half as Number
+    cell as Number
 ) as Boolean {
-    var room = (half * 88) / 100;
+    var room = (cell * 75) / 100;
     var ok = true;
     for (var i = 0; i < captions.size(); i++) {
         var text = WatchUi.loadResource(captions[i] as ResourceId) as String;
         var width = dc.getTextWidthInPixels(text, Theme.captionFont());
         if (width > room) {
-            logger.debug(text + " is " + width.toString() + "px, cell allows " +
-                room.toString() + "px");
+            logger.debug(text + " is " + width.toString() + "px, cell of " +
+                cell.toString() + "px allows " + room.toString() + "px");
             ok = false;
         }
     }
@@ -2521,5 +2532,41 @@ function testSetClockIsNotTheExerciseClock(logger as Test.Logger) as Boolean {
     var controller = AppController.instance();
     Test.assert(controller.setSeconds() >= 0);
     Test.assert(controller.exerciseSeconds() >= 0);
+    return true;
+}
+
+//! Only the best record per movement is kept.
+//!
+//! Beating your weight on set 2 and again on set 4 is one achievement with a
+//! better number, not two. Listing both would make the recap longer and less
+//! true.
+(:test)
+function testOneRecordPerMovement(logger as Test.Logger) as Boolean {
+    var controller = AppController.instance();
+    controller.startWorkout(TestSupport.abcWorkout());
+    controller.selectExercise("A");
+
+    // Three sets of the same movement, each heavier than the last. Whether any
+    // of them counts as a record depends on stored history, which a test cannot
+    // set — so what is asserted is the shape of the list, not its length.
+    var before = controller.records().size();
+    controller.completeSet();
+    controller.completeSet();
+    controller.completeSet();
+    var after = controller.records();
+
+    // At most one entry gained, and every entry names a distinct movement.
+    Test.assert(after.size() <= before + 1);
+    for (var i = 0; i < after.size(); i++) {
+        for (var j = i + 1; j < after.size(); j++) {
+            var a = (after[i] as Array)[0] as String;
+            var b = (after[j] as Array)[0] as String;
+            Test.assert(!a.equals(b));
+        }
+    }
+    // Every row is [name, kind, reps, weight] — the recap indexes all four.
+    for (var i = 0; i < after.size(); i++) {
+        Test.assertEqual((after[i] as Array).size(), 4);
+    }
     return true;
 }

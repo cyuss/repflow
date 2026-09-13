@@ -55,6 +55,16 @@ class AppController {
     //! The best thing that happened this session, for the recap.
     private var _bestRecord as Number;
     private var _recordCount as Number;
+    //! What was beaten this session, in the order it happened.
+    //!
+    //! `[exercise name, History.RECORD_*, reps, weightKg]` per entry, kept so
+    //! the recap can name them. A count alone says "2 records" and leaves the
+    //! athlete to work out which lift and by what — which is the whole of what
+    //! they want to know.
+    //!
+    //! Only the **best** record per movement is kept: beating your weight three
+    //! times in one session is one story, not three.
+    private var _records as Array;
     //! Weight/reps the athlete has dialled in for the set about to be performed.
     //!
     //! The weight is nullable, and null is not zero: it means the routine sets
@@ -104,6 +114,7 @@ class AppController {
         _bests = {} as Dictionary;
         _bestRecord = History.RECORD_NONE;
         _recordCount = 0;
+        _records = [] as Array;
         _pendingWeight = null;
         _pendingReps = 0;
         _pendingRpe = null;
@@ -249,6 +260,11 @@ class AppController {
 
     public function recordCount() as Number {
         return _recordCount;
+    }
+
+    //! What was beaten this session. See _records.
+    public function records() as Array {
+        return _records;
     }
 
     //! What was done on this movement in the last session that touched it.
@@ -604,6 +620,7 @@ class AppController {
             if (record > _bestRecord) {
                 _bestRecord = record;
             }
+            _noteRecord(exercise.name, record, reps, weight);
             Haptics.record();
         } else {
             Haptics.setLogged();
@@ -673,6 +690,37 @@ class AppController {
         }
         _restBeganAt = began;
         WatchUi.requestUpdate();
+    }
+
+    //! Keep the best record this movement set today, replacing a lesser one.
+    //!
+    //! A lifter who beats their weight on set 2 and again on set 4 has one
+    //! achievement with a better number, not two achievements. Listing both
+    //! would make the recap longer and less true.
+    private function _noteRecord(
+        name as String,
+        kind as Number,
+        reps as Number,
+        weightKg as Float?
+    ) as Void {
+        for (var i = 0; i < _records.size(); i++) {
+            var row = _records[i] as Array;
+            if (!(row[0] as String).equals(name)) {
+                continue;
+            }
+            // A heavier record beats a lighter one of the same kind, and a
+            // better kind beats any of a lesser one — see History.RECORD_*.
+            var better = kind > (row[1] as Number);
+            if (kind == (row[1] as Number) && weightKg != null) {
+                var had = row[3] as Float?;
+                better = had == null || (weightKg as Float) > (had as Float);
+            }
+            if (better) {
+                _records[i] = [name, kind, reps, weightKg] as Array;
+            }
+            return;
+        }
+        _records.add([name, kind, reps, weightKg] as Array);
     }
 
     //! Stop counting rest, and remember how much of it there was.
@@ -792,7 +840,7 @@ class AppController {
         // repainted on every tick and Storage is not free.
         var weekly = History.volumeForWeek(finishedAt);
         var view = new WorkoutSummaryView(summary, workout, _zones, weekly,
-            _recordCount, _batteryStart, _recovery.best(), save);
+            _records, _batteryStart, _recovery.best(), save);
         WatchUi.switchToView(view, new WorkoutSummaryDelegate(view), WatchUi.SLIDE_UP);
     }
 
@@ -843,6 +891,7 @@ class AppController {
         _bests = History.loadBests();
         _bestRecord = History.RECORD_NONE;
         _recordCount = 0;
+        _records = [] as Array;
     }
 
     private function _persist() as Void {

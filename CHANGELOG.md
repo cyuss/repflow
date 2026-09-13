@@ -29,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   can be recovered weeks later without the watch. `sync-hevy-show` previews it.
   The API key is asked for and never stored.
 
+- **An effort page** in the recap: one bar per rated set, in the order they
+  were performed, at the height of its rating and in its colour, with the
+  session average above. The shape says whether the session held together in a
+  way a list of numbers does not.
+- **A records page** in the recap, naming what was beaten and by how much. The
+  first page said "2 records" and left the athlete to work out which lift.
 - **A set clock** on the exercise screen, beside the exercise clock. They
   measure different spans — the exercise timer runs through every rest, so it
   answers a question about the last ten minutes rather than about the bar in
@@ -59,8 +65,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - On the summary's body page, recovery and Body Battery moved to the middle
   band and Garmin's two heart rate figures to the bottom one: "BODY BATT" needs
   77px and the bottom band allows 56.
-- Field captions drop a size when they do not fit, which is what was happening
-  to "AVG HR" and "MAX HR" on a watch with large fonts turned on.
+- On the summary's body page, Body Battery takes the full-width band — its
+  caption is the longest in the app and that is the only band with no
+  neighbour — and the heart rate pair is captioned AVG and MAX. At 50px in a
+  64px cell "AVG HR" left seven pixels either side of the divider and read as
+  touching. Field captions also drop a size when they do not fit, and the test
+  now requires a quarter of the cell held clear rather than a bare fit.
 - The exercise-screen heart rate row is a zone-coloured heart and the number,
   without the zone gauge and the "Z3" beside it.
 - Exercise names written to the FIT may now be 40 characters rather than 24.
