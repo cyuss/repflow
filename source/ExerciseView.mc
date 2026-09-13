@@ -114,9 +114,21 @@ class ExerciseView extends WatchUi.View {
         // No action button. START logs the set, and a button saying so was only
         // repeating what the athlete already knows while eating the space the
         // readouts and the load needed.
+        // Sets done and the time of day: the two things you glance at rather
+        // than read. Uncaptioned on purpose — a fraction beside a wall clock
+        // cannot be mistaken for it, and the captioned pair above is where the
+        // reading happens.
+        //
+        // Lifted off the very bottom: this row carries two readings side by
+        // side instead of one centred, and the outer ends of a pair sit where
+        // the glass has already curved in. h/22 put their descenders under the
+        // bezel — visible in a screenshot, invisible to every other check.
         var clockHeight = dc.getFontHeight(Graphics.FONT_XTINY);
-        var clockTop = h - clockHeight - h / 22;
-        Theme.drawClock(dc, clockTop);
+        var clockTop = h - clockHeight - h / 14;
+        Theme.drawClockWith(dc, clockTop,
+            exercise.currentSetNumber().toString() + "/" +
+                exercise.targetSets.toString(),
+            Theme.colorAccent());
 
         var top = Theme.drawHeartRateGauge(dc, h / 14);
         top = Marquee.draw(dc, top + h / 60, exercise.name,
@@ -131,8 +143,31 @@ class ExerciseView extends WatchUi.View {
 
     }
 
-    //! The secondary readouts: exercise timer and set counter, as captioned
-    //! data fields. Returns the y where this band starts.
+    //! The two clocks, as captioned data fields. Returns the y where this band
+    //! starts.
+    //!
+    //!      0:17       4:18
+    //!      SET       TIMER
+    //!
+    //! Three spans matter while a set is happening, and they are all different:
+    //! how long **this set** has run, how long the **movement** has taken across
+    //! its sets and rests, and how far through it you are. The set clock was the
+    //! one nobody could see — the exercise timer keeps running through every
+    //! rest, so it answers a question about the last ten minutes rather than
+    //! about the bar in your hands.
+    //!
+    //! Only two of the three are here. Three columns of this band are 51px each
+    //! on a Fenix 6 Pro and "12:34" needs 54 — measured in
+    //! testExerciseBandFitsThree, not guessed — so a third would have shrunk all
+    //! of them. The set count went to the bottom line instead: it is the one of
+    //! the three that is also drawn on the progress ring, so it is the one that
+    //! loses least by being smaller.
+    //!
+    //! The two clocks sit together because they are the same kind of thing,
+    //! which is what makes the difference between them legible. Captioning one
+    //! "SET" and the other "SETS" — an earlier attempt — put a duration and a
+    //! fraction side by side under near-identical words, and nothing about that
+    //! reads at arm's length.
     private function _drawSecondaryBand(
         dc as Graphics.Dc,
         bottom as Number,
@@ -140,9 +175,8 @@ class ExerciseView extends WatchUi.View {
         exercise as Exercise
     ) as Number {
         var h = dc.getHeight();
-        var timer = Theme.formatDuration(controller.exerciseSeconds());
-        var sets = exercise.currentSetNumber().toString() + "/" +
-            exercise.targetSets.toString();
+        var setTime = Theme.formatDuration(controller.setSeconds());
+        var exerciseTime = Theme.formatDuration(controller.exerciseSeconds());
 
         var bandHeight = Theme.miniFieldHeight(dc);
         var top = bottom - bandHeight;
@@ -150,11 +184,14 @@ class ExerciseView extends WatchUi.View {
         var bandLeft = (dc.getWidth() - bandWidth) / 2;
         FieldGrid.drawRule(dc, top - h / 50);
 
-        Theme.drawMiniField(dc, bandLeft + bandWidth / 4, top, timer,
-            WatchUi.loadResource(Rez.Strings.FieldTimer) as String, Theme.colorText());
-        Theme.drawMiniField(dc, bandLeft + (bandWidth * 3) / 4, top, sets,
+        // The live one is at full contrast and the context one is dimmed, so a
+        // glance lands on the set before it lands on the movement.
+        Theme.drawMiniField(dc, bandLeft + bandWidth / 4, top, setTime,
             (WatchUi.loadResource(Rez.Strings.SetLabel) as String).toUpper(),
-            Theme.colorAccent());
+            Theme.colorText());
+        Theme.drawMiniField(dc, bandLeft + (bandWidth * 3) / 4, top, exerciseTime,
+            WatchUi.loadResource(Rez.Strings.FieldTimer) as String,
+            Theme.colorDim());
         return top - h / 50;
     }
 

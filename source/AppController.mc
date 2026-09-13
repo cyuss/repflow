@@ -80,6 +80,14 @@ class AppController {
     //! exercise timer. Garmin owns the activity clock; this one answers a
     //! different question — how long have I been on THIS exercise.
     private var _exerciseStartedAt as Number;
+    //! Epoch second the set now under way began, or 0 when none is.
+    //!
+    //! A set begins when the athlete is back in front of the exercise able to
+    //! lift: the rest ended, or they picked the exercise. It ends when the set
+    //! is logged. That is a different span from the exercise timer, which runs
+    //! across every set and every rest on the movement — and the difference is
+    //! exactly what the athlete cannot see any other way.
+    private var _setBeganAt as Number;
 
     public function initialize() {
         _engine = null;
@@ -102,6 +110,7 @@ class AppController {
         _exercisePage = 0;
         _restPage = 0;
         _exerciseStartedAt = 0;
+        _setBeganAt = 0;
     }
 
     public static function instance() as AppController {
@@ -274,10 +283,24 @@ class AppController {
 
     //! Seconds spent on the exercise currently selected.
     public function exerciseSeconds() as Number {
-        if (_exerciseStartedAt <= 0) {
+        return _since(_exerciseStartedAt);
+    }
+
+    //! Seconds spent on the set now under way, or 0 between sets.
+    public function setSeconds() as Number {
+        return _since(_setBeganAt);
+    }
+
+    //! Seconds since an epoch second, or 0 when it was never set.
+    //!
+    //! A negative answer means the clock moved backwards under us — a time zone
+    //! crossing, a GPS fix correcting the watch mid-session. Zero is the honest
+    //! reading of that; a negative duration is not.
+    private function _since(began as Number) as Number {
+        if (began <= 0) {
             return 0;
         }
-        var elapsed = now() - _exerciseStartedAt;
+        var elapsed = now() - began;
         return elapsed > 0 ? elapsed : 0;
     }
 
@@ -315,6 +338,9 @@ class AppController {
         _batteryStart = LiveMetrics.bodyBattery();
         _loadHistory();
         _exerciseStartedAt = now();
+        // No set is under way: a session opens on the exercise list, and the
+        // set clock starts when an exercise is actually chosen.
+        _setBeganAt = 0;
         _recorder.start(workout.name);
         _startTicker();
         _persist();
@@ -333,6 +359,7 @@ class AppController {
             syncPendingValues(ex);
         }
         _exerciseStartedAt = now();
+        _setBeganAt = now();
         _startTicker();
     }
 
@@ -398,6 +425,7 @@ class AppController {
             syncPendingValues(ex);
         }
         _exerciseStartedAt = now();
+        _setBeganAt = now();
         _exercisePage = Tuning.PAGE_SET;
         _startTicker();
         _persist();
@@ -529,6 +557,7 @@ class AppController {
             syncPendingValues(ex);
         }
         _exerciseStartedAt = now();
+        _setBeganAt = now();
         _exercisePage = Tuning.PAGE_SET;
         _startTicker();
         _persist();
@@ -561,6 +590,8 @@ class AppController {
         _recorder.markSet(exercise.name, setNumber, reps, weight, rpe, _restedSec);
         // Attribute a rest interval to exactly one set.
         _restedSec = 0;
+        // The set is over. Its clock restarts when the next one begins.
+        _setBeganAt = 0;
         _recorder.updateTotals(engine.summary(at));
         syncPendingValues(exercise);
         _persist();
@@ -696,6 +727,7 @@ class AppController {
     public function endRest() as Void {
         _rest.skip();
         _closeRest();
+        _setBeganAt = now();
         _recovery.endRest();
         updateRepCounting();
 

@@ -887,6 +887,39 @@ module Theme {
     }
 
     //! Height drawMiniField needs.
+    //! Will this many mini fields fit side by side in `width`?
+    //!
+    //! A mini field is centred on its column and nothing clips it, so a value
+    //! or a caption wider than its share simply grows into its neighbour. That
+    //! is invisible to the compiler and to every test that does not measure,
+    //! which is why the caller asks before it draws rather than after someone
+    //! reports it.
+    //!
+    //! 90% of a column, so two neighbours cannot meet in the middle.
+    public function miniFieldsFit(
+        dc as Graphics.Dc,
+        width as Number,
+        count as Number,
+        values as Array<String>,
+        captions as Array<String>
+    ) as Boolean {
+        if (count < 1) {
+            return false;
+        }
+        var room = ((width / count) * 90) / 100;
+        for (var i = 0; i < count; i++) {
+            if (i < values.size() &&
+                dc.getTextWidthInPixels(values[i], Graphics.FONT_TINY) > room) {
+                return false;
+            }
+            if (i < captions.size() &&
+                dc.getTextWidthInPixels(captions[i], captionFont()) > room) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public function miniFieldHeight(dc as Graphics.Dc) as Number {
         return dc.getFontHeight(Graphics.FONT_TINY) + dc.getFontHeight(captionFont());
     }
@@ -897,11 +930,65 @@ module Theme {
     //! display that strip is otherwise dead space — too narrow for content, too
     //! tall to ignore.
     public function drawClock(dc as Graphics.Dc, top as Number) as Void {
+        drawClockWith(dc, top, null, colorDim());
+    }
+
+    //! The time of day, optionally with one more elapsed reading beside it.
+    //!
+    //! The bottom line of the exercise screen is one short row of small text
+    //! with most of its width unused, which makes it the only place left to put
+    //! a third clock without shrinking the two readouts above it.
+    //!
+    //! `leading` goes on the left and the time of day on the right, in
+    //! different colours, and neither is captioned — there is no room, and none
+    //! is needed. The pair is context, not data: the captioned readouts above
+    //! are what the athlete reads, and these two are what they glance at.
+    //!
+    //! **Two things about the geometry, both learned the hard way.** The pair is
+    //! centred with a gap rather than pushed to the edges of the chord: this
+    //! row sits low, where the glass curves away fastest, and text pinned to
+    //! the chord's ends had its bottom half cut off by the bezel. And the room
+    //! is measured at the line's **bottom**, not its middle — below centre the
+    //! chord closes as it descends, so the middle of a line always overstates
+    //! what its descenders will have.
+    //!
+    //! When the pair will not fit, the time of day wins. It is the one that was
+    //! already there.
+    public function drawClockWith(
+        dc as Graphics.Dc,
+        top as Number,
+        leading as String?,
+        leadingColor as Number
+    ) as Void {
         var now = System.getClockTime();
         var text = now.hour.format("%02d") + ":" + now.min.format("%02d");
-        dc.setColor(colorDim(), Graphics.COLOR_TRANSPARENT);
-        dc.drawText(dc.getWidth() / 2, top, Graphics.FONT_XTINY, text,
-            Graphics.TEXT_JUSTIFY_CENTER);
+        var font = Graphics.FONT_XTINY;
+
+        if (leading != null) {
+            var room = usableWidth(dc, top + dc.getFontHeight(font));
+            var leadWidth = dc.getTextWidthInPixels(leading as String, font);
+            var clockWidth = dc.getTextWidthInPixels(text, font);
+            // Enough space between them that they never read as one value.
+            var gap = dc.getWidth() / 10;
+            var total = leadWidth + gap + clockWidth;
+            if (total <= room) {
+                var left = (dc.getWidth() - total) / 2;
+                setColor(dc, leadingColor);
+                dc.drawText(left, top, font, leading as String,
+                    Graphics.TEXT_JUSTIFY_LEFT);
+                setColor(dc, colorFaint());
+                dc.drawText(left + total, top, font, text,
+                    Graphics.TEXT_JUSTIFY_RIGHT);
+                return;
+            }
+        }
+
+        setColor(dc, colorDim());
+        dc.drawText(dc.getWidth() / 2, top, font, text, Graphics.TEXT_JUSTIFY_CENTER);
+    }
+
+    function setColor(dc as Graphics.Dc, color as Number) as Void {
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
     }
 
     //! A ring around the rim showing progress from 0.0 to 1.0.

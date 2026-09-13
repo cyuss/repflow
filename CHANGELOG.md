@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   can be recovered weeks later without the watch. `sync-hevy-show` previews it.
   The API key is asked for and never stored.
 
+- **A set clock** on the exercise screen, beside the exercise clock. They
+  measure different spans — the exercise timer runs through every rest, so it
+  answers a question about the last ten minutes rather than about the bar in
+  your hands — and only one of them was visible.
 - **Open rest** — rest that counts up and ends when you press, as an
   alternative to the countdown. Choose it in the settings, or switch mid-rest
   from the rest screen's menu. It never buzzes: a buzz claims the rest is over,

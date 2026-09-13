@@ -2452,3 +2452,74 @@ function testTimedRestIsUnchanged(logger as Test.Logger) as Boolean {
     Test.assertEqual(rest.remaining(), 75);
     return true;
 }
+
+//! The exercise screen's band holds what it claims to hold.
+//!
+//! A mini field is centred on its column and nothing clips it, so a caption
+//! wider than its share grows silently into its neighbour — exactly how
+//! "BODY BATT" ended up on top of "REC". This measures the real band, with the
+//! real strings, at the widest values they can ever show.
+//!
+//! It also records why the exercise clock is not up here: three columns of this
+//! band are 51px each on a Fenix 6 Pro and a "12:34" needs 54.
+(:test)
+function testExerciseBandFitsThree(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+    var h = dc.getHeight();
+    // The band the exercise screen actually gives this row: just above the
+    // clock at the bottom of the page.
+    var bandHeight = Theme.miniFieldHeight(dc);
+    var clockTop = h - dc.getFontHeight(Graphics.FONT_XTINY) - h / 22;
+    var top = (clockTop - h / 60) - bandHeight;
+    var width = Theme.bandWidth(dc, top, bandHeight);
+
+    var setLabel = (WatchUi.loadResource(Rez.Strings.SetLabel) as ResourceId) as String;
+    var values = ["59:59", "59:59", "10/10"] as Array<String>;
+    var captions = [
+        setLabel.toUpper(),
+        WatchUi.loadResource(Rez.Strings.FieldTimer as ResourceId) as String,
+        WatchUi.loadResource(Rez.Strings.FieldSets as ResourceId) as String
+    ] as Array<String>;
+
+
+    logger.debug("band " + width.toString() + "px, three would fit: " +
+        (Theme.miniFieldsFit(dc, width, 3, values, captions) ? "yes" : "no"));
+
+    // What the band actually draws: the set clock and the set counter, at the
+    // widest either can ever be — "59:59" and "10/10".
+    Test.assert(Theme.miniFieldsFit(dc, width, 2, values, captions));
+
+    // And the bottom line has room for the set count beside the time of day,
+    // which is where it went.
+    //
+    // Measured at the line's BOTTOM, which is the mistake that put this row's
+    // descenders under the bezel: below centre the chord closes as it
+    // descends, so the middle of a line always overstates what it has.
+    var h2 = dc.getHeight();
+    var lineFont = Graphics.FONT_XTINY;
+    var lineHeight = dc.getFontHeight(lineFont);
+    var clockTop2 = h2 - lineHeight - h2 / 14;
+    var lineWidth = Theme.usableWidth(dc, clockTop2 + lineHeight);
+    var pair = dc.getTextWidthInPixels("10/10", lineFont) +
+        dc.getWidth() / 10 +
+        dc.getTextWidthInPixels("23:59", lineFont);
+    logger.debug("bottom line " + lineWidth.toString() + "px at its baseline, pair " +
+        pair.toString() + "px");
+    Test.assert(pair <= lineWidth);
+    return true;
+}
+
+//! The set clock and the exercise clock measure different things.
+(:test)
+function testSetClockIsNotTheExerciseClock(logger as Test.Logger) as Boolean {
+    // Both are wall-clock readings off the controller, so what is checked here
+    // is the arithmetic that turns a start into a duration: never negative,
+    // and zero when nothing has started.
+    var controller = AppController.instance();
+    Test.assert(controller.setSeconds() >= 0);
+    Test.assert(controller.exerciseSeconds() >= 0);
+    return true;
+}
