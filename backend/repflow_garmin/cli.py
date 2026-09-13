@@ -261,6 +261,23 @@ def _print_hevy_mapping(sets: list[Any], catalogue: list[Any]) -> None:
         print(f"    {name:<{width}}  x{counts[name]}  ->  {template.title}  ({exact})")
 
 
+def _suggest_activities() -> None:
+    """List what else is there, rather than leaving the athlete to guess.
+
+    Being told "this one is not a RepFlow activity" is only half an answer; the
+    other half is which one is.
+    """
+    try:
+        found = recent_strength(connect(), limit=20)
+    except Exception:
+        return
+    if not found:
+        return
+    print("\nRecent strength activities:", file=sys.stderr)
+    for activity in found:
+        print(f"  {activity}", file=sys.stderr)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="repflow-garmin", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -297,7 +314,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return int(args.func(args))
-    except (GarminError, NotARepFlowActivity, HevyError) as exc:
+    except NotARepFlowActivity as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        _suggest_activities()
+        return 2
+    except (GarminError, HevyError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 

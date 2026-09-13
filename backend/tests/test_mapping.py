@@ -141,3 +141,49 @@ class TestWhatTheAthleteIsShownBeforeWriting:
         printed = capsys.readouterr().out
         assert "Bench Press" in printed and "(curated)" in printed
         assert "Kettlebell Windmill" in printed and "(matched)" in printed
+
+
+class TestChoosingWhichActivity:
+    """Picking the wrong activity writes someone's sets onto another session."""
+
+    def test_the_newest_is_chosen_whatever_order_garmin_sends(self) -> None:
+        # Garmin's listing is documented as newest-first and was not: a run of
+        # this tool picked the session from the day before the one just
+        # recorded. The order is established here instead of trusted.
+        from repflow_garmin.garmin import ActivitySummary
+
+        rows = [
+            {
+                "activityId": 1,
+                "activityName": "Yesterday",
+                "startTimeLocal": "2026-09-12 13:02:46",
+                "beginTimestamp": 1_757_681_000_000,
+                "activityType": {"typeKey": "strength_training"},
+            },
+            {
+                "activityId": 2,
+                "activityName": "Today",
+                "startTimeLocal": "2026-09-13 12:07:56",
+                "beginTimestamp": 1_757_767_000_000,
+                "activityType": {"typeKey": "strength_training"},
+            },
+        ]
+        parsed = [ActivitySummary.parse(r) for r in rows]
+        parsed.sort(key=lambda a: a.sort_key, reverse=True)
+        assert [a.activity_id for a in parsed] == [2, 1]
+
+    def test_an_activity_with_no_timestamp_sorts_last_not_first(self) -> None:
+        from repflow_garmin.garmin import ActivitySummary
+
+        dated = ActivitySummary.parse(
+            {
+                "activityId": 1,
+                "startTimeLocal": "2026-09-13 12:07:56",
+                "beginTimestamp": 1_757_767_000_000,
+                "activityType": {"typeKey": "strength_training"},
+            }
+        )
+        undated = ActivitySummary.parse(
+            {"activityId": 2, "activityType": {"typeKey": "strength_training"}}
+        )
+        assert max(dated.sort_key, undated.sort_key) == dated.sort_key

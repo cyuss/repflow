@@ -108,9 +108,11 @@ def read_sets(fit_bytes: bytes) -> list[LoggedSet]:
 
     if not sets:
         raise NotARepFlowActivity(
-            "no laps in this activity carry RepFlow's exercise field — "
-            "either it was not recorded by RepFlow, or it was recorded before "
-            "resources/fit_contributions.xml declared the developer fields"
+            "no laps in this activity carry RepFlow's exercise field.\n"
+            "  It was recorded by something else — Garmin's own strength mode, "
+            "or another app — or by a build of RepFlow from before the developer "
+            "fields were declared.\n"
+            "  Run `repflow-garmin list` and name the right one with --activity."
         )
     return sets
 

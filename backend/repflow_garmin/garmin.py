@@ -53,16 +53,32 @@ class ActivitySummary:
     name: str
     start_local: str
     activity_type: str
+    #: Milliseconds since the epoch, for ordering. Zero when Garmin did not
+    #: send one, which sorts such an activity last rather than first.
+    begin_ms: int = 0
 
     @classmethod
     def parse(cls, raw: dict[str, Any]) -> "ActivitySummary":
         type_key = (raw.get("activityType") or {}).get("typeKey") or "?"
+        begin = raw.get("beginTimestamp")
         return cls(
             activity_id=int(raw["activityId"]),
             name=str(raw.get("activityName") or "Untitled"),
             start_local=str(raw.get("startTimeLocal") or "?"),
             activity_type=type_key,
+            begin_ms=int(begin) if isinstance(begin, (int, float)) else 0,
         )
+
+    @property
+    def sort_key(self) -> tuple[int, str]:
+        """Newest first, with the start time as the tie-break.
+
+        The listing endpoint is documented as newest-first and was not: a run
+        of this tool picked a session from the day before the one just
+        recorded. Ordering something this destructive by trusting a remote
+        list's order is not worth the line it saves.
+        """
+        return (self.begin_ms, self.start_local)
 
     def __str__(self) -> str:
         return f"{self.activity_id}  {self.start_local}  {self.name} ({self.activity_type})"
@@ -116,11 +132,13 @@ def connect(email: str | None = None, password: str | None = None) -> Garmin:
 def recent_strength(client: Garmin, limit: int = 20) -> list[ActivitySummary]:
     """The athlete's recent strength activities, newest first."""
     raw = client.get_activities(0, limit)
-    return [
+    found = [
         ActivitySummary.parse(a)
         for a in raw
         if (a.get("activityType") or {}).get("typeKey") in STRENGTH_TYPES
     ]
+    found.sort(key=lambda a: a.sort_key, reverse=True)
+    return found
 
 
 def latest_strength(client: Garmin) -> ActivitySummary:
