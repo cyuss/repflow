@@ -29,6 +29,7 @@ from .hevy import (
     summarise as summarise_hevy,
     templates,
 )
+from .tui import choose, confirm, interactive
 from .garmin import (
     GarminError,
     connect,
@@ -102,14 +103,41 @@ def _cmd_list(args: argparse.Namespace) -> int:
     return 0
 
 
-def _load(client: Any, activity_id: int | None) -> tuple[Any, list[Any]]:
-    activity = None
-    if activity_id is None:
-        activity = latest_strength(client)
-        activity_id = activity.activity_id
-        print(f"Activity: {activity}")
-    else:
+def _pick(client: Any, activity_id: int | None, unattended: bool) -> Any:
+    """Which activity to act on: the one named, or one the athlete chooses.
+
+    Named on the command line wins. Otherwise the recent strength activities are
+    offered, because "it picked the wrong one" has already happened here — the
+    listing endpoint is documented as newest-first and is not — and a guess that
+    gets printed after the fact is not the same as being asked.
+
+    With no terminal, or with --yes, the newest is taken and said out loud.
+    """
+    if activity_id is not None:
         print(f"Activity: {activity_id}")
+        return None, activity_id
+
+    if unattended or not interactive():
+        activity = latest_strength(client)
+        print(f"Activity: {activity}")
+        return activity, activity.activity_id
+
+    found = recent_strength(client, limit=20)
+    if not found:
+        # Same refusal as latest_strength, with the same listing of what there
+        # is instead of a bare "none found".
+        activity = latest_strength(client)
+        return activity, activity.activity_id
+
+    chosen = choose(found, lambda a: str(a), title="Which session?")
+    if chosen is None:
+        raise GarminError("nothing chosen")
+    print(f"Activity: {chosen}")
+    return chosen, chosen.activity_id
+
+
+def _load(client: Any, activity_id: int | None, unattended: bool = False) -> tuple[Any, list[Any]]:
+    activity, activity_id = _pick(client, activity_id, unattended)
     return activity_id, logged_sets(client, int(activity_id))
 
 
@@ -125,7 +153,7 @@ def _cmd_show(args: argparse.Namespace) -> int:
 
 def _cmd_fill(args: argparse.Namespace) -> int:
     client = connect()
-    activity_id, sets = _load(client, args.activity)
+    activity_id, sets = _load(client, args.activity, args.yes)
     payload, unmapped = build(activity_id, sets)
     _report(sets, payload, unmapped)
 
@@ -144,11 +172,9 @@ def _cmd_fill(args: argparse.Namespace) -> int:
         print("\nDry run — nothing written.")
         return 0
 
-    if not args.yes:
-        answer = input("\nWrite these sets to the activity? [y/N] ").strip().lower()
-        if answer not in {"y", "yes"}:
-            print("Nothing written.")
-            return 1
+    if not args.yes and not confirm("\nWrite these sets to the activity?"):
+        print("Nothing written.")
+        return 1
 
     write_sets(client, int(activity_id), payload)
     print("Written. Reload the activity in Garmin Connect.")
@@ -181,14 +207,7 @@ def _hevy_key(explicit: str | None) -> str:
 def _cmd_hevy(args: argparse.Namespace) -> int:
     key = _hevy_key(args.key)
     client = connect()
-    activity = None
-    activity_id = args.activity
-    if activity_id is None:
-        activity = latest_strength(client)
-        activity_id = activity.activity_id
-        print(f"Activity: {activity}")
-    else:
-        print(f"Activity: {activity_id}")
+    activity, activity_id = _pick(client, args.activity, args.yes)
 
     sets = logged_sets(client, int(activity_id))
     print(f"  read {len(sets)} sets from the activity's FIT file")
@@ -223,11 +242,9 @@ def _cmd_hevy(args: argparse.Namespace) -> int:
     if args.dry_run:
         print("\nDry run — nothing sent.")
         return 0
-    if not args.yes:
-        answer = input("\nPost this workout to Hevy? [y/N] ").strip().lower()
-        if answer not in {"y", "yes"}:
-            print("Nothing sent.")
-            return 1
+    if not args.yes and not confirm("\nPost this workout to Hevy?"):
+        print("Nothing sent.")
+        return 1
 
     post_workout(key, body)
     print("Posted. Open Hevy and pull to refresh.")

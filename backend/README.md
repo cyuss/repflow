@@ -100,6 +100,12 @@ The endpoint creates rather than updates, so running it twice would put the
 session in twice. It checks your recent workouts for one starting at the same
 moment and stops if it finds one; `--force` overrides that.
 
+Each command asks **which session** first — arrow keys through your recent
+strength activities, Enter to choose, `q` to cancel. It guesses only when there
+is nobody to ask: a pipe, a cron job, or `--yes`, and then it says out loud
+which one it took. This tool once acted on the session from the day before, and
+a guess printed after the fact is not the same as being asked.
+
 `fill` prints the payload, says how many sets it is replacing, and asks before
 writing. `--dry-run` never writes; `--yes` skips the question; `--activity <id>`
 picks a specific activity instead of the most recent strength one.
@@ -164,6 +170,7 @@ variant left off, and each one says so in `mapping.py`.
 | `garmin.py` | Sign in, download, read and write the sets |
 | `hevy.py` | Match movements to Hevy templates and build the workout |
 | `cli.py` | The command line |
+| `tui.py` | Choosing from a list with the arrow keys |
 
 `payload.py`, `mapping.py` and `catalogue.py` are pure and need no account, which
 is why most of the test suite runs without one. `tests/fitfixture.py` builds FIT

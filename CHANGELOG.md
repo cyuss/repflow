@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Garmin's Work Time / Rest Time split has nothing to read.
 - `make test` now runs the backend's tests alongside the watch app's, and skips
   them cleanly on a machine where the backend is not set up.
+- Both sync commands now **ask which session**: arrow keys through your recent
+  strength activities, Enter to choose, `q` to cancel. They guess only with no
+  terminal or `--yes`, and say which one they took.
 - `make sync-garmin` / `just sync-garmin` — fill Garmin Connect's native
   exercise table for a recorded session. `sync-garmin-show` previews it.
 - `make sync-hevy` / `just sync-hevy` — post the same session to Hevy, read from
