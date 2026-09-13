@@ -87,6 +87,31 @@ RepFlow shipped once without that block, and every field was invisible.
 - **Garmin's native per-set table.** Same cause.
 - Rest periods as first-class objects. A lap boundary is the only marker.
 
+#### Observed on hardware — 13 Sep 2026, Fenix 6 Pro 47 mm
+
+![Garmin Connect showing a RepFlow activity: native Strength Training, empty
+exercise table](evidence/connect-strength-empty-table.png)
+
+This settles the first half of POC B by observation rather than by reading the
+SDK, and it is worth being precise about what it shows.
+
+The activity **is** native. Garmin Connect titles it *Strength Training*, carries
+the workout's own name through from RepFlow, and computes heart rate and
+calories from it. Nothing about it is quarantined into a Connect IQ ghetto.
+
+And the `EXERCISES` table is **there, with its native columns — `Set | Name |
+Time | Reps | Weight kg` — and empty**, offering *Add Exercise +* instead. Those
+columns are fed by FIT `set` messages. RepFlow cannot write them, so Garmin has
+the table and no rows to put in it.
+
+That is the distinction this document draws, made visible: **the activity is
+native, its contents are not.** Anyone who assumes "it records a strength
+activity" implies "the sets appear" can look at this screenshot instead.
+
+It also shows the table is **user-editable**, which is the shape route C
+targets: those rows are real Garmin objects, not a rendering of developer
+fields.
+
 ### Limitations found in practice
 
 - A running recording **blocks Garmin's sleep tracking**, so it must be closed
