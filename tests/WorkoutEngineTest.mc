@@ -2366,3 +2366,89 @@ function testSetsWrittenBeforeRpeStillLoad(logger as Test.Logger) as Boolean {
     Test.assert(_isRpe(WorkoutSet.fromStorage(fresh.toStorage()).rpe, 9.5));
     return true;
 }
+
+//! Open rest: a clock that runs until the athlete stops it.
+//!
+//! Not a countdown of zero length. It has no target, so it never reaches zero,
+//! never buzzes, and cannot be extended — and every one of those has to be a
+//! real answer rather than a stand-in, because a buzz is a claim that the rest
+//! is over and in this mode only the athlete gets to make it.
+(:test)
+function testOpenRestCountsUpAndNeverFires(logger as Test.Logger) as Boolean {
+    var rest = new RestTimer();
+    rest.startOpen();
+
+    Test.assert(rest.isOpen());
+    Test.assert(rest.isRunning());
+    Test.assertEqual(rest.format(), "00:00");
+
+    for (var i = 0; i < 125; i++) {
+        // Never true: there is no moment to announce.
+        Test.assert(!rest.tick());
+    }
+    Test.assertEqual(rest.elapsed(), 125);
+    Test.assertEqual(rest.format(), "02:05");
+    // Still running after two minutes. A countdown would have stopped.
+    Test.assert(rest.isRunning());
+
+    // No target means no proportion of one, and the rest screen draws no arc.
+    Test.assertEqual(rest.progress(), 0.0);
+    Test.assertEqual(rest.duration(), 0);
+    Test.assertEqual(rest.remaining(), 0);
+    return true;
+}
+
+//! Adding time to an open rest does nothing, rather than quietly converting it.
+(:test)
+function testOpenRestCannotBeExtended(logger as Test.Logger) as Boolean {
+    var rest = new RestTimer();
+    rest.startOpen();
+    rest.tick();
+    rest.tick();
+
+    rest.extend(30);
+    // Still open, still counting up, still no target: silently turning this
+    // into a countdown would take away the mode the athlete chose.
+    Test.assert(rest.isOpen());
+    Test.assertEqual(rest.duration(), 0);
+    Test.assertEqual(rest.elapsed(), 2);
+    return true;
+}
+
+//! The athlete's press is what ends it.
+(:test)
+function testOpenRestEndsOnlyWhenSkipped(logger as Test.Logger) as Boolean {
+    var rest = new RestTimer();
+    rest.startOpen();
+    for (var i = 0; i < 400; i++) {
+        rest.tick();
+    }
+    Test.assert(rest.isRunning());
+
+    rest.skip();
+    Test.assert(!rest.isRunning());
+    return true;
+}
+
+//! A timed rest still behaves exactly as it did.
+(:test)
+function testTimedRestIsUnchanged(logger as Test.Logger) as Boolean {
+    var rest = new RestTimer();
+    rest.start(3);
+    Test.assert(!rest.isOpen());
+    Test.assertEqual(rest.format(), "00:03");
+    Test.assertEqual(rest.elapsed(), 0);
+
+    Test.assert(!rest.tick());
+    Test.assertEqual(rest.elapsed(), 1);
+    Test.assert(!rest.tick());
+    // The tick that reaches zero, and only that one, fires.
+    Test.assert(rest.tick());
+    Test.assert(!rest.isRunning());
+    Test.assert(!rest.tick());
+
+    rest.start(60);
+    rest.extend(15);
+    Test.assertEqual(rest.remaining(), 75);
+    return true;
+}

@@ -22,6 +22,7 @@ module AppSettingsMenu {
     const ITEM_THEME = "theme";
     const ITEM_UNITS = "units";
     const ITEM_REST = "rest";
+    const ITEM_REST_MODE = "restmode";
     const ITEM_STEP = "step";
     const ITEM_HAPTICS = "haptics";
     const ITEM_REPS = "reps";
@@ -40,6 +41,9 @@ module AppSettingsMenu {
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.SetUnits) as String,
             unitsLabel(), ITEM_UNITS, {}));
+        menu.addItem(new WatchUi.MenuItem(
+            WatchUi.loadResource(Rez.Strings.RestMode) as String,
+            restModeLabel(), ITEM_REST_MODE, {}));
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.RestLabel) as String,
             Theme.formatDuration(Settings.restDefault()), ITEM_REST, {}));
@@ -85,6 +89,12 @@ module AppSettingsMenu {
         // athlete should not have to guess which one that resolves to.
         return (WatchUi.loadResource(Rez.Strings.SetUnitsAuto) as String) +
             " (" + Units.label() + ")";
+    }
+
+    public function restModeLabel() as String {
+        return WatchUi.loadResource(Settings.restMode() == Tuning.REST_OPEN
+            ? Rez.Strings.RestOpen
+            : Rez.Strings.RestTimed) as String;
     }
 
     public function animLabel() as String {
@@ -149,6 +159,13 @@ class AppSettingsDelegate extends WatchUi.Menu2InputDelegate {
             }
             Settings.writeNumber("animations", next);
             Settings.invalidate();
+            _rebuild();
+            return;
+        }
+        if (id.equals(AppSettingsMenu.ITEM_REST_MODE)) {
+            Settings.setRestMode(Settings.restMode() == Tuning.REST_OPEN
+                ? Tuning.REST_TIMED
+                : Tuning.REST_OPEN);
             _rebuild();
             return;
         }

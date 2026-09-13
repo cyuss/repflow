@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   can be recovered weeks later without the watch. `sync-hevy-show` previews it.
   The API key is asked for and never stored.
 
+- **Open rest** — rest that counts up and ends when you press, as an
+  alternative to the countdown. Choose it in the settings, or switch mid-rest
+  from the rest screen's menu. It never buzzes: a buzz claims the rest is over,
+  and in this mode only the athlete gets to say that.
 - **RPE** — an effort rating on each set, on the scale Hevy's API actually
   accepts (6, 7, 7.5, 8, 8.5, 9, 9.5, 10 — there is no 6.5, and a value off the
   ladder is answered with a 400 that loses the whole workout). It appears only
@@ -38,6 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Starting a workout opens the **exercise list**, not the first exercise.
+  Starting on exercise one assumes you are going to do exercise one, which is
+  the assumption this app exists to refuse.
 - The workout overview moved from `Menu2` to `CustomMenu`, so long exercise
   names scroll on the focused row instead of being truncated by the system.
   Rows are left-aligned and taller — at a fifth of the screen the outermost

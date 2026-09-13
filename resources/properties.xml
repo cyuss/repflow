@@ -11,6 +11,7 @@
     -->
     <properties>
         <property id="restDefault"       type="number">90</property>
+        <property id="restMode"          type="number">0</property>
         <property id="weightStepTenths"  type="number">10</property>
         <property id="units"             type="number">0</property>
         <property id="haptics"           type="boolean">true</property>
@@ -23,6 +24,9 @@
 
     <strings>
         <string id="SetRestDefault">Default rest (seconds)</string>
+        <string id="SetRestMode">Rest between sets</string>
+        <string id="SetRestTimed">Countdown</string>
+        <string id="SetRestOpen">Until I press</string>
         <string id="SetWeightStep">Weight step (tenths of a kg / 0.1 lb)</string>
         <string id="SetUnits">Weight units</string>
         <string id="SetUnitsAuto">Follow the watch</string>
@@ -44,6 +48,13 @@
     <settings>
         <setting propertyKey="@Properties.restDefault" title="@Strings.SetRestDefault">
             <settingConfig type="numeric" min="10" max="900" />
+        </setting>
+
+        <setting propertyKey="@Properties.restMode" title="@Strings.SetRestMode">
+            <settingConfig type="list">
+                <listEntry value="0">@Strings.SetRestTimed</listEntry>
+                <listEntry value="1">@Strings.SetRestOpen</listEntry>
+            </settingConfig>
         </setting>
 
         <setting propertyKey="@Properties.weightStepTenths" title="@Strings.SetWeightStep">

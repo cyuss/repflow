@@ -17,6 +17,9 @@
     <string id="FieldWeight">WEIGHT</string>
     <string id="FieldReps">REPS</string>
     <string id="FieldRpe">RPE</string>
+    <string id="RestMode">Rest</string>
+    <string id="RestTimed">Countdown</string>
+    <string id="RestOpen">Until I press</string>
     <string id="FieldHr">HR</string>
     <string id="FieldAvgHr">AVG HR</string>
     <string id="FieldMaxHr">MAX HR</string>

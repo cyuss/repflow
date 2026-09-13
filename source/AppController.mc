@@ -591,14 +591,57 @@ class AppController {
     // Rest timer
     // ------------------------------------------------------------------
 
+    //! Begin the rest, in whichever shape the athlete has chosen.
+    //!
+    //! `durationSec` is ignored in open mode. It is still passed because the
+    //! caller does not need to know which mode is in force, and because
+    //! switching back mid-rest has to find the duration still there.
     public function startRest(durationSec as Number) as Void {
-        _rest.start(durationSec);
+        if (Settings.restMode() == Tuning.REST_OPEN) {
+            _rest.startOpen();
+        } else {
+            _rest.start(durationSec);
+        }
         _restBeganAt = now();
         _recovery.startRest();
         _restPage = 0;
         updateRepCounting();
         _startTicker();   // already running during a workout; harmless to re-arm
         WatchUi.switchToView(new RestView(), new RestDelegate(), WatchUi.SLIDE_UP);
+    }
+
+    //! Switch between a countdown and an open clock, mid-rest.
+    //!
+    //! The new mode becomes the default for the rest of the session and for
+    //! every session after it — someone who reaches for this has decided how
+    //! they want to train, not just how they want this one gap to behave.
+    //!
+    //! The rest already under way is restarted in the new shape rather than
+    //! converted. Time already rested is kept: `_restBeganAt` is untouched, so
+    //! the interval written to the FIT still measures from when the athlete
+    //! actually stopped lifting.
+    public function switchRestMode() as Void {
+        var open = Settings.restMode() == Tuning.REST_OPEN;
+        Settings.setRestMode(open ? Tuning.REST_TIMED : Tuning.REST_OPEN);
+        // A rest that has already finished is not restarted in the other shape.
+        // The setting is changed for the next one; putting a fresh countdown on
+        // a screen the athlete is about to leave would be a surprise.
+        if (!_rest.isRunning()) {
+            return;
+        }
+        var began = _restBeganAt;
+        if (open) {
+            var exercise = _engine == null ? null : (_engine as WorkoutEngine).currentExercise();
+            var seconds = exercise == null ? Settings.restDefault() : exercise.restDuration;
+            if (seconds <= 0) {
+                seconds = Settings.restDefault();
+            }
+            _rest.start(seconds);
+        } else {
+            _rest.startOpen();
+        }
+        _restBeganAt = began;
+        WatchUi.requestUpdate();
     }
 
     //! Stop counting rest, and remember how much of it there was.

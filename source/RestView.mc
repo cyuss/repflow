@@ -197,10 +197,13 @@ class RestView extends WatchUi.View {
     }
 
     //! Thin arc that drains as the rest elapses — readable at a glance.
+    //!
+    //! The **track** is drawn whatever the mode, because it is the frame this
+    //! screen's text is laid out inside and the layout must not move when the
+    //! athlete switches modes. What changes is the arc on top of it: an open
+    //! rest has no target, so there is no proportion to fill and none is drawn.
+    //! An empty ring is the honest picture of "resting, no target".
     private function _drawProgressArc(dc as Graphics.Dc, rest as RestTimer) as Void {
-        if (rest.duration() <= 0) {
-            return;
-        }
         var w = dc.getWidth();
         var h = dc.getHeight();
         var radius = (w < h ? w : h) / 2 - RING_MARGIN;
@@ -211,7 +214,7 @@ class RestView extends WatchUi.View {
         dc.setPenWidth(Device.stroke(27));
         dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
         dc.drawCircle(cx, cy, radius);
-        if (sweep > 0) {
+        if (rest.duration() > 0 && sweep > 0) {
             dc.setColor(Theme.colorAccent(), Graphics.COLOR_TRANSPARENT);
             dc.drawArc(cx, cy, radius, Graphics.ARC_CLOCKWISE, 90, (90 - sweep + 360) % 360);
         }
@@ -268,19 +271,31 @@ module RestActionsMenu {
     const ACTION_SUB = "sub";
     const ACTION_SKIP = "skip";
     const ACTION_END = "end";
+    const ACTION_MODE = "mode";
 
     public function show() as Void {
         var rest = AppController.instance().restTimer();
         var menu = new WatchUi.Menu2({
             :title => WatchUi.loadResource(Rez.Strings.Rest) as String
         });
-        // The current duration is the subtitle, so the menu answers "how long
-        // is this rest" before the athlete has changed anything.
+        // Switch the rest between a countdown and an open clock from here, not
+        // only from the settings screen: which one you want is a decision about
+        // the gym you are standing in, and it changes between sets.
         menu.addItem(new WatchUi.MenuItem(
-            "+ " + Tuning.REST_STEP.toString() + " s",
-            Theme.formatDuration(rest.duration()), ACTION_ADD, {}));
-        menu.addItem(new WatchUi.MenuItem(
-            "- " + Tuning.REST_STEP.toString() + " s", null, ACTION_SUB, {}));
+            WatchUi.loadResource(Rez.Strings.RestMode) as String,
+            AppSettingsMenu.restModeLabel(), ACTION_MODE, {}));
+        // Adding and removing time is meaningless without a target, so an open
+        // rest does not offer it. An entry that does nothing is worse than one
+        // that is not there.
+        if (!rest.isOpen()) {
+            // The current duration is the subtitle, so the menu answers "how
+            // long is this rest" before the athlete has changed anything.
+            menu.addItem(new WatchUi.MenuItem(
+                "+ " + Tuning.REST_STEP.toString() + " s",
+                Theme.formatDuration(rest.duration()), ACTION_ADD, {}));
+            menu.addItem(new WatchUi.MenuItem(
+                "- " + Tuning.REST_STEP.toString() + " s", null, ACTION_SUB, {}));
+        }
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.SkipRest) as String, null, ACTION_SKIP, {}));
         menu.addItem(new WatchUi.MenuItem(
@@ -309,6 +324,11 @@ class RestActionsDelegate extends WatchUi.Menu2InputDelegate {
         }
         if (id.equals(RestActionsMenu.ACTION_SUB)) {
             controller.restTimer().extend(-Tuning.REST_STEP);
+            _back();
+            return;
+        }
+        if (id.equals(RestActionsMenu.ACTION_MODE)) {
+            controller.switchRestMode();
             _back();
             return;
         }

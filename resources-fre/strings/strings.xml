@@ -10,6 +10,9 @@
     <string id="FieldWeight">POIDS</string>
     <string id="FieldReps">REPS</string>
     <string id="FieldRpe">RPE</string>
+    <string id="RestMode">Repos</string>
+    <string id="RestTimed">Minuteur</string>
+    <string id="RestOpen">Jusqu'a appui</string>
     <string id="FieldHr">FC</string>
     <string id="FieldAvgHr">FC MOY</string>
     <string id="FieldMaxHr">FC MAX</string>
@@ -58,6 +61,9 @@
     <string id="Saved">Enregistre</string>
     <!-- Reglages, edites dans l'application Garmin Connect -->
     <string id="SetRestDefault">Repos par defaut (secondes)</string>
+    <string id="SetRestMode">Repos entre les series</string>
+    <string id="SetRestTimed">Minuteur</string>
+    <string id="SetRestOpen">Jusqu'a appui</string>
     <string id="SetWeightStep">Pas de charge (dixiemes de kg / 0,1 lb)</string>
     <string id="SetUnits">Unite de charge</string>
     <string id="SetUnitsAuto">Suivre la montre</string>

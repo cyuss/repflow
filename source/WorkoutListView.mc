@@ -158,23 +158,25 @@ class WorkoutListDelegate extends WatchUi.BehaviorDelegate {
     public static const ITEM_HEVY = "hevy";
 
 
-    //! START — begin the highlighted workout on its first exercise, or open the
-    //! editor when the cursor is on the New workout page.
+    //! START — begin the highlighted workout, or open the editor when the
+    //! cursor is on the New workout page.
+    //!
+    //! The session opens on the **list**, not on the first exercise.
+    //!
+    //! Starting on exercise one assumes the athlete is going to do exercise one,
+    //! which is the assumption this whole app exists to refuse: the bench is
+    //! taken, so you start with rows. Landing on the list costs one press when
+    //! the order does happen to be the planned one, and saves a wrong start
+    //! and a correction every other time.
     public function onSelect() as Boolean {
         if (_view.onNewPage()) {
             WorkoutEditor.createNew();
             return true;
         }
         var controller = AppController.instance();
-        var workout = _view.selected() as Workout;
-        controller.startWorkout(workout);
-        if (workout.exercises.size() > 0) {
-            controller.selectExercise(workout.exercises[0].id);
-            WatchUi.switchToView(new ExerciseView(), new ExerciseDelegate(), WatchUi.SLIDE_LEFT);
-        } else {
-            WatchUi.switchToView(new WorkoutOverviewView(), new WorkoutOverviewDelegate(),
-                WatchUi.SLIDE_LEFT);
-        }
+        controller.startWorkout(_view.selected() as Workout);
+        WatchUi.switchToView(new WorkoutOverviewView(), new WorkoutOverviewDelegate(),
+            WatchUi.SLIDE_LEFT);
         return true;
     }
 }

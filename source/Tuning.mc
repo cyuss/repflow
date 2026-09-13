@@ -64,6 +64,18 @@ module Tuning {
     //! Where the set editor should go when it closes. RepFlow keeps a flat view
     //! stack, so a screen names its destination rather than relying on what
     //! happens to be underneath it.
+    //! How the rest between sets behaves.
+    //!
+    //!   TIMED  counts down from the exercise's rest duration and buzzes at zero
+    //!   OPEN   counts up from nothing and ends when the athlete says so
+    //!
+    //! Both are legitimate ways to train. A programme with prescribed rest wants
+    //! the countdown; a session where the rack decides wants the clock to simply
+    //! run, and a timer that expires while you are still queueing is worse than
+    //! no timer at all.
+    const REST_TIMED = 0;
+    const REST_OPEN = 1;
+
     const RETURN_EXERCISE = 0;
     const RETURN_REST = 1;
 

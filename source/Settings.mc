@@ -28,6 +28,7 @@ module Settings {
     var _repCounter as Boolean? = null;
     var _animations as Number? = null;
     var _theme as Number? = null;
+    var _restMode as Number? = null;
 
     //! Re-read on the next call. Called from RepFlowApp.onSettingsChanged.
     public function invalidate() as Void {
@@ -38,6 +39,7 @@ module Settings {
         _repCounter = null;
         _animations = null;
         _theme = null;
+        _restMode = null;
         Units.invalidate();
         Device.invalidate();
     }
@@ -163,6 +165,26 @@ module Settings {
         } catch (e) {
             // as above
         }
+    }
+
+    //! Tuning.REST_TIMED / REST_OPEN.
+    //!
+    //! Timed is the default because a prescribed rest is what most programmes
+    //! carry. Open exists for the sessions where the gym decides: a countdown
+    //! that expires while you are still waiting for the rack is worse than no
+    //! countdown, because it says the rest is over when it is not.
+    public function restMode() as Number {
+        var v = _restMode;
+        if (v == null) {
+            v = readNumber("restMode", Tuning.REST_TIMED, Tuning.REST_TIMED, Tuning.REST_OPEN);
+            _restMode = v;
+        }
+        return v;
+    }
+
+    public function setRestMode(value as Number) as Void {
+        writeNumber("restMode", value);
+        _restMode = value;
     }
 
     //! Tuning.ANIM_AUTO / ANIM_OFF / ANIM_ON.
