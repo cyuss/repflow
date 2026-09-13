@@ -57,6 +57,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Values are drawn in Garmin's own number font wherever they fit, which is now
+  almost everywhere. They were falling back to a text font because the fit was
+  measured against the font's line height, and a number font declares a descent
+  its digits never use — `FONT_NUMBER_MILD` is 60px of line and 44px of ink, so
+  a quarter of every value box was being reserved for nothing.
 - Starting a workout opens the **exercise list**, not the first exercise.
   Starting on exercise one assumes you are going to do exercise one, which is
   the assumption this app exists to refuse.

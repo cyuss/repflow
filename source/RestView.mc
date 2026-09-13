@@ -101,7 +101,10 @@ class RestView extends WatchUi.View {
         dc.drawText(dc.getWidth() / 2, countdownTop, timerFont, rest.format(),
             Graphics.TEXT_JUSTIFY_CENTER);
 
-        var top = countdownTop + dc.getFontHeight(timerFont) + h / 60;
+        // Advance past the digits, not past the line they nominally sit on: a
+        // number font's descent is empty, and counting it here would leave a
+        // finger's width of nothing under the countdown.
+        var top = countdownTop + Theme.inkHeight(timerFont) + h / 60;
         FieldGrid.drawRule(dc, top);
         top += 1;
 

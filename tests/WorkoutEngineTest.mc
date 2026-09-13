@@ -580,16 +580,28 @@ function testPickFontRespectsHeightBudget(logger as Test.Logger) as Boolean {
     var unbounded = Theme.pickFont(dc, "55", hero, 240);
     Test.assert(dc.getFontHeight(unbounded) > 0);
 
-    // Given a budget, the chosen font must honour it — unless even the smallest
-    // font in the ladder is taller, in which case the smallest is returned.
+    // Given a budget, the chosen font's **ink** must honour it — unless even
+    // the smallest font in the ladder is taller, in which case the smallest is
+    // returned.
+    //
+    // Ink, not line height. This test used to assert the line height, which is
+    // the rule that made every value in the app fall back to a text font: a
+    // number font declares a descent its digits never use, so holding it to its
+    // line box throws away a quarter of the space. See Theme.inkHeight.
     var budgets = [80, 60, 40, 24] as Array<Number>;
     var smallest = hero[hero.size() - 1];
     for (var i = 0; i < budgets.size(); i++) {
         var font = Theme.pickFontFitting(dc, "55", hero, 240, budgets[i]);
-        var height = dc.getFontHeight(font);
-        Test.assert(height <= budgets[i] || font == smallest);
+        Test.assert(Theme.inkHeight(font) <= budgets[i] || font == smallest);
         // Never larger than the unconstrained choice.
-        Test.assert(height <= dc.getFontHeight(unbounded));
+        Test.assert(dc.getFontHeight(font) <= dc.getFontHeight(unbounded));
+    }
+
+    // And ink is never more than the line it sits on, whichever font it is.
+    var every = Theme.fontsCell();
+    for (var i = 0; i < every.size(); i++) {
+        Test.assert(Theme.inkHeight(every[i]) > 0);
+        Test.assert(Theme.inkHeight(every[i]) <= dc.getFontHeight(every[i]));
     }
     return true;
 }

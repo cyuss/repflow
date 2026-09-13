@@ -72,7 +72,13 @@ module FieldGrid {
 
         var valueFont = Theme.pickFontFitting(dc, value, Theme.fontsCell(),
             (width * 92) / 100, area);
-        var valueHeight = dc.getFontHeight(valueFont);
+        // Centre the **ink** in the value area, not the line box. A number font
+        // carries an unused descent — see Theme.inkHeight — and centring the
+        // line box would push the digits up by half of it and leave the cell
+        // looking top-heavy. drawText places the top of the line box, and the
+        // ink starts there, so this is the offset that lands the digits in the
+        // middle of the space reserved for them.
+        var valueHeight = Theme.inkHeight(valueFont);
 
         var cx = x + width / 2;
         dc.setColor(valueColor, Graphics.COLOR_TRANSPARENT);

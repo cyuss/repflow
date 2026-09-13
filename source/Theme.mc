@@ -302,6 +302,27 @@ module Theme {
     //! across for a huge number font but nowhere near enough down the screen,
     //! so a width-only choice overflows whatever sits below it. Pass
     //! `maxHeight` 0 to ignore the height constraint.
+    //! How tall a font's ink actually is, as opposed to the line it sits on.
+    //!
+    //! Garmin's number fonts declare a descent they never use: FONT_NUMBER_MILD
+    //! is 60px of line height and 44px of ascent, and digits have nothing below
+    //! the baseline, so the last 16px are empty. Measuring a value box against
+    //! the line height therefore throws away a quarter of the room and picks a
+    //! smaller font than fits — which is why RepFlow's weights were drawn in a
+    //! **text** font while the watch's own screens use the number one.
+    //!
+    //! Only ever call this for values. A label with a "g" or a "y" in it needs
+    //! its descent, and a caption measured this way would sit on the rule below.
+    public function inkHeight(font as Graphics.FontDefinition) as Number {
+        if (Graphics has :getFontAscent) {
+            var ascent = Graphics.getFontAscent(font);
+            if (ascent > 0) {
+                return ascent;
+            }
+        }
+        return Graphics.getFontHeight(font);
+    }
+
     public function pickFontFitting(
         dc as Graphics.Dc,
         text as String,
@@ -314,7 +335,9 @@ module Theme {
             if (dc.getTextWidthInPixels(text, font) > maxWidth) {
                 continue;
             }
-            if (maxHeight > 0 && dc.getFontHeight(font) > maxHeight) {
+            // Ink, not line height: this function is only ever asked about
+            // values, and a value has no descenders. See inkHeight.
+            if (maxHeight > 0 && inkHeight(font) > maxHeight) {
                 continue;
             }
             return font;

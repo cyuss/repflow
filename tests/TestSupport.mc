@@ -113,7 +113,11 @@ module TestSupport {
     ) as Void {
         var maxWidth = (cellWidth * 92) / 100;
         var font = Theme.pickFontFitting(dc, value, Theme.fontsCell(), maxWidth, valueArea);
-        Test.assert(dc.getFontHeight(font) <= valueArea);
+        // The **ink** has to fit the value area, not the line box. Garmin's
+        // number fonts carry a descent that digits never use, and holding them
+        // to their line height is what made RepFlow draw its weights in a text
+        // font while the watch's own screens use the number one.
+        Test.assert(Theme.inkHeight(font) <= valueArea);
         Test.assert(dc.getTextWidthInPixels(value, font) <= maxWidth);
         Test.assert(dc.getFontHeight(font) >= minHeight);
     }
