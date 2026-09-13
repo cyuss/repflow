@@ -2,37 +2,31 @@
   <!--
     RepFlow launcher icon.
 
-    It carries its own ground. The first version was a white barbell on
-    transparent, which vanished on a light app list — and a launcher background
-    is not something an app gets to choose. A dark disc behind the mark fixes
-    that without giving up the dark-list case: on white the disc is the
-    contrast, on black the ring and the barbell are.
+    **One silhouette, one colour, no ground.** That is what an activity icon is
+    on this watch — running figure, bike, swimmer — and anything drawn behind
+    the mark announces the app as a visitor before it has done anything.
 
-    Everything else follows Garmin's own activity icons: one bold silhouette,
-    one accent colour, and strokes no thinner than about 6% of the width,
-    because the launcher renders this between 33 and 80 pixels across.
+    The colour is doing a job a white glyph could not. A launcher background is
+    not something an app gets to choose, and the two it lands on are opposites:
+    the watch's own app list is black, Garmin Connect's phone list is white. A
+    white barbell disappeared on the phone; a disc behind it fixed that and
+    looked like a badge. Garmin's own accent blue is legible on both grounds and
+    is already the colour of this ecosystem, so it solves the problem by
+    belonging rather than by fencing the mark off.
 
-    The ring is RepFlow's progress ring, the one thing on screen for the whole
-    workout. It is what separates this from every other dumbbell in the store.
+    The mark fills its frame the way Garmin's do. Strokes are no thinner than
+    about 8% of the width, because the launcher renders this between 33 and 80
+    pixels across and anything finer disappears at the small end.
+
+    Two plates a side — the inner tall, the outer short — because that
+    silhouette still reads as a loaded bar at 33 pixels, where a single plate a
+    side reads as a bone.
   -->
-
-  <!-- The ground. Not pure black: a hair lighter reads as a deliberate disc
-       rather than as a hole punched in a dark list. -->
-  <circle cx="256" cy="256" r="228" fill="#141A20"/>
-
-  <!-- Progress ring: 300 degrees, opening at the top-left the way the ring on
-       the exercise screen does. -->
-  <path d="M 256 50
-           A 206 206 0 1 1 153.0 78.6"
-        fill="none" stroke="#00AAFF" stroke-width="32" stroke-linecap="round"/>
-
-  <!-- Barbell. Two plates a side: the outer short, the inner tall, which is
-       what makes it read as a bar and not as a dumbbell-shaped blob. -->
-  <g fill="#FFFFFF">
-    <rect x="112" y="214" width="34"  height="84"  rx="11"/>
-    <rect x="158" y="183" width="48"  height="146" rx="17"/>
-    <rect x="306" y="183" width="48"  height="146" rx="17"/>
-    <rect x="366" y="214" width="34"  height="84"  rx="11"/>
-    <rect x="196" y="237" width="120" height="38"  rx="13"/>
+  <g fill="#0092E4">
+    <rect x="54"  y="210" width="44"  height="92"  rx="15"/>
+    <rect x="112" y="160" width="64"  height="192" rx="22"/>
+    <rect x="336" y="160" width="64"  height="192" rx="22"/>
+    <rect x="414" y="210" width="44"  height="92"  rx="15"/>
+    <rect x="164" y="228" width="184" height="56"  rx="19"/>
   </g>
 </svg>
