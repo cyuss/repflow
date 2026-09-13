@@ -60,6 +60,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Discarding a workout no longer leaves the word "Discard" painted across the
+  recap. Switching views from inside a `Menu2` selection callback leaves the
+  menu's own layer on screen; the choice is now acted on a tick later, once the
+  system has torn that layer down.
+- `Theme.clear` drops any clip before clearing, so no view can inherit one from
+  a scrolling line drawn earlier and repaint only part of itself.
 - Ending a workout no longer stalls on the Save/Discard menu. Closing the FIT
   file is the slowest thing the app does and it was happening before the recap
   was drawn, inside the menu's own selection callback — so the menu sat there

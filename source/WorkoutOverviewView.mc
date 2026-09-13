@@ -169,6 +169,36 @@ module RowLayout {
         return ladder[ladder.size() - 1];
     }
 
+    //! The biggest font a fixed label can take without being clipped.
+    //!
+    //! Starts from what the row's height allows and shrinks until the words
+    //! fit the row's width too.
+    public function labelFont(
+        dc as Graphics.Dc,
+        rowHeight as Number,
+        text as String
+    ) as Graphics.FontDefinition {
+        var ladder = [
+            Graphics.FONT_MEDIUM,
+            Graphics.FONT_SMALL,
+            Graphics.FONT_TINY,
+            Graphics.FONT_XTINY
+        ] as Array<Graphics.FontDefinition>;
+        var tallest = nameFont(dc, rowHeight, Theme.captionFont());
+        var width = textWidth(dc);
+        var started = false;
+        for (var i = 0; i < ladder.size(); i++) {
+            if (!started && ladder[i] != tallest) {
+                continue;       // skip anything taller than the row allows
+            }
+            started = true;
+            if (dc.getTextWidthInPixels(text, ladder[i]) <= width) {
+                return ladder[i];
+            }
+        }
+        return ladder[ladder.size() - 1];
+    }
+
     //! The icon column, mirrored as a margin on the right.
     public function gutter(dc as Graphics.Dc) as Number {
         return dc.getWidth() / 5;
@@ -272,9 +302,14 @@ class ActionMenuItem extends WatchUi.CustomMenuItem {
     }
 
     public function draw(dc as Graphics.Dc) as Void {
-        // The same size as an exercise row's name: an action in this list is a
-        // row like any other, and a smaller one reads as disabled.
-        var font = RowLayout.nameFont(dc, dc.getHeight(), Theme.captionFont());
+        // As large as an exercise row's name — an action in this list is a row
+        // like any other, and a smaller one reads as disabled — but no larger
+        // than fits. An exercise name that overflows scrolls, because only one
+        // row is focused at a time and that row is the one you are reading.
+        // "Add exercise" is not reading material: it is a target, it is always
+        // the same words, and a target clipped to "Add exercis." looks broken
+        // rather than long.
+        var font = RowLayout.labelFont(dc, dc.getHeight(), _label);
         var top = (dc.getHeight() - dc.getFontHeight(font)) / 2;
         if (top < 0) {
             top = 0;

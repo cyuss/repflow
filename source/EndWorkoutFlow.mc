@@ -1,5 +1,6 @@
 import Toybox.Lang;
 import Toybox.WatchUi;
+import Toybox.Timer;
 
 //! Ending a workout — the stop menu.
 //!
@@ -29,6 +30,65 @@ module EndWorkoutFlow {
     const ACTION_RESUME = "end_resume";
     const ACTION_SAVE = "end_save";
     const ACTION_DISCARD = "end_discard";
+
+    //! What the athlete chose, waiting for the menu to get out of the way.
+    const CHOICE_NONE = 0;
+    const CHOICE_RESUME = 1;
+    const CHOICE_SAVE = 2;
+    const CHOICE_DISCARD = 3;
+
+    var _choice as Number = CHOICE_NONE;
+    var _defer as Timer.Timer? = null;
+    var _callbacks as EndWorkoutCallbacks = new EndWorkoutCallbacks();
+
+    //! Act on the choice **after** this menu's callback has returned.
+    //!
+    //! Switching views from inside `Menu2InputDelegate.onSelect` leaves the
+    //! menu's own layer on screen: the recap drew its header and the word
+    //! "Discard" stayed painted across the middle of it — photographed on a
+    //! real watch. The system owns that layer and only tears it down once the
+    //! callback is done with it.
+    //!
+    //! So the choice is recorded, the callback returns, and a timer one tick
+    //! later does the navigation. By then the menu is gone and the view
+    //! underneath is ours to replace.
+    public function choose(choice as Number) as Void {
+        _choice = choice;
+        if (_defer == null) {
+            _defer = new Timer.Timer();
+        }
+        (_defer as Timer.Timer).start(_callbacks.method(:onChosen), 20, false);
+    }
+
+    //! Carry out whatever was chosen. Called from the deferring timer.
+    public function act() as Void {
+        var choice = _choice;
+        _choice = CHOICE_NONE;
+
+        if (choice == CHOICE_SAVE) {
+            AppController.instance().finishWorkout(true);
+            return;
+        }
+        if (choice == CHOICE_DISCARD) {
+            AppController.instance().finishWorkout(false);
+            return;
+        }
+        if (choice == CHOICE_RESUME) {
+            resume();
+        }
+    }
+
+    //! Nothing was changed — put the athlete back where they were.
+    public function resume() as Void {
+        var engine = AppController.instance().engine();
+        if (engine != null && engine.currentExercise() != null) {
+            WatchUi.switchToView(new ExerciseView(), new ExerciseDelegate(),
+                WatchUi.SLIDE_DOWN);
+        } else {
+            WatchUi.switchToView(new WorkoutOverviewView(),
+                new WorkoutOverviewDelegate(), WatchUi.SLIDE_DOWN);
+        }
+    }
 
     public function request() as Void {
         var engine = AppController.instance().engine();
@@ -73,28 +133,30 @@ class EndWorkoutConfirmDelegate extends WatchUi.Menu2InputDelegate {
     public function onSelect(item as WatchUi.MenuItem) as Void {
         var id = item.getId() as String;
         if (id.equals(EndWorkoutFlow.ACTION_SAVE)) {
-            AppController.instance().finishWorkout(true);
+            EndWorkoutFlow.choose(EndWorkoutFlow.CHOICE_SAVE);
             return;
         }
         if (id.equals(EndWorkoutFlow.ACTION_DISCARD)) {
-            AppController.instance().finishWorkout(false);
+            EndWorkoutFlow.choose(EndWorkoutFlow.CHOICE_DISCARD);
             return;
         }
-        _cancel();
+        EndWorkoutFlow.choose(EndWorkoutFlow.CHOICE_RESUME);
     }
 
     //! BACK is "I did not mean to stop" — never an answer to save or discard.
     public function onBack() as Void {
-        _cancel();
+        EndWorkoutFlow.choose(EndWorkoutFlow.CHOICE_RESUME);
+    }
+}
+
+//! A module cannot hand a Timer one of its own functions — `method()` needs a
+//! receiver and a module has none. This class is that receiver.
+class EndWorkoutCallbacks {
+
+    public function initialize() {
     }
 
-    //! Nothing was changed — put the athlete back where they were.
-    private function _cancel() as Void {
-        var engine = AppController.instance().engine();
-        if (engine != null && engine.currentExercise() != null) {
-            WatchUi.switchToView(new ExerciseView(), new ExerciseDelegate(), WatchUi.SLIDE_DOWN);
-        } else {
-            WatchUi.switchToView(new WorkoutOverviewView(), new WorkoutOverviewDelegate(), WatchUi.SLIDE_DOWN);
-        }
+    public function onChosen() as Void {
+        EndWorkoutFlow.act();
     }
 }

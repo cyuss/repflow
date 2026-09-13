@@ -228,7 +228,17 @@ module Theme {
     // Layout primitives
     // ------------------------------------------------------------------
 
+    //! Start a frame: no clip, the theme's colours, a clean screen.
+    //!
+    //! `dc.clear()` only clears what the clip allows, so a clip left set by
+    //! something earlier turns a full repaint into a partial one — a screen
+    //! that keeps whatever was under the uncleared part. The marquee sets a
+    //! clip on every scrolling line, so this is not hypothetical; clearing it
+    //! here costs nothing and means no view can inherit one.
     public function clear(dc as Graphics.Dc) as Void {
+        if (dc has :clearClip) {
+            dc.clearClip();
+        }
         dc.setColor(colorText(), colorBg());
         dc.clear();
     }

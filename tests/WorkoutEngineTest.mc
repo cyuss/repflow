@@ -2761,3 +2761,42 @@ function testDiscardSurvivesTheDeferral(logger as Test.Logger) as Boolean {
     Test.assert(!controller.closingIsPending());
     return true;
 }
+
+//! Leaving the end-of-workout menu happens after the menu is gone.
+//!
+//! Switching views from inside `Menu2InputDelegate.onSelect` leaves the menu's
+//! own layer painted on top: the recap drew its header and the word "Discard"
+//! stayed across the middle of it, photographed on a real watch. The system
+//! owns that layer and only tears it down once the callback has returned.
+//!
+//! So the choice is recorded and acted on a tick later. This checks the
+//! recording and the acting, which is the part that can be tested without a
+//! screen: what must never happen is a choice that is silently lost, or one
+//! that is carried out twice.
+(:test)
+function testEndWorkoutChoiceIsDeferredThenActedOnce(logger as Test.Logger) as Boolean {
+    var controller = AppController.instance();
+    controller.startWorkout(TestSupport.abcWorkout());
+    controller.selectExercise("A");
+    controller.completeSet();
+
+    // Chosen but not yet acted on: the menu is still on screen at this point.
+    EndWorkoutFlow.choose(EndWorkoutFlow.CHOICE_DISCARD);
+    Test.assertEqual(EndWorkoutFlow._choice, EndWorkoutFlow.CHOICE_DISCARD);
+    Test.assert(controller.engine() != null);
+
+    // The timer fires: the workout ends, and the recording is queued to close.
+    EndWorkoutFlow.act();
+    Test.assertEqual(EndWorkoutFlow._choice, EndWorkoutFlow.CHOICE_NONE);
+    Test.assert(controller.engine() == null);
+    Test.assert(controller.closingIsPending());
+
+    // A second firing must do nothing at all. A repeated timer, or a stray
+    // press, must not end a workout that has already ended.
+    EndWorkoutFlow.act();
+    Test.assertEqual(EndWorkoutFlow._choice, EndWorkoutFlow.CHOICE_NONE);
+
+    controller.onClose();
+    Test.assert(!controller.closingIsPending());
+    return true;
+}
