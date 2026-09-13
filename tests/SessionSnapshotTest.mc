@@ -17,7 +17,7 @@ import Toybox.Test;
 function testRoundTripSnapshotIsValid(logger as Test.Logger) as Boolean {
     var engine = TestSupport.newEngine();
     engine.selectExercise("A");
-    engine.completeCurrentSet(9, 57.5, TestSupport.T0 + 10);
+    engine.completeCurrentSet(9, 57.5, null, TestSupport.T0 + 10);
     engine.selectExercise("B");
     engine.deferExercise("B");
 
@@ -139,7 +139,7 @@ function testCorruptExerciseIsRejected(logger as Test.Logger) as Boolean {
 function testCorruptSetIsRejected(logger as Test.Logger) as Boolean {
     var engine = TestSupport.newEngine();
     engine.selectExercise("A");
-    engine.completeCurrentSet(10, 50.0, TestSupport.T0);
+    engine.completeCurrentSet(10, 50.0, null, TestSupport.T0);
 
     var raw = engine.getSession().toStorage();
     var workout = raw["w"] as Dictionary;
@@ -160,7 +160,7 @@ function testCorruptSetIsRejected(logger as Test.Logger) as Boolean {
 function testIntegerWeightsAreAccepted(logger as Test.Logger) as Boolean {
     var engine = TestSupport.newEngine();
     engine.selectExercise("A");
-    engine.completeCurrentSet(10, 50.0, TestSupport.T0);
+    engine.completeCurrentSet(10, 50.0, null, TestSupport.T0);
 
     var raw = engine.getSession().toStorage();
     var workout = raw["w"] as Dictionary;
@@ -195,7 +195,7 @@ function testIntegerWeightsAreAccepted(logger as Test.Logger) as Boolean {
 function testV1SnapshotMigratesForward(logger as Test.Logger) as Boolean {
     var engine = TestSupport.newEngine();
     engine.selectExercise("A");
-    engine.completeCurrentSet(9, 57.5, TestSupport.T0 + 10);
+    engine.completeCurrentSet(9, 57.5, null, TestSupport.T0 + 10);
     engine.selectExercise("B");
     engine.deferExercise("B");
 

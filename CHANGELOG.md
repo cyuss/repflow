@@ -23,8 +23,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `make test` now runs the backend's tests alongside the watch app's, and skips
   them cleanly on a machine where the backend is not set up.
 
+- **RPE** — an effort rating on each set, on the scale Hevy's API actually
+  accepts (6, 7, 7.5, 8, 8.5, 9, 9.5, 10 — there is no 6.5, and a value off the
+  ladder is answered with a 400 that loses the whole workout). It appears only
+  while confirming a set, because a rating is something you give a set you have
+  done. It costs no presses: START still logs from any field. Recorded per set,
+  never inherited, carried to Hevy and into the FIT as a developer field.
+
 ### Changed
 
+- The workout overview moved from `Menu2` to `CustomMenu`, so long exercise
+  names scroll on the focused row instead of being truncated by the system.
+  Rows are left-aligned and taller — at a fifth of the screen the outermost
+  rows sat where the glass has already curved past the icon column and their
+  state rings came out as bare slivers.
+- The rest screen's text is bounded by the countdown ring rather than by the
+  glass.
+- On the summary's body page, recovery and Body Battery moved to the middle
+  band and Garmin's two heart rate figures to the bottom one: "BODY BATT" needs
+  77px and the bottom band allows 56.
+- Field captions drop a size when they do not fit, which is what was happening
+  to "AVG HR" and "MAX HR" on a watch with large fonts turned on.
+- The exercise-screen heart rate row is a zone-coloured heart and the number,
+  without the zone gauge and the "Z3" beside it.
 - Exercise names written to the FIT may now be 40 characters rather than 24.
   Imported Hevy names were being truncated — "Triceps Extension (Cable)" became
   "Triceps Extension (Cable" — and a truncated name is a mis-identified exercise

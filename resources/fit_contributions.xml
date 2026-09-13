@@ -24,6 +24,7 @@
          12   reps              lap
          13   weight            lap
          14   rest              lap   (seconds before this set)
+         15   rpe               lap   (effort, Hevy's scale)
 
       displayInChart is false throughout. A chart is record-level and numeric,
       and RepFlow writes nothing per second worth plotting that Garmin does not
@@ -43,6 +44,7 @@
         <string id="fit_lap_weight_label">Weight</string>
         <string id="fit_lap_rest_label">Rest</string>
         <string id="fit_seconds_units">s</string>
+        <string id="fit_rpe_label">RPE</string>
         <string id="fit_no_units">-</string>
     </strings>
 
@@ -95,5 +97,16 @@
                   precision="0"
                   dataLabel="@Strings.fit_lap_rest_label"
                   unitLabel="@Strings.fit_seconds_units" />
+        <!--
+          How hard the set felt. FIT has no native field for effort, so this is
+          the only place a RepFlow session carries it into Garmin Connect.
+          precision 1 because the scale has halves in it: 8.5 is a rating, 9 is
+          a different one.
+        -->
+        <fitField id="15" sortOrder="8" displayInChart="false"
+                  displayInActivitySummary="false" displayInActivityLaps="true"
+                  precision="1"
+                  dataLabel="@Strings.fit_rpe_label"
+                  unitLabel="@Strings.fit_no_units" />
     </fitContributions>
 </resources>

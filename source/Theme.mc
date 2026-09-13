@@ -135,6 +135,29 @@ module Theme {
         return Device.fontScale() >= 1.2 ? Graphics.FONT_TINY : Graphics.FONT_XTINY;
     }
 
+    //! The caption font, dropped one size when the label will not fit.
+    //!
+    //! A caption is centred under its value and nothing measured it, so two
+    //! captions in a pair grew towards each other until they touched. That was
+    //! invisible here and obvious on a watch with large fonts turned on, where
+    //! `captionFont` is a size up and "AVG HR" beside "MAX HR" ran together.
+    //!
+    //! Shrinking rather than clipping: a caption is a word, and half a word is
+    //! worse than a small one. There is nothing below XTINY, so a label that
+    //! still does not fit is a label that is too long — which is what
+    //! testFieldCaptionsFitTheirCells is for.
+    public function captionFontFor(
+        dc as Graphics.Dc,
+        text as String,
+        maxWidth as Number
+    ) as Graphics.FontDefinition {
+        var font = captionFont();
+        if (dc.getTextWidthInPixels(text, font) <= maxWidth) {
+            return font;
+        }
+        return Graphics.FONT_XTINY;
+    }
+
     // ------------------------------------------------------------------
     // Font ladders, largest first. pickFont walks down until the text fits.
     // Built on demand rather than held as module constants so they cost no
@@ -349,6 +372,25 @@ module Theme {
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, top, font, clipToWidth(dc, text, font, maxWidth),
             Graphics.TEXT_JUSTIFY_CENTER);
+        return top + dc.getFontHeight(font);
+    }
+
+    //! The same, anchored to a left edge.
+    //!
+    //! A list is scanned down its left edge: centred rows make every name start
+    //! somewhere different, so finding the one you want means reading them all.
+    public function drawClippedAt(
+        dc as Graphics.Dc,
+        left as Number,
+        top as Number,
+        text as String,
+        font as Graphics.FontDefinition,
+        color as Number,
+        maxWidth as Number
+    ) as Number {
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(left, top, font, clipToWidth(dc, text, font, maxWidth),
+            Graphics.TEXT_JUSTIFY_LEFT);
         return top + dc.getFontHeight(font);
     }
 
@@ -776,6 +818,19 @@ module Theme {
 
     //! A filled rectangle with rounded ends, falling back to a plain one on a
     //! device without rounded rectangles.
+    //!
+    //! At the sizes this app draws bars — eight pixels across — the rounding is
+    //! the whole difference between a designed mark and a row of teeth.
+    public function fillBar(
+        dc as Graphics.Dc,
+        x as Number,
+        y as Number,
+        width as Number,
+        height as Number
+    ) as Void {
+        _roundBar(dc, x, y, width, height);
+    }
+
     function _roundBar(
         dc as Graphics.Dc,
         x as Number,

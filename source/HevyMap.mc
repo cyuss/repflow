@@ -162,6 +162,11 @@ module HevyMap {
     //! A set with no load sends `weight_kg` as null, which is what Hevy's own
     //! schema asks for. Sending a zero would write a lie into the athlete's
     //! history.
+    //!
+    //! The effort rating is sent the same way, and is sanitised on the way out:
+    //! Hevy's `rpe` is an enumeration, not a range, and one value off the ladder
+    //! is answered with a 400 that loses the **whole** session, not the set. See
+    //! Rpe.
     public function sessionToPayload(
         workout as Workout,
         startedAt as Number,
@@ -185,7 +190,8 @@ module HevyMap {
                 sets.add({
                     "type" => "normal",
                     "weight_kg" => set.actualWeight,
-                    "reps" => set.actualReps
+                    "reps" => set.actualReps,
+                    "rpe" => Rpe.sanitise(set.rpe)
                 } as Object);
             }
             if (sets.size() == 0) {

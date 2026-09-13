@@ -117,9 +117,14 @@ class Exercise {
     }
 
     //! Record a performed set. Returns the set that was created.
-    public function recordSet(reps as Number, weight as Float?, at as Number) as WorkoutSet {
+    public function recordSet(
+        reps as Number,
+        weight as Float?,
+        rpe as Float?,
+        at as Number
+    ) as WorkoutSet {
         var set = new WorkoutSet(sets.size(), reps, weight);
-        set.complete(reps, weight, at);
+        set.complete(reps, weight, rpe, at);
         sets.add(set);
         return set;
     }

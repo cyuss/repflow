@@ -9,6 +9,7 @@
     <string id="Reps">reps</string>
     <string id="FieldWeight">POIDS</string>
     <string id="FieldReps">REPS</string>
+    <string id="FieldRpe">RPE</string>
     <string id="FieldHr">FC</string>
     <string id="FieldAvgHr">FC MOY</string>
     <string id="FieldMaxHr">FC MAX</string>

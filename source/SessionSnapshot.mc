@@ -26,7 +26,9 @@ module SessionSnapshot {
     //!   v2  exercises carry a muscle group ("m"), for weekly volume
     //!   v3  the target weight may be null ("no target load"), and exercises
     //!       carry Hevy's own movement id ("h") when they came from a routine
-    const SCHEMA_VERSION = 3;
+    //!   v4  a completed set carries its effort rating (RPE) as an eighth
+    //!       element, or nothing at all when it was not rated
+    const SCHEMA_VERSION = 4;
 
     //! The oldest layout this build can still bring forward.
     const OLDEST_MIGRATABLE = 1;
@@ -81,6 +83,18 @@ module SessionSnapshot {
         // its weight is a number, which v3 still accepts. The version is the
         // only thing that moves.
         if (v == 2) {
+            if (!_isValidShape(data, true)) {
+                return null;
+            }
+            data["v"] = 3;
+            v = 3;
+        }
+
+        // v3 -> v4: a set gains an eighth element for the effort rating. Sets
+        // written before it simply do not have one, and an absent rating is
+        // exactly what an unrated set means — so nothing is added and nothing
+        // is invented. Only the version moves.
+        if (v == 3) {
             if (!_isValidShape(data, true)) {
                 return null;
             }
@@ -192,13 +206,21 @@ module SessionSnapshot {
     }
 
     //! A set is stored as a flat array — see WorkoutSet.toStorage.
-    //! [index, targetReps, targetWeight, actualReps, actualWeight, completed, completedAt]
+    //!
+    //!   [index, targetReps, targetWeight, actualReps, actualWeight,
+    //!    completed, completedAt, rpe]
+    //!
+    //! Seven elements or eight: the rating was appended in v4, and a set
+    //! written by an earlier build is one short. That is not damage — it is a
+    //! set nobody rated, which is a state v4 has anyway. Rejecting it would
+    //! throw away a session mid-workout when an update lands, which is the
+    //! thing migration exists to prevent.
     function _isValidSet(raw as Object?) as Boolean {
         if (!(raw instanceof Array)) {
             return false;
         }
         var set = raw as Array;
-        if (set.size() != 7) {
+        if (set.size() < 7 || set.size() > 8) {
             return false;
         }
         if (!_isNumber(set[0] as Object?) || !_isNumber(set[1] as Object?)) {
@@ -218,6 +240,12 @@ module SessionSnapshot {
             return false;
         }
         if (set[6] != null && !_isNumber(set[6] as Object?)) {
+            return false;
+        }
+        // Present means it must be a number; a rating off Hevy's ladder is
+        // dropped later by Rpe.sanitise rather than rejected here, because a
+        // strange rating is not a reason to lose the session it belongs to.
+        if (set.size() > 7 && set[7] != null && !_isFloat(set[7] as Object?)) {
             return false;
         }
         return true;

@@ -5,7 +5,7 @@ import Toybox.System;
 
 //! Edit the weight and the reps of the upcoming set, on one screen.
 //!
-//!        (heart) 132  ▮▮▮▯▯
+//!        (heart) 132
 //!            SET 2 / 4
 //!                +
 //!      ┌────────┐ ┌──────┐
@@ -13,7 +13,17 @@ import Toybox.System;
 //!      │   KG   │ │ REPS │
 //!      └────────┘ └──────┘
 //!                -
+//!      RPE  ▮▮▮▮▮▯▯▯   8.5
 //!            ● ● ○ ○
+//!
+//! **The RPE row is only there while confirming a set**, because an effort
+//! rating is something you give a set you have done, not a target you set for
+//! one you have not. Planning a set shows two fields; confirming one shows
+//! three.
+//!
+//! It costs no presses. START still logs in one, from any field — the athlete
+//! who does not rate sets never touches it, and an unrated set records no
+//! rating rather than a middling one.
 //!
 //! The focused cell is outlined in the accent colour; UP/DOWN change it, START
 //! moves on and confirms on the last one, BACK steps back. That is exactly the
@@ -87,6 +97,12 @@ class SetEditorView extends WatchUi.View {
     //! five-rep jump overshoots more often than it helps.
     public function adjust(direction as Number) as Void {
         var controller = AppController.instance();
+        if (_focus == Tuning.FOCUS_RPE) {
+            controller.adjustRpe(direction);
+            _lastAdjustMs = 0;
+            WatchUi.requestUpdate();
+            return;
+        }
         if (_focus == Tuning.FOCUS_REPS) {
             controller.adjustReps(direction);
             _lastAdjustMs = 0;
@@ -129,18 +145,128 @@ class SetEditorView extends WatchUi.View {
         var cellsTop = y + signBand;
         var cellsBottom = bottom - signBand;
 
+        // Confirming a set gives up a slice of the cells to the effort row.
+        // Planning one keeps the whole band, because there is nothing to rate.
+        var rpeHeight = confirming ? (h * 15) / 100 : 0;
+        cellsBottom -= rpeHeight;
+
         var focusCx = _drawCells(dc, cellsTop, cellsBottom, controller);
 
         var signSize = (signBand * 55) / 100;
         Theme.drawSign(dc, focusCx, y + signBand / 2, signSize, true, Theme.colorAccent());
         Theme.drawSign(dc, focusCx, cellsBottom + signBand / 2, signSize, false,
             Theme.colorAccent());
+
+        if (confirming) {
+            _drawRpe(dc, bottom - rpeHeight, rpeHeight, controller.pendingRpe());
+        }
     }
 
-    //! The two values, side by side, the focused one outlined.
+    //! The effort row: a label, a ladder, and the number.
     //!
-    //! Returns the horizontal centre of the focused cell, so the caller can put
-    //! the + and the - directly above and below it.
+    //!      RPE   ▁▂▃▄▅▆▇█   8.5
+    //!
+    //! A ladder rather than a third boxed cell. Two cells with one more below
+    //! them is a grid with a widow in it, and RPE is not the same kind of thing
+    //! as a load or a rep count: those are measurements, this is a judgement on
+    //! a fixed ladder of eight rungs. A bar shows which rung — the actual
+    //! question — and a bare number does not.
+    //!
+    //! Three things do the work:
+    //!
+    //!   * the bars **grow from a common baseline**, so the ladder reads as a
+    //!     climb. Centred bars of rising height read as a pile instead;
+    //!   * their ends are **rounded**, which at eight pixels wide is the whole
+    //!     difference between a designed mark and a row of teeth;
+    //!   * the colour **climbs with the effort** — accent through warm to hot —
+    //!     so RPE 9.5 is not the same blue as RPE 7. That is the same language
+    //!     the heart rate zones already speak on the metrics page.
+    private function _drawRpe(
+        dc as Graphics.Dc,
+        top as Number,
+        height as Number,
+        value as Float?
+    ) as Void {
+        var focused = _focus == Tuning.FOCUS_RPE;
+        var band = Theme.bandWidth(dc, top, height);
+        var outline = (dc.getWidth() - band) / 2;
+
+        // The outline is the field; the content sits inside it with air on
+        // either side. Text hard against a border reads as an overflow.
+        var pad = band / 14;
+        var left = outline + pad;
+        var width = band - pad * 2;
+
+        var font = Graphics.FONT_XTINY;
+        var fontHeight = dc.getFontHeight(font);
+        var textTop = top + (height - fontHeight) / 2;
+
+        var label = WatchUi.loadResource(Rez.Strings.FieldRpe) as String;
+        var labelWidth = dc.getTextWidthInPixels(label, font);
+        // Reserve the widest reading, so the ladder does not shuffle sideways
+        // as the rating goes from "8" to "8.5".
+        var valueWidth = dc.getTextWidthInPixels("10.5", font);
+        var gap = width / 12;
+        var tint = Rpe.color(value);
+
+        dc.setColor(focused ? Theme.colorAccent() : Theme.colorDim(),
+            Graphics.COLOR_TRANSPARENT);
+        dc.drawText(left, textTop, font, label, Graphics.TEXT_JUSTIFY_LEFT);
+
+        dc.setColor(tint, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(left + width, textTop, font, Rpe.format(value),
+            Graphics.TEXT_JUSTIFY_RIGHT);
+
+        var ladderLeft = left + labelWidth + gap;
+        var ladderWidth = (left + width - valueWidth - gap) - ladderLeft;
+        if (ladderWidth > Rpe.size() * 3) {
+            _drawLadder(dc, ladderLeft, top + height, ladderWidth, height, value);
+        }
+
+        if (focused) {
+            // The same outline the focused cell gets, so "this is what UP and
+            // DOWN move" means one thing on this screen.
+            dc.setPenWidth(3);
+            dc.setColor(Theme.colorAccent(), Graphics.COLOR_TRANSPARENT);
+            dc.drawRoundedRectangle(outline, top, band, height, height / 2);
+            dc.setPenWidth(1);
+        }
+    }
+
+    //! One bar per rung, rising from a shared baseline, lit up to the rating.
+    private function _drawLadder(
+        dc as Graphics.Dc,
+        left as Number,
+        baseline as Number,
+        width as Number,
+        height as Number,
+        value as Float?
+    ) as Void {
+        var count = Rpe.size();
+        var lit = Rpe.indexOf(value) + 1;    // -1 becomes 0: nothing lit
+        var pitch = width / count;
+        var barWidth = (pitch * 58) / 100;
+        if (barWidth < 2) {
+            barWidth = 2;
+        }
+        var tallest = (height * 58) / 100;
+        var shortest = (tallest * 40) / 100;
+        var foot = baseline - height / 6;
+
+        for (var i = 0; i < count; i++) {
+            var barHeight = shortest + ((tallest - shortest) * i) / (count - 1);
+            if (barHeight < 2) {
+                barHeight = 2;
+            }
+            // An unlit rung is still a rung: faint, not absent, so the ladder
+            // keeps its length and the lit part is read as a proportion of it.
+            dc.setColor(i < lit ? Rpe.colorAt(i) : Theme.colorFaint(),
+                Graphics.COLOR_TRANSPARENT);
+            Theme.fillBar(dc, left + i * pitch + (pitch - barWidth) / 2,
+                foot - barHeight, barWidth, barHeight);
+        }
+    }
+
     private function _drawCells(
         dc as Graphics.Dc,
         top as Number,
@@ -165,6 +291,11 @@ class SetEditorView extends WatchUi.View {
             WatchUi.loadResource(Rez.Strings.FieldReps) as String,
             _focus == Tuning.FOCUS_REPS);
 
+        // The effort row spans the screen, so its + and - belong on the centre
+        // line rather than over one of the two cells.
+        if (_focus == Tuning.FOCUS_RPE) {
+            return dc.getWidth() / 2;
+        }
         return _focus == Tuning.FOCUS_REPS ? left + half + half / 2 : left + half / 2;
     }
 
@@ -297,10 +428,20 @@ class SetConfirmDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
+    //! BACK cycles the fields: reps -> weight -> effort -> reps.
+    //!
+    //! Cycling rather than paging, because START logs from wherever you are.
+    //! The athlete who never rates a set presses START and is done; the one who
+    //! does presses BACK twice. Neither pays for the other.
     public function onBack() as Boolean {
-        _view.setFocus(_view.focus() == Tuning.FOCUS_REPS
-            ? Tuning.FOCUS_WEIGHT
-            : Tuning.FOCUS_REPS);
+        var focus = _view.focus();
+        var next = Tuning.FOCUS_REPS;
+        if (focus == Tuning.FOCUS_REPS) {
+            next = Tuning.FOCUS_WEIGHT;
+        } else if (focus == Tuning.FOCUS_WEIGHT) {
+            next = Tuning.FOCUS_RPE;
+        }
+        _view.setFocus(next);
         return true;
     }
 

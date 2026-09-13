@@ -40,10 +40,20 @@ class WorkoutOverviewView extends WatchUi.CustomMenu {
             title = engine.getWorkout().name;
         }
 
-        // Two lines and air. The focused row gets more, which is what makes the
-        // selection obvious without a highlight bar across it.
-        CustomMenu.initialize(height / 5, Theme.colorBg(), {
-            :focusItemHeight => height / 4,
+        // Four rows, not six.
+        //
+        // Row height is what decides how far from the centre the outermost row
+        // sits, and on a round screen that decides whether its icon survives.
+        // At a fifth of the screen the top and bottom rows sat where the glass
+        // has already curved past the icon column, and their state rings came
+        // out as bare vertical slivers — reported from a real watch and
+        // reproduced in the simulator.
+        //
+        // Taller rows keep every row near the middle where the screen is at
+        // its widest. They are also easier to hit and closer to what Garmin's
+        // own menus do, so nothing is being traded away for the fix.
+        CustomMenu.initialize(height / 4, Theme.colorBg(), {
+            :focusItemHeight => height / 3,
             :title => new OverviewTitle(title),
             // Explicitly themeless: a menu theme would override the background
             // colour, and RepFlow's light mode is a background colour.
@@ -115,12 +125,16 @@ class OverviewTitle extends WatchUi.Drawable {
 //! the numbers are stated once.
 module RowLayout {
 
-    //! Width available to text, centred on the screen.
+    //! Where a row's text starts. Every row starts here, whatever it says.
+    public function textLeft(dc as Graphics.Dc) as Number {
+        return gutter(dc);
+    }
+
+    //! Width available to text.
     //!
     //! The gutter is taken off **both** sides even though only the left one
-    //! holds an icon. The text is then centred on the screen rather than
-    //! centred in what is left over, which is what stops a list of short names
-    //! from looking pushed to the right.
+    //! holds an icon: the right one is what keeps the longest name clear of the
+    //! curve of the glass.
     public function textWidth(dc as Graphics.Dc) as Number {
         var width = dc.getWidth();
         var usable = width - gutter(dc) * 2;
@@ -134,14 +148,12 @@ module RowLayout {
 
     //! Where the state icon's centre goes.
     //!
-    //! Not at the left edge of the gutter, which is where it was: a row two
-    //! places from the focus sits near the top or bottom of a round screen,
-    //! where the display has already curved away from x=0, and the icons on
-    //! those rows came out with a slice missing. A third of the way in clears
-    //! the curve on every row the menu shows and still leaves the icon clear
-    //! of the text.
+    //! Far enough in that the curve of the glass does not clip it on the
+    //! outermost row the menu shows — see the row height chosen in
+    //! WorkoutOverviewView — and far enough out that it stays a column you can
+    //! run your eye down rather than a mark stuck to the text.
     public function iconCentre(dc as Graphics.Dc) as Number {
-        return (gutter(dc) * 7) / 10;
+        return (gutter(dc) * 3) / 5;
     }
 }
 
@@ -170,6 +182,10 @@ class ExerciseMenuItem extends WatchUi.CustomMenuItem {
         if (top < 0) {
             top = 0;
         }
+        // The icon belongs to the exercise, and the exercise is the name. Level
+        // with the name's own line, not with the middle of the two-line block —
+        // centred on the block it read as though it belonged to the gap.
+        var iconCy = top + nameHeight / 2;
 
         // Wide spacing, and a space before the unit: "2/4    20 kg" reads as
         // two facts, "2/420kg" as one run-on. ASCII only — the Fenix 6 Pro has
@@ -185,15 +201,18 @@ class ExerciseMenuItem extends WatchUi.CustomMenuItem {
             nameColor = Theme.colorFaint();
         }
 
+        // Left-aligned, so the eye runs down one edge to find a name instead
+        // of reading every row to work out where each one starts.
+        var textLeft = RowLayout.textLeft(dc);
         if (focused) {
-            Marquee.draw(dc, top, _exercise.name,
+            Marquee.drawAt(dc, textLeft, top, _exercise.name,
                 [nameFont] as Array<Graphics.FontDefinition>, nameColor, textWidth);
         } else {
-            Theme.drawClipped(dc, dc.getWidth() / 2, top, _exercise.name, nameFont,
+            Theme.drawClippedAt(dc, textLeft, top, _exercise.name, nameFont,
                 nameColor, textWidth);
         }
 
-        Theme.drawClipped(dc, dc.getWidth() / 2, top + nameHeight + gap, sub, subFont,
+        Theme.drawClippedAt(dc, textLeft, top + nameHeight + gap, sub, subFont,
             focused ? Theme.colorAccent() : Theme.colorFaint(), textWidth);
 
         // The icon sits in the left gutter, centred on the row as a whole.
@@ -203,7 +222,7 @@ class ExerciseMenuItem extends WatchUi.CustomMenuItem {
         var iconSize = (RowLayout.gutter(dc) * 4) / 5;
         var icon = new StateIcon(_exercise.state, iconSize);
         icon.setLocation(RowLayout.iconCentre(dc) - (iconSize * 44) / 100,
-            (height - iconSize) / 2);
+            iconCy - iconSize / 2);
         icon.draw(dc);
     }
 }
@@ -224,7 +243,7 @@ class ActionMenuItem extends WatchUi.CustomMenuItem {
         if (top < 0) {
             top = 0;
         }
-        Theme.drawClipped(dc, dc.getWidth() / 2, top, _label, font,
+        Theme.drawClippedAt(dc, RowLayout.textLeft(dc), top, _label, font,
             isFocused() ? Theme.colorText() : Theme.colorDim(),
             RowLayout.textWidth(dc));
     }

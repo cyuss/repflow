@@ -123,7 +123,7 @@ module TestSupport {
     public function completeSets(engine as WorkoutEngine, count as Number) as Void {
         for (var i = 0; i < count; i++) {
             var ex = engine.currentExercise() as Exercise;
-            engine.completeCurrentSet(ex.plannedReps(), ex.plannedWeight(), T0 + i);
+            engine.completeCurrentSet(ex.plannedReps(), ex.plannedWeight(), null, T0 + i);
         }
     }
 }

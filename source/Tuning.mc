@@ -57,6 +57,9 @@ module Tuning {
 
     const FOCUS_WEIGHT = 0;
     const FOCUS_REPS = 1;
+    //! Only reachable while confirming a set: an effort rating is something you
+    //! give a set you have done, not a target you set for one you have not.
+    const FOCUS_RPE = 2;
 
     //! Where the set editor should go when it closes. RepFlow keeps a flat view
     //! stack, so a screen names its destination rather than relying on what

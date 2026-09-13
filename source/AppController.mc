@@ -62,6 +62,13 @@ class AppController {
     //! there would write a fabricated load into their history.
     private var _pendingWeight as Float?;
     private var _pendingReps as Number;
+    //! The effort rating for the set being confirmed, or null for unrated.
+    //!
+    //! Cleared after every set rather than carried forward: a load is inherited
+    //! because the next set is probably the same weight, and an effort rating
+    //! is not, because the next set is probably harder. Carrying it would put a
+    //! number the athlete never gave into their history.
+    private var _pendingRpe as Float?;
     //! Which data screen the exercise view is showing. Lives here rather than on
     //! the view so it survives rest screens and menu round-trips.
     private var _exercisePage as Number;
@@ -91,6 +98,7 @@ class AppController {
         _recordCount = 0;
         _pendingWeight = null;
         _pendingReps = 0;
+        _pendingRpe = null;
         _exercisePage = 0;
         _restPage = 0;
         _exerciseStartedAt = 0;
@@ -252,6 +260,10 @@ class AppController {
         return _pendingWeight;
     }
 
+    public function pendingRpe() as Float? {
+        return _pendingRpe;
+    }
+
     public function pendingReps() as Number {
         return _pendingReps;
     }
@@ -367,6 +379,7 @@ class AppController {
 
         _pendingWeight = weight;
         _pendingReps = exercise.plannedReps();
+        _pendingRpe = null;
     }
 
     public function selectExercise(exerciseId as String) as Boolean {
@@ -426,6 +439,11 @@ class AppController {
             return;
         }
         _pendingWeight = (weight as Float) < 0.0 ? 0.0 : weight;
+    }
+
+    //! Step the effort rating up or down Hevy's ladder. See Rpe.
+    public function adjustRpe(direction as Number) as Void {
+        _pendingRpe = Rpe.step(_pendingRpe, direction);
     }
 
     public function adjustReps(delta as Number) as Void {
@@ -535,11 +553,12 @@ class AppController {
         var at = now();
         var reps = _pendingReps;
         var weight = _pendingWeight;
+        var rpe = _pendingRpe;
         var setNumber = exercise.completedSetCount() + 1;
-        engine.completeCurrentSet(reps, weight, at);
+        engine.completeCurrentSet(reps, weight, rpe, at);
         // The lap carries what the set was, so Garmin Connect's lap table reads
         // as a set list rather than as a row of anonymous split times.
-        _recorder.markSet(exercise.name, setNumber, reps, weight, _restedSec);
+        _recorder.markSet(exercise.name, setNumber, reps, weight, rpe, _restedSec);
         // Attribute a rest interval to exactly one set.
         _restedSec = 0;
         _recorder.updateTotals(engine.summary(at));

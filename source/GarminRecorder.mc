@@ -44,6 +44,7 @@ class GarminRecorder {
     private const FIELD_LAP_REPS = 12;
     private const FIELD_LAP_WEIGHT = 13;
     private const FIELD_LAP_REST = 14;
+    private const FIELD_LAP_RPE = 15;
 
     //! Longest exercise name written to a lap. A string field has to declare a
     //! size, and the name that comes back out of this field is what the
@@ -65,6 +66,7 @@ class GarminRecorder {
     private var _lapRepsField as FitContributor.Field?;
     private var _lapWeightField as FitContributor.Field?;
     private var _lapRestField as FitContributor.Field?;
+    private var _lapRpeField as FitContributor.Field?;
     private var _started as Boolean;
 
     public function initialize() {
@@ -77,6 +79,7 @@ class GarminRecorder {
         _lapRepsField = null;
         _lapWeightField = null;
         _lapRestField = null;
+        _lapRpeField = null;
         _started = false;
     }
 
@@ -150,6 +153,13 @@ class GarminRecorder {
                 "rest", FIELD_LAP_REST, FitContributor.DATA_TYPE_UINT16,
                 { :mesgType => FitContributor.MESG_TYPE_LAP, :units => "s" }
             );
+            // How hard the set felt. FIT has no native field for it — Garmin
+            // Connect's own strength activity records reps and load and nothing
+            // about effort — so it travels as RepFlow's own.
+            _lapRpeField = session.createField(
+                "rpe", FIELD_LAP_RPE, FitContributor.DATA_TYPE_FLOAT,
+                { :mesgType => FitContributor.MESG_TYPE_LAP }
+            );
         } catch (e) {
             // Developer fields are a bonus; the activity itself still records.
             _setsField = null;
@@ -160,6 +170,7 @@ class GarminRecorder {
             _lapRepsField = null;
             _lapWeightField = null;
             _lapRestField = null;
+            _lapRpeField = null;
         }
     }
 
@@ -194,6 +205,7 @@ class GarminRecorder {
         setNumber as Number,
         reps as Number,
         weightKg as Float?,
+        rpe as Float?,
         restSeconds as Number
     ) as Boolean {
         var session = _session;
@@ -219,6 +231,11 @@ class GarminRecorder {
             // recording a zero, which would read as "lifted nothing".
             if (_lapWeightField != null && weightKg != null) {
                 (_lapWeightField as FitContributor.Field).setData(weightKg as Float);
+            }
+            // An unrated set leaves the field unwritten. Writing a zero would
+            // put "RPE 0" in the lap table, which is not a rating.
+            if (_lapRpeField != null && rpe != null) {
+                (_lapRpeField as FitContributor.Field).setData(rpe as Float);
             }
             // Zero is a real answer here — the first set of a session, or a
             // superset taken straight through — so unlike the load it is

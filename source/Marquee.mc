@@ -80,6 +80,24 @@ module Marquee {
         return _draw(dc, top, text, font, color, maxWidth);
     }
 
+    //! Scroll `text` inside a window whose left edge is given, not derived.
+    //!
+    //! A list is read down its left edge, so its rows are left-aligned and the
+    //! window they scroll in starts where the text starts. `draw` centres the
+    //! window instead, which is right for a heading and wrong for a row.
+    public function drawAt(
+        dc as Graphics.Dc,
+        left as Number,
+        top as Number,
+        text as String,
+        fonts as Array<Graphics.FontDefinition>,
+        color as Number,
+        maxWidth as Number
+    ) as Number {
+        var font = fonts.size() > 0 ? fonts[0] : Graphics.FONT_XTINY;
+        return _drawIn(dc, left, top, text, font, color, maxWidth, false);
+    }
+
     function _draw(
         dc as Graphics.Dc,
         top as Number,
@@ -88,16 +106,37 @@ module Marquee {
         color as Number,
         maxWidth as Number
     ) as Number {
+        return _drawIn(dc, (dc.getWidth() - maxWidth) / 2, top, text, font, color,
+            maxWidth, true);
+    }
+
+    //! `centred` only decides where still text sits. Text that overflows is
+    //! always drawn from the window's left edge, because that is where reading
+    //! starts and the scroll has to begin at the beginning.
+    function _drawIn(
+        dc as Graphics.Dc,
+        left as Number,
+        top as Number,
+        text as String,
+        font as Graphics.FontDefinition,
+        color as Number,
+        maxWidth as Number,
+        centred as Boolean
+    ) as Number {
         var height = dc.getFontHeight(font);
         var width = dc.getTextWidthInPixels(text, font);
 
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
         if (width <= maxWidth) {
-            dc.drawText(dc.getWidth() / 2, top, font, text, Graphics.TEXT_JUSTIFY_CENTER);
+            if (centred) {
+                dc.drawText(left + maxWidth / 2, top, font, text,
+                    Graphics.TEXT_JUSTIFY_CENTER);
+            } else {
+                dc.drawText(left, top, font, text, Graphics.TEXT_JUSTIFY_LEFT);
+            }
             return top + height;
         }
 
-        var left = (dc.getWidth() - maxWidth) / 2;
         var offset = _offset(width - maxWidth);
         _neededThisFrame = true;
         _ensureRunning();
@@ -110,7 +149,7 @@ module Marquee {
             dc.drawText(left - offset, top, font, text, Graphics.TEXT_JUSTIFY_LEFT);
             dc.clearClip();
         } else {
-            dc.drawText(dc.getWidth() / 2, top, font, text, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(left, top, font, text, Graphics.TEXT_JUSTIFY_LEFT);
         }
         return top + height;
     }

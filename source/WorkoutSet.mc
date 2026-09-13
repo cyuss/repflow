@@ -16,6 +16,9 @@ class WorkoutSet {
     public var completed as Boolean;
     //! Epoch seconds, or null while the set is not completed.
     public var completedAt as Number?;
+    //! How hard it felt, on Hevy's scale — see Rpe. Null means unrated, which
+    //! is different from easy, and stays null unless the athlete says otherwise.
+    public var rpe as Float?;
 
     public function initialize(index as Number, targetReps as Number, targetWeight as Float?) {
         me.index = index;
@@ -25,12 +28,19 @@ class WorkoutSet {
         me.actualWeight = null;
         me.completed = false;
         me.completedAt = null;
+        me.rpe = null;
     }
 
     //! Mark this set done with the values the athlete actually performed.
-    public function complete(reps as Number, weight as Float?, at as Number) as Void {
+    public function complete(
+        reps as Number,
+        weight as Float?,
+        rpe as Float?,
+        at as Number
+    ) as Void {
         actualReps = reps;
         actualWeight = weight;
+        me.rpe = Rpe.sanitise(rpe);
         completed = true;
         completedAt = at;
     }
@@ -48,6 +58,9 @@ class WorkoutSet {
         }
         actualReps = null;
         actualWeight = null;
+        // The rating described the set that was performed. Undoing the set
+        // undoes the rating with it rather than carrying it onto the next.
+        rpe = null;
         completed = false;
         completedAt = null;
     }
@@ -63,7 +76,8 @@ class WorkoutSet {
     }
 
     public function toStorage() as Array {
-        return [index, targetReps, targetWeight, actualReps, actualWeight, completed, completedAt];
+        return [index, targetReps, targetWeight, actualReps, actualWeight, completed,
+            completedAt, rpe];
     }
 
     //! Storage can hand a whole number back as a Number even though it was
@@ -86,6 +100,11 @@ class WorkoutSet {
         set.actualWeight = _toFloat(data[4] as Object?);
         set.completed = data[5] as Boolean;
         set.completedAt = data[6] as Number?;
+        // Appended after v3, so a record written by an older build is one
+        // element short. Absent and unrated are the same thing here.
+        if (data.size() > 7) {
+            set.rpe = Rpe.sanitise(_toFloat(data[7] as Object?));
+        }
         return set;
     }
 }

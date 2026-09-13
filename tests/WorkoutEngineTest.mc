@@ -132,7 +132,7 @@ function testPendingRemainsResumable(logger as Test.Logger) as Boolean {
     var engine = TestSupport.newEngine();
 
     engine.selectExercise("C");
-    engine.completeCurrentSet(8, 62.5, TestSupport.T0);
+    engine.completeCurrentSet(8, 62.5, null, TestSupport.T0);
     engine.deferExercise("C");
     Test.assertEqual(TestSupport.stateOf(engine, "C"), EX_PENDING);
 
@@ -165,13 +165,13 @@ function testWeightAndRepInheritance(logger as Test.Logger) as Boolean {
     Test.assert(a.plannedWeight() == 50.0);
     Test.assertEqual(a.plannedReps(), 10);
 
-    engine.completeCurrentSet(10, 55.0, TestSupport.T0);
+    engine.completeCurrentSet(10, 55.0, null, TestSupport.T0);
     // Set 2 inherits what was actually performed, not the template values.
     Test.assert(a.plannedWeight() == 55.0);
     Test.assertEqual(a.plannedReps(), 10);
 
     // Change the load on set 2 ...
-    engine.completeCurrentSet(8, 57.5, TestSupport.T0 + 60);
+    engine.completeCurrentSet(8, 57.5, null, TestSupport.T0 + 60);
     // ... and set 3 follows the change.
     Test.assert(a.plannedWeight() == 57.5);
     Test.assertEqual(a.plannedReps(), 8);
@@ -183,10 +183,10 @@ function testWeightAndRepInheritance(logger as Test.Logger) as Boolean {
 function testInheritanceSurvivesNavigation(logger as Test.Logger) as Boolean {
     var engine = TestSupport.newEngine();
     engine.selectExercise("A");
-    engine.completeCurrentSet(9, 62.5, TestSupport.T0);
+    engine.completeCurrentSet(9, 62.5, null, TestSupport.T0);
 
     engine.selectExercise("B");
-    engine.completeCurrentSet(12, 40.0, TestSupport.T0 + 30);
+    engine.completeCurrentSet(12, 40.0, null, TestSupport.T0 + 30);
 
     engine.selectExercise("A");
     var a = TestSupport.exerciseOf(engine, "A");
@@ -246,11 +246,11 @@ function testSessionSummary(logger as Test.Logger) as Boolean {
     var engine = TestSupport.newEngine();
 
     engine.selectExercise("A");
-    engine.completeCurrentSet(10, 50.0, TestSupport.T0);   // 500
-    engine.completeCurrentSet(8, 55.0, TestSupport.T0);    // 440
+    engine.completeCurrentSet(10, 50.0, null, TestSupport.T0);   // 500
+    engine.completeCurrentSet(8, 55.0, null, TestSupport.T0);    // 440
 
     engine.selectExercise("B");
-    engine.completeCurrentSet(12, 40.0, TestSupport.T0);   // 480
+    engine.completeCurrentSet(12, 40.0, null, TestSupport.T0);   // 480
 
     var summary = engine.summary(TestSupport.T0 + 1800);
     Test.assertEqual(summary.durationSec, 1800);
@@ -288,7 +288,7 @@ function testEmptySessionSummary(logger as Test.Logger) as Boolean {
 function testSessionSerializationRoundTrip(logger as Test.Logger) as Boolean {
     var engine = TestSupport.newEngine();
     engine.selectExercise("A");
-    engine.completeCurrentSet(9, 57.5, TestSupport.T0 + 10);
+    engine.completeCurrentSet(9, 57.5, null, TestSupport.T0 + 10);
     engine.selectExercise("B");
     engine.deferExercise("B");
     engine.selectExercise("C");
@@ -381,7 +381,7 @@ function testUnknownExerciseIdIsRejected(logger as Test.Logger) as Boolean {
 (:test)
 function testCompleteSetWithNoSelection(logger as Test.Logger) as Boolean {
     var engine = TestSupport.newEngine();
-    Test.assert(engine.completeCurrentSet(10, 50.0, TestSupport.T0) == null);
+    Test.assert(engine.completeCurrentSet(10, 50.0, null, TestSupport.T0) == null);
     Test.assertEqual(engine.summary(TestSupport.T0).completedSets, 0);
     return true;
 }
@@ -454,10 +454,10 @@ function testSmokeTestScenario(logger as Test.Logger) as Boolean {
 
     // Steps 2-5: start on A, complete two sets, raising the load on the second.
     Test.assert(engine.selectExercise("A"));
-    engine.completeCurrentSet(10, 50.0, TestSupport.T0);
+    engine.completeCurrentSet(10, 50.0, null, TestSupport.T0);
     var a = TestSupport.exerciseOf(engine, "A");
     Test.assert(a.plannedWeight() == 50.0);      // set 2 inherits set 1
-    engine.completeCurrentSet(10, 55.0, TestSupport.T0 + 120);
+    engine.completeCurrentSet(10, 55.0, null, TestSupport.T0 + 120);
 
     // Step 6: the overview shows A worked but not finished (target is 2... so
     // A is in fact complete here; give it a third target-exceeding set later).
@@ -835,7 +835,7 @@ function testSummaryPagesDraw(logger as Test.Logger) as Boolean {
     }
     var engine = TestSupport.newEngine();
     engine.selectExercise("A");
-    engine.completeCurrentSet(10, 50.0, TestSupport.T0);
+    engine.completeCurrentSet(10, 50.0, null, TestSupport.T0);
     engine.selectExercise("B");
     engine.skipExercise("B");
     var summary = engine.finishWorkout(TestSupport.T0 + 1800);
@@ -942,11 +942,11 @@ function testActiveSetIsAlwaysTheNextIncompleteOne(logger as Test.Logger) as Boo
     Test.assertEqual(a.completedSetCount(), 0);
     Test.assertEqual(a.currentSetNumber(), 1);
 
-    engine.completeCurrentSet(10, 50.0, TestSupport.T0);
+    engine.completeCurrentSet(10, 50.0, null, TestSupport.T0);
     Test.assertEqual(a.completedSetCount(), 1);
     Test.assertEqual(a.currentSetNumber(), 2);
 
-    engine.completeCurrentSet(10, 55.0, TestSupport.T0 + 60);
+    engine.completeCurrentSet(10, 55.0, null, TestSupport.T0 + 60);
     Test.assertEqual(a.completedSetCount(), 2);
     Test.assert(a.hasReachedTargetSets());
 
@@ -1021,7 +1021,7 @@ function testDeviceCapabilitiesAreSafeToRead(logger as Test.Logger) as Boolean {
 function testAddingAnExerciseMidWorkout(logger as Test.Logger) as Boolean {
     var engine = TestSupport.newEngine();
     engine.selectExercise("A");
-    engine.completeCurrentSet(10, 50.0, TestSupport.T0);
+    engine.completeCurrentSet(10, 50.0, null, TestSupport.T0);
 
     var extra = new Exercise("D", "Exercise D", 3, 12, 20.0, 60);
     extra.muscle = Muscle.SHOULDERS;
@@ -1069,7 +1069,7 @@ function testSubstituteUntouchedExercise(logger as Test.Logger) as Boolean {
 function testSubstituteKeepsWorkAlreadyDone(logger as Test.Logger) as Boolean {
     var engine = TestSupport.newEngine();
     engine.selectExercise("B");
-    engine.completeCurrentSet(12, 40.0, TestSupport.T0);
+    engine.completeCurrentSet(12, 40.0, null, TestSupport.T0);
 
     var replacement = new Exercise("B2", "Exercise B2", 3, 10, 45.0, 90);
     Test.assert(engine.substituteExercise("B", replacement));
@@ -1108,7 +1108,7 @@ function testAddSetRaisesTheTarget(logger as Test.Logger) as Boolean {
     Test.assertEqual(TestSupport.stateOf(engine, "A"), EX_ACTIVE);
 
     // Performing it completes the exercise again.
-    engine.completeCurrentSet(8, 60.0, TestSupport.T0 + 300);
+    engine.completeCurrentSet(8, 60.0, null, TestSupport.T0 + 300);
     Test.assertEqual(TestSupport.stateOf(engine, "A"), EX_COMPLETED);
 
     Test.assert(!engine.addSet("nope"));
@@ -1352,8 +1352,8 @@ function testCommitSessionRecordsLastPerformance(logger as Test.Logger) as Boole
     var bests = {} as Dictionary;
     var engine = TestSupport.newEngine();
     engine.selectExercise("A");
-    engine.completeCurrentSet(10, 50.0, TestSupport.T0);
-    engine.completeCurrentSet(8, 55.0, TestSupport.T0 + 120);
+    engine.completeCurrentSet(10, 50.0, null, TestSupport.T0);
+    engine.completeCurrentSet(8, 55.0, null, TestSupport.T0 + 120);
     engine.selectExercise("B");     // touched but never performed
 
     History.commitSession(bests, engine.getWorkout(), TestSupport.T0 + 600);
@@ -1838,7 +1838,7 @@ function testLastSessionsLoadFillsABlankRoutine(logger as Test.Logger) as Boolea
     // A movement with no target weight, performed once at 42.5 kg.
     var engine = TestSupport.newEngine();
     engine.selectExercise("A");
-    engine.completeCurrentSet(8, 42.5, TestSupport.T0);
+    engine.completeCurrentSet(8, 42.5, null, TestSupport.T0);
     History.commitSession(bests, engine.getWorkout(), TestSupport.T0 + 600);
 
     var last = History.lastPerformance(bests, "A");
@@ -1855,7 +1855,7 @@ function testLastSessionsLoadFillsABlankRoutine(logger as Test.Logger) as Boolea
     // Once a set is performed this session, the session's own number wins —
     // history describes last week, not what is happening now.
     fresh.selectExercise("A");
-    fresh.completeCurrentSet(8, 47.5, TestSupport.T0 + 1000);
+    fresh.completeCurrentSet(8, 47.5, null, TestSupport.T0 + 1000);
     Test.assert(a.plannedWeight() == 47.5);
     Test.assert(a.completedSetCount() > 0);
     return true;
@@ -2025,12 +2025,12 @@ function testHevyPayloadFromSession(logger as Test.Logger) as Boolean {
     var engine = new WorkoutEngine(new WorkoutSession(workout, TestSupport.T0));
 
     engine.selectExercise("h_D04AC939");
-    engine.completeCurrentSet(10, 60.0, TestSupport.T0 + 60);
-    engine.completeCurrentSet(8, 65.0, TestSupport.T0 + 200);
+    engine.completeCurrentSet(10, 60.0, null, TestSupport.T0 + 60);
+    engine.completeCurrentSet(8, 65.0, null, TestSupport.T0 + 200);
     engine.selectExercise("h_PULLUP");
-    engine.completeCurrentSet(8, null, TestSupport.T0 + 400);   // bodyweight
+    engine.completeCurrentSet(8, null, null, TestSupport.T0 + 400);   // bodyweight
     engine.selectExercise("e_local");
-    engine.completeCurrentSet(10, 20.0, TestSupport.T0 + 600);  // no Hevy id
+    engine.completeCurrentSet(10, 20.0, null, TestSupport.T0 + 600);  // no Hevy id
 
     var payload = HevyMap.sessionToPayload(workout, TestSupport.T0,
         TestSupport.T0 + 3600, true);
@@ -2102,11 +2102,11 @@ function testPocStrengthSession(logger as Test.Logger) as Boolean {
 
     engine.selectExercise("c_bench");
     for (var i = 0; i < 3; i++) {
-        engine.completeCurrentSet(8, 80.0, TestSupport.T0 + 60 + i * 180);
+        engine.completeCurrentSet(8, 80.0, null, TestSupport.T0 + 60 + i * 180);
     }
     engine.selectExercise("b_lat_pulldown");
     for (var i = 0; i < 3; i++) {
-        engine.completeCurrentSet(10, 60.0, TestSupport.T0 + 700 + i * 150);
+        engine.completeCurrentSet(10, 60.0, null, TestSupport.T0 + 700 + i * 150);
     }
 
     // POC A — what ActivityRecording can carry: totals on the session message,
@@ -2246,5 +2246,123 @@ function testOverviewRowsDraw(logger as Test.Logger) as Boolean {
     // long name scrolls over the state dot.
     Test.assert(RowLayout.textWidth(dc) <= dc.getWidth() - RowLayout.gutter(dc) * 2);
     Test.assert(RowLayout.iconCentre(dc) < RowLayout.gutter(dc));
+    return true;
+}
+
+//! The effort scale is Hevy's, not ours.
+//!
+//! `rpe` is an enumeration in Hevy's API, not a range, and a value off it is
+//! answered with a 400 that loses the **whole** workout rather than the set.
+//! Note what the ladder does not contain: there is no 6.5. A tidy "6 to 10 in
+//! halves" would look right on the watch and cost the athlete their session.
+(:test)
+function testRpeScaleMatchesHevy(logger as Test.Logger) as Boolean {
+    // Transcribed from PostWorkoutsRequestSet.rpe in the published schema.
+    var expected = [6.0, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0];
+    Test.assertEqual(Rpe.SCALE.size(), expected.size());
+    for (var i = 0; i < expected.size(); i++) {
+        Test.assert((Rpe.SCALE[i] - (expected[i] as Float)).abs() < 0.001);
+    }
+    Test.assert(Rpe.indexOf(6.5) < 0);        // the gap is deliberate
+    Test.assert(Rpe.sanitise(6.5) == null);
+    Test.assert(Rpe.sanitise(11.0) == null);
+    Test.assert(Rpe.sanitise(null) == null);
+    Test.assert(Rpe.sanitise(8.5) != null);
+    return true;
+}
+
+//! Stepping the ladder, including the two ends and the way off it.
+(:test)
+function testRpeStepping(logger as Test.Logger) as Boolean {
+    // From unrated, either direction opens at 8 — the athlete has said "rate
+    // this", not "make it the hardest one".
+    Test.assert(_isRpe(Rpe.step(null, 1), Rpe.OPENING));
+    Test.assert(_isRpe(Rpe.step(null, -1), Rpe.OPENING));
+
+    Test.assert(_isRpe(Rpe.step(8.0, 1), 8.5));
+    Test.assert(_isRpe(Rpe.step(8.5, -1), 8.0));
+    // 6 to 7: the ladder skips 6.5, so stepping must not land on it.
+    Test.assert(_isRpe(Rpe.step(6.0, 1), 7.0));
+    Test.assert(_isRpe(Rpe.step(7.0, -1), 6.0));
+
+    // The top holds; the bottom lets go, because changing your mind about
+    // rating a set has to be possible and there is no other way out.
+    Test.assert(_isRpe(Rpe.step(10.0, 1), 10.0));
+    Test.assert(Rpe.step(6.0, -1) == null);
+    Test.assert(_isRpe(Rpe.step(8.0, 0), 8.0));
+    return true;
+}
+
+//! Compare a nullable rating with an expected one.
+//!
+//! Test.assertEqual takes Objects, and a `Float?` is not one — the type checker
+//! is right to refuse it, and a cast would only move the problem.
+function _isRpe(actual as Float?, expected as Float) as Boolean {
+    return actual != null && ((actual as Float) - expected).abs() < 0.001;
+}
+
+//! "8", not "8.0" — a judgement, not a measurement.
+(:test)
+function testRpeFormatting(logger as Test.Logger) as Boolean {
+    Test.assertEqual(Rpe.format(8.0), "8");
+    Test.assertEqual(Rpe.format(8.5), "8.5");
+    Test.assertEqual(Rpe.format(10.0), "10");
+    Test.assertEqual(Rpe.format(null), LiveMetrics.NO_VALUE);
+    return true;
+}
+
+//! A rating belongs to the set that earned it, and to no other.
+(:test)
+function testRpeIsRecordedPerSetAndNotInherited(logger as Test.Logger) as Boolean {
+    var engine = TestSupport.newEngine();
+    engine.selectExercise("A");
+
+    engine.completeCurrentSet(8, 60.0, 8.5, TestSupport.T0);
+    engine.completeCurrentSet(8, 60.0, null, TestSupport.T0 + 120);
+
+    var sets = TestSupport.exerciseOf(engine, "A").sets;
+    Test.assert(_isRpe(sets[0].rpe, 8.5));
+    // Not carried forward: the load repeats because the next set is probably
+    // the same weight; the effort does not, because it is probably harder.
+    Test.assert(sets[1].rpe == null);
+
+    // A rating off the ladder is dropped at the door rather than stored and
+    // sent on to be rejected.
+    engine.completeCurrentSet(8, 60.0, 6.5, TestSupport.T0 + 240);
+    Test.assert(sets[2].rpe == null);
+    return true;
+}
+
+//! Undoing a set undoes its rating with it.
+(:test)
+function testUncompleteClearsTheRating(logger as Test.Logger) as Boolean {
+    var set = new WorkoutSet(0, 10, 50.0);
+    set.complete(8, 55.0, 9.0, TestSupport.T0);
+    Test.assert(_isRpe(set.rpe, 9.0));
+
+    set.uncomplete();
+    Test.assert(set.rpe == null);
+    // The performed values survive as the new targets, as they always did.
+    Test.assertEqual(set.targetReps, 8);
+    Test.assert(set.targetWeight != null);
+    return true;
+}
+
+//! A set written before v4 has seven elements, not eight.
+//!
+//! Rejecting it would throw away a session mid-workout when an update lands,
+//! which is the thing migration exists to prevent. An absent rating and an
+//! unrated set are the same thing.
+(:test)
+function testSetsWrittenBeforeRpeStillLoad(logger as Test.Logger) as Boolean {
+    var old = [0, 10, 50.0, 8, 55.0, true, TestSupport.T0] as Array;
+    var set = WorkoutSet.fromStorage(old);
+    Test.assert(set.actualReps != null && (set.actualReps as Number) == 8);
+    Test.assert(set.rpe == null);
+
+    // And a set written now round-trips its rating.
+    var fresh = new WorkoutSet(0, 10, 50.0);
+    fresh.complete(8, 55.0, 9.5, TestSupport.T0);
+    Test.assert(_isRpe(WorkoutSet.fromStorage(fresh.toStorage()).rpe, 9.5));
     return true;
 }

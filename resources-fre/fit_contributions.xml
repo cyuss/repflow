@@ -14,6 +14,7 @@
         <string id="fit_lap_weight_label">Charge</string>
         <string id="fit_lap_rest_label">Repos</string>
         <string id="fit_seconds_units">s</string>
+        <string id="fit_rpe_label">RPE</string>
         <string id="fit_no_units">-</string>
     </strings>
 </resources>

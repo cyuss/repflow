@@ -136,12 +136,17 @@ class WorkoutEngine {
 
     //! Record a completed set for the selected exercise.
     //! Returns null when nothing is selected.
-    public function completeCurrentSet(reps as Number, weight as Float?, at as Number) as WorkoutSet? {
+    public function completeCurrentSet(
+        reps as Number,
+        weight as Float?,
+        rpe as Float?,
+        at as Number
+    ) as WorkoutSet? {
         var ex = _session.currentExercise();
         if (ex == null) {
             return null;
         }
-        var set = ex.recordSet(reps, weight, at);
+        var set = ex.recordSet(reps, weight, rpe, at);
         if (ex.hasReachedTargetSets()) {
             ex.state = EX_COMPLETED;
             // Stay selected: the athlete may still want to add an extra set.

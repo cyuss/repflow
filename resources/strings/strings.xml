@@ -16,6 +16,7 @@
          in a narrow cell, so anything long gets shrunk to nothing. -->
     <string id="FieldWeight">WEIGHT</string>
     <string id="FieldReps">REPS</string>
+    <string id="FieldRpe">RPE</string>
     <string id="FieldHr">HR</string>
     <string id="FieldAvgHr">AVG HR</string>
     <string id="FieldMaxHr">MAX HR</string>
