@@ -2570,3 +2570,34 @@ function testOneRecordPerMovement(logger as Test.Logger) as Boolean {
     }
     return true;
 }
+
+//! A rest announces itself once, whichever way it ends.
+//!
+//! Two ways out — the countdown reaching zero, or the athlete pressing START —
+//! and both mean "back under the bar", so both buzz with the same pattern. What
+//! must not happen is both buzzing for one rest, which is what an athlete
+//! watching the last second of a countdown would otherwise get.
+(:test)
+function testRestAnnouncesItselfOnce(logger as Test.Logger) as Boolean {
+    var controller = AppController.instance();
+    controller.startWorkout(TestSupport.abcWorkout());
+    controller.selectExercise("A");
+
+    // Ended by the athlete, before the countdown runs out.
+    controller.startRest(90);
+    Test.assert(!controller.restOverSignalled());
+    controller.endRest();
+    Test.assert(controller.restOverSignalled());
+
+    // A fresh rest starts silent again.
+    controller.startRest(2);
+    Test.assert(!controller.restOverSignalled());
+
+    // Ended by the clock this time, then left by the athlete: still once.
+    controller.onTick();
+    controller.onTick();
+    Test.assert(controller.restOverSignalled());
+    controller.endRest();
+    Test.assert(controller.restOverSignalled());
+    return true;
+}

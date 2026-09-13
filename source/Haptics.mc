@@ -10,6 +10,11 @@ import Toybox.System;
 //!   rest over     two firm pulses        "back under the bar"
 //!   record        three rising pulses    "look at this one"
 //!
+//! "Rest over" fires when the rest ends, by whichever route it ends — the
+//! countdown reaching zero, or the athlete pressing START. It says the same
+//! thing both times and so it is the same pattern, and it fires **once**: see
+//! AppController._signalRestOver.
+//!
 //! A single buzz for all three teaches the athlete to look at the screen every
 //! time, which is exactly what a wrist device is supposed to avoid.
 //!

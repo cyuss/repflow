@@ -28,6 +28,16 @@ class AppController {
     private var _recovery as RecoveryTracker;
     //! Epoch second the current rest began, or 0 when not resting.
     private var _restBeganAt as Number;
+    //! True once this rest has announced itself as over.
+    //!
+    //! A rest can end two ways — the countdown reaching zero, or the athlete
+    //! pressing START — and both mean "back under the bar". So both buzz, with
+    //! the same pattern, and this is what stops the athlete who was already
+    //! watching the countdown from being buzzed twice half a second apart.
+    //!
+    //! It also gives open rest a buzz it could not otherwise have: there is no
+    //! zero to reach, so the press is the only moment there is.
+    private var _restSignalled as Boolean;
     //! How long the athlete actually rested before the set about to be logged.
     //!
     //! Measured wall-clock from entering the rest screen to leaving it, not
@@ -105,6 +115,7 @@ class AppController {
         _rest = new RestTimer();
         _restBeganAt = 0;
         _restedSec = 0;
+        _restSignalled = false;
         _ticker = null;
         _zones = new ZoneTracker();
         _recovery = new RecoveryTracker();
@@ -651,6 +662,7 @@ class AppController {
             _rest.start(durationSec);
         }
         _restBeganAt = now();
+        _restSignalled = false;
         _recovery.startRest();
         _restPage = 0;
         updateRepCounting();
@@ -723,6 +735,21 @@ class AppController {
         _records.add([name, kind, reps, weightKg] as Array);
     }
 
+    //! Say the rest is over, once per rest.
+    private function _signalRestOver() as Void {
+        if (_restSignalled) {
+            return;
+        }
+        _restSignalled = true;
+        Haptics.restOver();
+    }
+
+    //! Has this rest already announced itself? For the tests, which cannot
+    //! observe a vibration.
+    public function restOverSignalled() as Boolean {
+        return _restSignalled;
+    }
+
     //! Stop counting rest, and remember how much of it there was.
     //!
     //! Called from every way out of the rest screen, not just the timer
@@ -761,8 +788,8 @@ class AppController {
             _recovery.sample(hr);
         }
         if (_rest.isRunning() && _rest.tick()) {
-            // Reached zero exactly on this tick — notify once.
-            Haptics.restOver();
+            // Reached zero exactly on this tick.
+            _signalRestOver();
         }
         WatchUi.requestUpdate();
     }
@@ -773,6 +800,10 @@ class AppController {
     //! returning to a completed list — that is the flow Hevy has, and it saves
     //! the athlete a trip through the overview after every exercise.
     public function endRest() as Void {
+        // Leaving the rest screen for the bar is the same event as the
+        // countdown running out, whether the athlete waited for it or not — and
+        // in open rest it is the only moment there is.
+        _signalRestOver();
         _rest.skip();
         _closeRest();
         _setBeganAt = now();

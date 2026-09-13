@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   can be recovered weeks later without the watch. `sync-hevy-show` previews it.
   The API key is asked for and never stored.
 
+- The watch buzzes when the rest ends by **either** route — the countdown
+  reaching zero, or pressing START to go back to the bar — and once per rest,
+  so watching the last second of a countdown no longer earns two buzzes half a
+  second apart. Open rest gets a buzz it could not otherwise have: there is no
+  zero to reach, so the press is the only moment there is.
 - **An effort page** in the recap: one bar per rated set, in the order they
   were performed, at the height of its rating and in its colour, with the
   session average above. The shape says whether the session held together in a
