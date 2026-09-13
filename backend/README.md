@@ -17,6 +17,9 @@ independent verifications against SDK 9.2.0 are in
 
 This tool fills the table from the other side, after the fact.
 
+**It is not a server.** "Backend" names where it sits in the picture below, not
+a thing that runs. See [Use](#use).
+
 ## How it works
 
 ```
@@ -48,9 +51,21 @@ make backend-setup            # from the repository root
 ## Use
 
 ```sh
-backend/.venv/bin/repflow-garmin list     # which activities can be filled in
-backend/.venv/bin/repflow-garmin show     # what would be written
-backend/.venv/bin/repflow-garmin fill     # write it, after confirming
+make fill-show                # what would be written, writes nothing
+make fill                     # write it, after confirming
+```
+
+Nothing runs between those commands. This is a program you start, which talks to
+Garmin and exits — not a service, not a daemon, nothing listening. Run it after a
+session, or once a month to catch up on the last ten: it reads the activities
+Garmin already stores, so it works just as well a year later.
+
+The full command, for the options the `make` targets do not cover:
+
+```sh
+backend/.venv/bin/repflow-garmin list           # which activities can be filled in
+backend/.venv/bin/repflow-garmin fill --activity 123
+backend/.venv/bin/repflow-garmin fill --dry-run
 ```
 
 `fill` prints the payload, says how many sets it is replacing, and asks before
