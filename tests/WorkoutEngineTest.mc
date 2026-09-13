@@ -2,6 +2,7 @@ import Toybox.Lang;
 import Toybox.Test;
 import Toybox.FitContributor;
 import Toybox.Graphics;
+import Toybox.WatchUi;
 
 //! Behaviour tests for the flexible workout engine.
 //!
@@ -778,6 +779,12 @@ function testGridPrimitivesDraw(logger as Test.Logger) as Boolean {
     FieldGrid.drawCell(dc, 0, 0, size, size / 3, "137.5", "WEIGHT", Theme.colorText());
 
     // And the Theme primitives every screen leans on.
+    Theme.drawAddMark(dc, size / 2, size / 2, size / 5, Theme.colorAccent());
+    Theme.drawAddMark(dc, size / 2, size / 2, 8, Theme.colorAccent());   // too small to draw
+    Theme.drawClipped(dc, size / 2, size / 3, "Incline Bench Press (Dumbbell)",
+        Theme.captionFont(), Theme.colorText(), size / 3);
+    Theme.drawClipped(dc, size / 2, size / 3, "Row", Theme.captionFont(),
+        Theme.colorText(), size / 3);
     Theme.drawActionBar(dc, "COMPLETE SET", Theme.colorAccent());
     Theme.drawPageDots(dc, 3, 1);
     Theme.drawSetDots(dc, size / 2, 4, 2);
@@ -2135,5 +2142,109 @@ function testPocStrengthSession(logger as Test.Logger) as Boolean {
     // `set` message Garmin Connect's strength view is built from.
     Test.assertEqual(FitContributor.MESG_TYPE_SESSION, FitContributor.MESG_TYPE_SESSION);
     Test.assert(!(FitContributor has :MESG_TYPE_SET));
+    return true;
+}
+
+//! Every field caption has to fit the cell it is actually drawn in.
+//!
+//! `drawCell` centres the caption under the value and does not measure it. Two
+//! captions in a `drawPair` therefore grow towards each other, and "BODY BATT"
+//! beside "REC" on the summary's body page ran into it — reported from a real
+//! watch, invisible in every measurement test here, because nothing compared a
+//! caption against the width it had.
+//!
+//! Which band a caption lands in is the whole point: on a fenix6pro the bottom
+//! band gives a caption 56px and the middle one 91px. So this mirrors
+//! WorkoutSummaryView._drawBodyPage rather than checking a worst case, and it
+//! fails if a caption is moved somewhere it does not fit.
+(:test)
+function testFieldCaptionsFitTheirCells(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+    var size = TestSupport.screenSize();
+    var top = (size * 26) / 100;
+    var bottom = size - size / 11;
+    var edge = FieldGrid.edgeHeight(top, bottom);
+    var middleTop = top + edge;
+    var bottomTop = bottom - edge;
+
+    // The middle band carries RepFlow's own two numbers; the bottom band, the
+    // narrowest on a round screen, carries Garmin's short ones.
+    var middle = [Rez.Strings.FieldRecovery, Rez.Strings.FieldBattery];
+    var narrow = [
+        Rez.Strings.FieldAvgHr, Rez.Strings.FieldMaxHr, Rez.Strings.FieldReps,
+        Rez.Strings.FieldHr, Rez.Strings.FieldTime, Rez.Strings.FieldTimer,
+        Rez.Strings.FieldKcal, Rez.Strings.FieldVolume, Rez.Strings.FieldSets
+    ];
+
+    var ok = _captionsFit(dc, logger, middle,
+        Theme.bandWidth(dc, middleTop, bottomTop - middleTop) / 2);
+    ok = _captionsFit(dc, logger, narrow,
+        Theme.bandWidth(dc, bottomTop, edge) / 2) && ok;
+    Test.assert(ok);
+    return true;
+}
+
+//! True when every caption fits half a band of `half` pixels.
+//!
+//! 88%, a hair under the 92% the value is fitted to, so two captions cannot
+//! meet in the middle even when both are at their widest.
+function _captionsFit(
+    dc as Graphics.Dc,
+    logger as Test.Logger,
+    captions as Array,
+    half as Number
+) as Boolean {
+    var room = (half * 88) / 100;
+    var ok = true;
+    for (var i = 0; i < captions.size(); i++) {
+        var text = WatchUi.loadResource(captions[i] as ResourceId) as String;
+        var width = dc.getTextWidthInPixels(text, Theme.captionFont());
+        if (width > room) {
+            logger.debug(text + " is " + width.toString() + "px, cell allows " +
+                room.toString() + "px");
+            ok = false;
+        }
+    }
+    return ok;
+}
+
+
+//! The overview's rows draw, focused and not, with names of every length.
+//!
+//! This is the screen the product is: "select any exercise at any time" is a
+//! list you choose from. It moved from Menu2 to CustomMenu so the rows could be
+//! drawn here rather than truncated by the system, and drawing them here means
+//! a symbol error in one row now blanks the screen the athlete navigates with.
+//! Nothing that only measures would catch that — the code has to run.
+(:test)
+function testOverviewRowsDraw(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+
+    // A name that fits, one that does not, and every state a row can be in.
+    var names = ["Row", "Incline Bench Press (Dumbbell) and then some"];
+    var states = [EX_NOT_STARTED, EX_ACTIVE, EX_PENDING, EX_COMPLETED, EX_SKIPPED];
+    for (var n = 0; n < names.size(); n++) {
+        for (var s = 0; s < states.size(); s++) {
+            var exercise = new Exercise("x", names[n] as String, 4, 10, 20.0, 90);
+            exercise.state = states[s] as ExerciseState;
+            new ExerciseMenuItem(exercise).draw(dc);
+        }
+    }
+
+    new ActionMenuItem("Add exercise", WorkoutOverviewView.ITEM_ADD_EXERCISE).draw(dc);
+    new OverviewTitle("Dos + Triceps").draw(dc);
+    new OverviewTitle("A workout name far too long for one line").draw(dc);
+    Marquee.endFrame();
+
+    // The text window has to leave the icon column alone at both ends, or a
+    // long name scrolls over the state dot.
+    Test.assert(RowLayout.textWidth(dc) <= dc.getWidth() - RowLayout.gutter(dc) * 2);
+    Test.assert(RowLayout.iconCentre(dc) < RowLayout.gutter(dc));
     return true;
 }

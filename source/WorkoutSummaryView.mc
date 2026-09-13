@@ -171,9 +171,16 @@ class WorkoutSummaryView extends WatchUi.View {
     //! how hard the session actually was on the athlete, rather than how much
     //! iron moved.
     //!
-    //! The bottom band splits, against the usual rule that only the middle does.
-    //! It is allowed here because both values are two or three characters —
-    //! "18" and "-21" — which is what the rule is really about.
+    //! The two RepFlow numbers sit in the **middle** band, which is the widest
+    //! one on a round screen and the only one "BODY BATT" fits in. On a Fenix 6
+    //! Pro the bottom band gives each caption 56px and that label needs 77, so
+    //! it grew into "REC" beside it — reported from a real watch. Garmin's own
+    //! two heart rate figures moved down in its place: "AVG HR" and "MAX HR"
+    //! are 50px and comfortable there.
+    //!
+    //! The arrangement also reads better than it did. Recovery and Body Battery
+    //! answer what the session cost the athlete, which is the question this page
+    //! exists for, and they now sit where the eye lands first.
     private function _drawBodyPage(dc as Graphics.Dc, top as Number, bottom as Number) as Void {
         var edge = FieldGrid.edgeHeight(top, bottom);
         var middleTop = top + edge;
@@ -183,15 +190,6 @@ class WorkoutSummaryView extends WatchUi.View {
             LiveMetrics.format(LiveMetrics.calories()),
             WatchUi.loadResource(Rez.Strings.FieldKcal) as String,
             Theme.colorWarm());
-
-        FieldGrid.drawRule(dc, middleTop);
-        FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
-            LiveMetrics.format(LiveMetrics.averageHeartRate()),
-            WatchUi.loadResource(Rez.Strings.FieldAvgHr) as String,
-            Theme.colorHr(),
-            LiveMetrics.format(LiveMetrics.maxHeartRate()),
-            WatchUi.loadResource(Rez.Strings.FieldMaxHr) as String,
-            Theme.colorHr());
 
         // Best beats dropped in a minute of rest, and what the session cost in
         // Body Battery. Both are "--" when the watch could not measure them,
@@ -213,14 +211,23 @@ class WorkoutSummaryView extends WatchUi.View {
             batteryColor = Theme.colorDone();
         }
 
-        FieldGrid.drawRule(dc, bottomTop);
-        FieldGrid.drawPair(dc, bottomTop, edge,
+        FieldGrid.drawRule(dc, middleTop);
+        FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
             recoveryText,
             WatchUi.loadResource(Rez.Strings.FieldRecovery) as String,
             _recovery == null ? Theme.colorFaint() : Theme.colorDone(),
             batteryText,
             WatchUi.loadResource(Rez.Strings.FieldBattery) as String,
             batteryColor);
+
+        FieldGrid.drawRule(dc, bottomTop);
+        FieldGrid.drawPair(dc, bottomTop, edge,
+            LiveMetrics.format(LiveMetrics.averageHeartRate()),
+            WatchUi.loadResource(Rez.Strings.FieldAvgHr) as String,
+            Theme.colorHr(),
+            LiveMetrics.format(LiveMetrics.maxHeartRate()),
+            WatchUi.loadResource(Rez.Strings.FieldMaxHr) as String,
+            Theme.colorHr());
     }
 
     //! The week's volume, muscle group by muscle group.
@@ -292,7 +299,7 @@ class WorkoutSummaryView extends WatchUi.View {
             var color = Muscle.color(group);
 
             dc.setColor(Theme.colorText(), Graphics.COLOR_TRANSPARENT);
-            dc.drawText(left, y, font, _clip(dc, Muscle.name(group), font, labelWidth),
+            dc.drawText(left, y, font, Theme.clipToWidth(dc, Muscle.name(group), font, labelWidth),
                 Graphics.TEXT_JUSTIFY_LEFT);
 
             var barTop = y + (lineHeight - barHeight) / 2;
@@ -413,18 +420,25 @@ class WorkoutSummaryView extends WatchUi.View {
     //!
     //! It is the same bar idiom as the time-in-zone chart one page back, on
     //! purpose: two charts that behave the same way read as one screen.
+    //!
+    //! The type size is chosen, not fixed: the largest font whose rows all fit
+    //! wins, and the smallest is used only when the session is long enough that
+    //! nothing else would show every exercise. Reading "Lat Pulldown 4/4" is the
+    //! point of the page — shrinking it to leave white space around the list
+    //! made a summary that had to be squinted at.
     private function _drawExercisesPage(dc as Graphics.Dc, top as Number, bottom as Number) as Void {
-        var font = Graphics.FONT_XTINY;
+        var list = _workout.exercises;
+        var available = bottom - top;
+
+        var font = _listFont(dc, available, list.size());
         var lineHeight = dc.getFontHeight(font);
         var barHeight = lineHeight / 6;
         if (barHeight < 3) {
             barHeight = 3;
         }
         var barGap = lineHeight / 6;
-        var rowHeight = lineHeight + barGap + barHeight + lineHeight / 3;
-        var list = _workout.exercises;
+        var rowHeight = _rowHeight(dc, font);
 
-        var available = bottom - top;
         var rows = available / rowHeight;
         if (rows < 1) {
             return;
@@ -456,12 +470,7 @@ class WorkoutSummaryView extends WatchUi.View {
         // looks wrong: the circle narrows as the list descends, so every name
         // started a little further in than the one above it and the left edge
         // came out as a staircase. A list wants a straight margin.
-        //
-        // The page-dot gutter comes off *both* sides. Taking it off the right
-        // alone kept the rows clear of the dots and pushed the whole block off
-        // centre by half a gutter, which is exactly as visible as a collision.
-        var gutter = dc.getWidth() / 14;
-        var width = Theme.bandWidth(dc, y, used) - gutter;
+        var width = _listWidth(dc, y, used);
         var left = (dc.getWidth() - width) / 2;
 
         for (var i = 0; i < shown; i++) {
@@ -476,6 +485,55 @@ class WorkoutSummaryView extends WatchUi.View {
             dc.drawText(dc.getWidth() / 2, y, font, "+" + rest.toString(),
                 Graphics.TEXT_JUSTIFY_CENTER);
         }
+    }
+
+    //! Height of one row — name, gap, progress bar, gap to the next.
+    private function _rowHeight(dc as Graphics.Dc, font as Graphics.FontDefinition) as Number {
+        var lineHeight = dc.getFontHeight(font);
+        var barHeight = lineHeight / 6;
+        if (barHeight < 3) {
+            barHeight = 3;
+        }
+        return lineHeight + lineHeight / 6 + barHeight + lineHeight / 3;
+    }
+
+    //! The largest font that still shows every exercise.
+    //!
+    //! Falls back to the smallest rather than to "as many as fit in a big
+    //! font": a summary that hides two exercises to make the rest larger has
+    //! answered the wrong question.
+    private function _listFont(
+        dc as Graphics.Dc,
+        available as Number,
+        count as Number
+    ) as Graphics.FontDefinition {
+        var ladder = [
+            Graphics.FONT_SMALL,
+            Graphics.FONT_TINY,
+            Graphics.FONT_XTINY
+        ] as Array<Graphics.FontDefinition>;
+        for (var i = 0; i < ladder.size(); i++) {
+            if (count * _rowHeight(dc, ladder[i]) <= available) {
+                return ladder[i];
+            }
+        }
+        return ladder[ladder.size() - 1];
+    }
+
+    //! How wide the block may be: the chord, stopped short of the page dots.
+    //!
+    //! The gutter used to be a flat fraction of the screen taken off both
+    //! sides, which was wider than the dots need and left the list looking
+    //! cramped inside a circle with room to spare. This asks the dots where
+    //! they are instead. Symmetric, because the block is centred — whatever
+    //! clearance the right edge needs, the left edge gets as well.
+    private function _listWidth(dc as Graphics.Dc, y as Number, used as Number) as Number {
+        var centre = dc.getWidth() / 2;
+        var clearance = dc.getWidth() / 40;
+        var half = Theme.pageDotsLeft(dc) - clearance - centre;
+        var capped = half > 0 ? half * 2 : 0;
+        var band = Theme.bandWidth(dc, y, used);
+        return band < capped ? band : capped;
     }
 
     //! One list row: name on the left, count on the right, progress underneath.
@@ -507,7 +565,7 @@ class WorkoutSummaryView extends WatchUi.View {
         dc.setColor(exercise.state == EX_SKIPPED ? Theme.colorDim() : Theme.colorText(),
             Graphics.COLOR_TRANSPARENT);
         dc.drawText(left, y, font,
-            _clip(dc, exercise.name, font, width - countWidth - gap),
+            Theme.clipToWidth(dc, exercise.name, font, width - countWidth - gap),
             Graphics.TEXT_JUSTIFY_LEFT);
 
         var barTop = y + dc.getFontHeight(font) + barGap;
@@ -522,31 +580,6 @@ class WorkoutSummaryView extends WatchUi.View {
         }
     }
 
-    //! Shorten `text` until it fits `maxWidth`, ending in a dot so the athlete
-    //! can see that something was cut rather than misread a truncated name.
-    private function _clip(
-        dc as Graphics.Dc,
-        text as String,
-        font as Graphics.FontDefinition,
-        maxWidth as Number
-    ) as String {
-        if (dc.getTextWidthInPixels(text, font) <= maxWidth) {
-            return text;
-        }
-        var cut = text.length();
-        while (cut > 1) {
-            cut--;
-            var candidate = text.substring(0, cut);
-            if (candidate == null) {
-                return text;
-            }
-            var shortened = candidate + ".";
-            if (dc.getTextWidthInPixels(shortened, font) <= maxWidth) {
-                return shortened;
-            }
-        }
-        return ".";
-    }
 }
 
 class WorkoutSummaryDelegate extends WatchUi.BehaviorDelegate {

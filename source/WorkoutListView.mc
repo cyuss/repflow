@@ -92,16 +92,16 @@ class WorkoutListView extends WatchUi.View {
         var labelFont = Theme.pickFont(dc, label, Theme.fontsTitle(),
             Theme.usableWidth(dc, h / 2));
         var labelHeight = dc.getFontHeight(labelFont);
-        var signSize = h / 6;
-        var gap = h / 22;
+        var signSize = (h * 22) / 100;
+        var gap = h / 20;
         var block = signSize + gap + labelHeight;
         var top = y + ((actionTop - y) - block) / 2;
         if (top < y) {
             top = y;
         }
 
-        Theme.drawSign(dc, dc.getWidth() / 2, top + signSize / 2, signSize, true,
-            Theme.colorDone());
+        Theme.drawAddMark(dc, dc.getWidth() / 2, top + signSize / 2, signSize,
+            Theme.colorAccent());
         Theme.drawFitted(dc, top + signSize + gap, label,
             Theme.fontsTitle(), Theme.colorText());
     }

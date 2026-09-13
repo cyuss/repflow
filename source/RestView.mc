@@ -85,14 +85,16 @@ class RestView extends WatchUi.View {
         _drawProgressArc(dc, rest);
 
         // The countdown is the hero: it owns the top third outright.
+        var inset = _ringInset(dc);
         var y = h / 9;
-        y = Theme.drawFitted(dc, y, WatchUi.loadResource(Rez.Strings.Rest) as String,
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.colorDim());
+        y = Theme.drawFittedWithin(dc, y, WatchUi.loadResource(Rez.Strings.Rest) as String,
+            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.colorDim(),
+            inset);
 
         var countdownTop = y + h / 60;
         var countdownHeight = (h * 26) / 100;
         var timerFont = Theme.pickFontFitting(dc, rest.format(), Theme.fontsHero(),
-            (Theme.usableWidth(dc, countdownTop + countdownHeight / 2) * 80) / 100,
+            (Theme.usableWidthWithin(dc, countdownTop + countdownHeight / 2, inset) * 80) / 100,
             countdownHeight);
         dc.setColor(rest.isRunning() ? Theme.colorText() : Theme.colorDone(),
             Graphics.COLOR_TRANSPARENT);
@@ -158,21 +160,40 @@ class RestView extends WatchUi.View {
 
         FieldGrid.drawRule(dc, fieldBottom);
         var y = fieldBottom + h / 44;
+        // Measured at the line's baseline and against the ring, not the glass:
+        // this is the lowest text on the page and the chord closes fastest here.
+        var nameFont = Theme.fontsBody()[0];
         y = Marquee.draw(dc, y, exercise.name, Theme.fontsBody(), Theme.colorText(),
-            Theme.usableWidth(dc, y));
+            Theme.usableWidthWithin(dc, y + (dc.getFontHeight(nameFont) * 3) / 4,
+                _ringInset(dc)));
 
         var detail = (exercise.completedSetCount() + 1).toString() + "/" +
             exercise.targetSets.toString() + "   " +
             exercise.plannedReps().toString() + " x " +
             Theme.formatPlannedWeight(exercise.plannedWeight()) + " " +
             Units.label();
-        y = Theme.drawFitted(dc, y, detail,
-            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.colorAccent());
+        y = Theme.drawFittedWithin(dc, y, detail,
+            [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.colorAccent(),
+            _ringInset(dc));
 
         if (lastLine != null) {
-            Theme.drawFitted(dc, y, lastLine as String,
-                [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.colorDim());
+            Theme.drawFittedWithin(dc, y, lastLine as String,
+                [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.colorDim(),
+                _ringInset(dc));
         }
+    }
+
+    //! Distance from the glass to the outside of the countdown ring.
+    private const RING_MARGIN = 5;
+
+    //! How far in from the glass the ring's inner edge sits, plus air.
+    //!
+    //! Text on this page is bounded by the ring, not by the bezel. The ring is
+    //! the frame the countdown lives in, and a line crossing it reads as a
+    //! rendering fault rather than as two layers — which is exactly what a
+    //! long exercise name scrolling along the bottom used to do.
+    private function _ringInset(dc as Graphics.Dc) as Number {
+        return RING_MARGIN + Device.stroke(27) / 2 + dc.getHeight() / 36;
     }
 
     //! Thin arc that drains as the rest elapses — readable at a glance.
@@ -182,7 +203,7 @@ class RestView extends WatchUi.View {
         }
         var w = dc.getWidth();
         var h = dc.getHeight();
-        var radius = (w < h ? w : h) / 2 - 5;
+        var radius = (w < h ? w : h) / 2 - RING_MARGIN;
         var cx = w / 2;
         var cy = h / 2;
         var sweep = (360.0 * (1.0 - rest.progress())).toNumber();

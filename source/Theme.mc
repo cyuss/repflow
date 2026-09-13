@@ -217,13 +217,32 @@ module Theme {
     //! edges. This returns the chord of the display at that height, inset by a
     //! margin.
     public function usableWidth(dc as Graphics.Dc, y as Number) as Number {
-        var w = dc.getWidth();
-        var h = dc.getHeight();
-        var cy = h / 2;
-        if (cy <= 0) {
-            return w;
+        return usableWidthWithin(dc, y, 0);
+    }
+
+    //! The same, but bounded by a circle drawn `inset` pixels in from the glass.
+    //!
+    //! A screen with a full-width ring on it has two edges, not one, and the
+    //! inner one is what the text has to respect. The rest screen's countdown
+    //! ring is the case this exists for: a scrolling exercise name measured
+    //! against the glass ran straight over the ring, which reads as a bug
+    //! rather than as a layer.
+    //!
+    //! `inset` is the distance from the glass to the **inside** of whatever is
+    //! drawn there — for a ring, its margin plus half its pen width, plus
+    //! however much air the design wants between the two.
+    public function usableWidthWithin(
+        dc as Graphics.Dc,
+        y as Number,
+        inset as Number
+    ) as Number {
+        var w = dc.getWidth() - inset * 2;
+        var h = dc.getHeight() - inset * 2;
+        var cy = dc.getHeight() / 2;
+        if (w <= 0 || h <= 0) {
+            return 0;
         }
-        var dy = (y - cy).abs().toFloat() / cy.toFloat();
+        var dy = (y - cy).abs().toFloat() / (h / 2).toFloat();
         if (dy > 0.92) {
             dy = 0.92;
         }
@@ -280,6 +299,59 @@ module Theme {
         return fonts[fonts.size() - 1];
     }
 
+    //! Shorten `text` until it fits `maxWidth`, ending in a dot.
+    //!
+    //! The dot is the point: a name cut silently is a name that can be misread
+    //! — "Incline Bench Pr" looks like a movement someone might have invented —
+    //! whereas one that ends in a dot says plainly that there is more of it.
+    public function clipToWidth(
+        dc as Graphics.Dc,
+        text as String,
+        font as Graphics.FontDefinition,
+        maxWidth as Number
+    ) as String {
+        if (dc.getTextWidthInPixels(text, font) <= maxWidth) {
+            return text;
+        }
+        var cut = text.length();
+        while (cut > 1) {
+            cut--;
+            var candidate = text.substring(0, cut);
+            if (candidate == null) {
+                return text;
+            }
+            var shortened = candidate + ".";
+            if (dc.getTextWidthInPixels(shortened, font) <= maxWidth) {
+                return shortened;
+            }
+        }
+        return ".";
+    }
+
+    //! Centred text at a fixed size, clipped rather than shrunk.
+    //!
+    //! For a row in a list, where every line has to sit on the same baseline
+    //! grid at the same size — `drawFitted` would give each row its own font
+    //! and the list would read as a ransom note.
+    //!
+    //! `cx` is passed rather than taken from the Dc because a menu item's
+    //! drawing context is not the screen, and its centre may not be the
+    //! screen's centre.
+    public function drawClipped(
+        dc as Graphics.Dc,
+        cx as Number,
+        top as Number,
+        text as String,
+        font as Graphics.FontDefinition,
+        color as Number,
+        maxWidth as Number
+    ) as Number {
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, top, font, clipToWidth(dc, text, font, maxWidth),
+            Graphics.TEXT_JUSTIFY_CENTER);
+        return top + dc.getFontHeight(font);
+    }
+
     //! Draw centred text with its TOP at `y`. Returns the y just below it.
     public function drawFitted(
         dc as Graphics.Dc,
@@ -289,6 +361,35 @@ module Theme {
         color as Number
     ) as Number {
         var font = pickFont(dc, text, fonts, usableWidth(dc, y));
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(dc.getWidth() / 2, y, font, text, Graphics.TEXT_JUSTIFY_CENTER);
+        return y + dc.getFontHeight(font);
+    }
+
+    //! The same, kept inside a circle `inset` pixels in from the glass.
+    //!
+    //! Two differences from `drawFitted`, both deliberate:
+    //!
+    //!   * the boundary is the inset circle, not the glass;
+    //!   * the line is measured at its **baseline** rather than its top. Below
+    //!     the centre the chord narrows as it descends, so the top of a line is
+    //!     the widest part of it — measuring there is what lets the bottom of
+    //!     the text cross an edge the top cleared.
+    //!
+    //! `drawFitted` keeps measuring at the top. It is on every screen in the
+    //! app and changing how it picks fonts is a separate decision from fixing
+    //! the one screen that has a ring on it.
+    public function drawFittedWithin(
+        dc as Graphics.Dc,
+        y as Number,
+        text as String,
+        fonts as Array<Graphics.FontDefinition>,
+        color as Number,
+        inset as Number
+    ) as Number {
+        var tallest = fonts.size() > 0 ? fonts[0] : Graphics.FONT_XTINY;
+        var measureAt = y + (dc.getFontHeight(tallest) * 3) / 4;
+        var font = pickFont(dc, text, fonts, usableWidthWithin(dc, measureAt, inset));
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
         dc.drawText(dc.getWidth() / 2, y, font, text, Graphics.TEXT_JUSTIFY_CENTER);
         return y + dc.getFontHeight(font);
@@ -536,59 +637,48 @@ module Theme {
     //!
     //!   (heart) 132  #####
     //!
-    //! Used as a header on the screens whose subject is something else.
+    //! The live heart rate as one compact row: a heart, and the number.
+    //!
+    //!         (heart)  132
+    //!
+    //! The heart carries the zone in its colour and nothing else does. This
+    //! used to also draw a five-segment zone gauge and a "Z3" label, which was
+    //! three encodings of one fact sitting above a screen whose job is the set
+    //! in front of you. A colour is read without being looked at; a gauge has
+    //! to be measured, and mid-set nobody measures anything.
+    //!
+    //! The full gauge still exists on the metrics page — see
+    //! `drawHeartRateField`, where heart rate *is* the subject and there is
+    //! room to say more about it.
+    //!
+    //! Returns the y just below the row.
     public function drawHeartRateGauge(dc as Graphics.Dc, top as Number) as Number {
         var hr = LiveMetrics.heartRate();
         var zone = LiveMetrics.zoneFor(hr);
-        var progress = LiveMetrics.zoneProgressFor(hr);
         var font = Graphics.FONT_XTINY;
         var fontHeight = dc.getFontHeight(font);
         var text = LiveMetrics.format(hr);
 
-        // The heart takes the zone's colour. It is the largest coloured thing
-        // on the row, so it says how hard you are working before the eye has
-        // reached the number — which is the whole point of a glance.
+        // No reading: grey. A reading but no zone profile: the plain heart
+        // colour. Neither case is allowed to imply an effort level.
         var tint = hr == null ? colorFaint() : (zone == null ? colorHr() : zoneColor(zone));
 
-        var heartSize = (fontHeight * 70) / 100;
-        var gap = heartSize / 2;
+        // Larger than it was, because it is now the only thing carrying the
+        // zone. A glyph that has to be found is not a glance.
+        var heartSize = (fontHeight * 82) / 100;
+        var gap = (heartSize * 55) / 100;
         var textWidth = dc.getTextWidthInPixels(text, font);
-        var zoneText = zone == null ? "" : "Z" + zone.toString();
-        var zoneWidth = zone == null ? 0 : dc.getTextWidthInPixels(zoneText, font) + gap;
-        var barWidth = fontHeight * 3;
 
-        var total = heartSize + gap + textWidth + gap * 2 + barWidth + zoneWidth;
-        var left = (dc.getWidth() - total) / 2;
+        var left = (dc.getWidth() - (heartSize + gap + textWidth)) / 2;
 
         drawHeart(dc, left + heartSize / 2, top + fontHeight / 2, heartSize, tint);
 
         dc.setColor(hr != null ? colorText() : colorFaint(), Graphics.COLOR_TRANSPARENT);
         dc.drawText(left + heartSize + gap, top, font, text, Graphics.TEXT_JUSTIFY_LEFT);
 
-        var barLeft = left + heartSize + gap + textWidth + gap * 2;
-        var barHeight = (fontHeight * 45) / 100;
-        drawZoneBar(dc, barLeft, top + (fontHeight - barHeight) / 2,
-            barWidth, barHeight, zone, progress);
-
-        if (zone != null) {
-            dc.setColor(tint, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(barLeft + barWidth + gap, top, font, zoneText,
-                Graphics.TEXT_JUSTIFY_LEFT);
-        }
         return top + fontHeight;
     }
 
-    //! Heart rate as a full data field: the number at field size, the zone bar
-    //! beneath it, and a caption naming the zone.
-    //!
-    //!         132          coloured by zone
-    //!      ## ## ## - -
-    //!        HR  Z3
-    //!
-    //! This is the one field on the metric page worth more than a number. A
-    //! bare "132 / HR" makes the athlete do the arithmetic against thresholds
-    //! they cannot see; the bar answers "how hard am I working" at a glance,
-    //! which is the actual question mid-set.
     public function drawHeartRateField(
         dc as Graphics.Dc,
         top as Number,
@@ -638,6 +728,69 @@ module Theme {
 
     //! A small minus or plus, drawn from rectangles rather than typed, so it
     //! cannot fall foul of a device's font set.
+    //! The "add" mark: a thin ring with a slim cross inside it.
+    //!
+    //!            ___
+    //!          /     \
+    //!         |   +   |
+    //!          \ ___ /
+    //!
+    //! The new-workout page used to draw a bare plus at a quarter of its own
+    //! size in stroke weight. At that thickness it stops reading as a symbol
+    //! and starts reading as two bars, and nothing about it says "press this".
+    //!
+    //! A ring does. It is the affordance Garmin uses for an action target
+    //! across its own menus, it echoes the progress ring and the state icons
+    //! this app already draws, and the hairline weight is what separates a
+    //! considered mark from a clip-art one. The cross is drawn with rounded
+    //! ends for the same reason — square ends at this size look chipped.
+    public function drawAddMark(
+        dc as Graphics.Dc,
+        cx as Number,
+        cy as Number,
+        size as Number,
+        color as Number
+    ) as Void {
+        var radius = size / 2;
+        if (radius < 6) {
+            return;
+        }
+        var pen = size / 16;
+        if (pen < 2) {
+            pen = 2;
+        }
+
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+        dc.setPenWidth(pen);
+        // Inside the radius, so a thick pen cannot spill past the size asked for.
+        dc.drawCircle(cx, cy, radius - pen / 2);
+        dc.setPenWidth(1);
+
+        // A third of the diameter. Any longer and the cross crowds the ring;
+        // any shorter and it floats in the middle of it.
+        var arm = (size * 17) / 100;
+        var bar = pen;
+        _roundBar(dc, cx - arm, cy - bar / 2, arm * 2, bar);
+        _roundBar(dc, cx - bar / 2, cy - arm, bar, arm * 2);
+    }
+
+    //! A filled rectangle with rounded ends, falling back to a plain one on a
+    //! device without rounded rectangles.
+    function _roundBar(
+        dc as Graphics.Dc,
+        x as Number,
+        y as Number,
+        width as Number,
+        height as Number
+    ) as Void {
+        var shorter = width < height ? width : height;
+        if (shorter >= 4 && dc has :fillRoundedRectangle) {
+            dc.fillRoundedRectangle(x, y, width, height, shorter / 2);
+            return;
+        }
+        dc.fillRectangle(x, y, width, height);
+    }
+
     public function drawSign(
         dc as Graphics.Dc,
         cx as Number,
@@ -733,20 +886,36 @@ module Theme {
     }
 
     //! Garmin-style page indicator down the right edge.
+    //! Radius of a page dot on this screen.
+    public function pageDotRadius(dc as Graphics.Dc) as Number {
+        var spacing = pageDotSpacing(dc);
+        var radius = spacing / 4;
+        return radius < 2 ? 2 : radius;
+    }
+
+    public function pageDotSpacing(dc as Graphics.Dc) as Number {
+        var spacing = (dc.getHeight() / 24).toNumber();
+        return spacing < 10 ? 10 : spacing;
+    }
+
+    //! The leftmost pixel the page dots occupy.
+    //!
+    //! Content that must not collide with them needs this, and deriving it from
+    //! the same numbers that draw them is the only way it stays true. The
+    //! active dot is a pixel wider than the rest, so it sets the edge.
+    public function pageDotsLeft(dc as Graphics.Dc) as Number {
+        var radius = pageDotRadius(dc);
+        return dc.getWidth() - (dc.getWidth() / 22) - radius - (radius + 1);
+    }
+
     public function drawPageDots(dc as Graphics.Dc, count as Number, active as Number) as Void {
         if (count <= 1) {
             return;
         }
         var w = dc.getWidth();
         var h = dc.getHeight();
-        var spacing = (h / 24).toNumber();
-        if (spacing < 10) {
-            spacing = 10;
-        }
-        var radius = spacing / 4;
-        if (radius < 2) {
-            radius = 2;
-        }
+        var spacing = pageDotSpacing(dc);
+        var radius = pageDotRadius(dc);
         var x = w - (w / 22) - radius;
         var startY = h / 2 - ((count - 1) * spacing) / 2;
         for (var i = 0; i < count; i++) {

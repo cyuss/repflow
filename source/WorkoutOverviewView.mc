@@ -5,23 +5,50 @@ import Toybox.System;
 
 //! The heart of "select any exercise at any time".
 //!
-//!     BACK + TRICEPS
-//!     ✓ Lat Pulldown       4/4
-//!     ! Seated Row         0/4
-//!     ● Face Pull          2/4
-//!     ○ Triceps Pushdown   0/4
+//!     PECS + BICEPS
+//!     (>) Bench Press (Barbell)
+//!         2/4    20 kg
+//!     ( ) Incline Bench Press (DB)
+//!         0/4    18 kg
 //!
-//! Built on WatchUi.Menu2 so scrolling, touch and button input all behave the
-//! way the rest of the watch does, at no memory cost of our own.
-class WorkoutOverviewView extends WatchUi.Menu2 {
+//! Built on `WatchUi.CustomMenu` rather than `Menu2`, so scrolling, touch and
+//! button input still behave the way the rest of the watch does while the rows
+//! themselves are drawn here.
+//!
+//! **Why it moved off Menu2.** Menu2 takes a label as a String and decides for
+//! itself what to do when the label is too long: it wraps, then it truncates.
+//! Imported names are long — "Incline Bench Press (Dumbbell)" — and a list of
+//! rows reading "Incline Bench Pr." is a list you cannot choose from, which is
+//! the one thing this screen exists for. There is no API to scroll a Menu2
+//! label. `CustomMenuItem.draw` is the supported way to take that decision
+//! back, and it is available on every product RepFlow ships to.
+//!
+//! The focused row scrolls; the others are clipped with a trailing dot. Only
+//! one row can be read at a time anyway, and a list where every row is moving
+//! is unreadable.
+class WorkoutOverviewView extends WatchUi.CustomMenu {
+
+    public static const ITEM_END_WORKOUT = "__end__";
+    public static const ITEM_ADD_EXERCISE = "__add__";
 
     public function initialize() {
+        var settings = System.getDeviceSettings();
+        var height = settings.screenHeight;
         var engine = AppController.instance().engine();
         var title = "Workout";
         if (engine != null) {
             title = engine.getWorkout().name;
         }
-        Menu2.initialize({ :title => title });
+
+        // Two lines and air. The focused row gets more, which is what makes the
+        // selection obvious without a highlight bar across it.
+        CustomMenu.initialize(height / 5, Theme.colorBg(), {
+            :focusItemHeight => height / 4,
+            :title => new OverviewTitle(title),
+            // Explicitly themeless: a menu theme would override the background
+            // colour, and RepFlow's light mode is a background colour.
+            :theme => null
+        });
         _populate(engine);
     }
 
@@ -29,50 +56,178 @@ class WorkoutOverviewView extends WatchUi.Menu2 {
         if (engine == null) {
             return;
         }
-        // Icon size is chosen from the device's screen rather than hard-coded,
-        // so the dots keep their proportions from a 260px Fenix 6 to a 466px
-        // Fenix 9 Pro.
-        // Menu2 anchors an icon Drawable at its reserved area's origin rather
-        // than centring it inside, so a drawable much smaller than that area
-        // sits high and to the left. Declaring roughly the area's own size and
-        // drawing the dot in the middle of it is what centres it.
-        var settings = System.getDeviceSettings();
-        var iconSize = settings.screenHeight / 5;
-        if (iconSize < 20) {
-            iconSize = 20;
-        }
-
         var list = engine.getWorkout().exercises;
         for (var i = 0; i < list.size(); i++) {
-            var ex = list[i];
-            // Wide spacing, and a space before the unit: "2/4    60 kg" reads as
-            // two facts, "2/460kg" as one run-on. ASCII only — the Fenix 6 Pro
-            // has no glyph for a middot and draws a "?" box instead.
-            var sub = ex.completedSetCount().toString() + "/" + ex.targetSets.toString() +
-                "    " + Theme.formatPlannedWeight(ex.plannedWeight()) +
-                " " + Units.label();
-            addItem(new WatchUi.IconMenuItem(
-                ex.name, sub, ex.id, new StateIcon(ex.state, iconSize), {}));
+            addItem(new ExerciseMenuItem(list[i]));
         }
         // An unplanned exercise is half of all sessions, so it lives here
         // rather than behind the per-exercise menu.
-        addItem(new WatchUi.MenuItem(
+        addItem(new ActionMenuItem(
             WatchUi.loadResource(Rez.Strings.AddExercise) as String,
-            null,
-            ITEM_ADD_EXERCISE,
-            {}
-        ));
+            ITEM_ADD_EXERCISE));
         // End the workout from the bottom of the list — no nested menu needed.
-        addItem(new WatchUi.MenuItem(
+        addItem(new ActionMenuItem(
             WatchUi.loadResource(Rez.Strings.ActionEndWorkout) as String,
-            null,
-            ITEM_END_WORKOUT,
-            {}
-        ));
+            ITEM_END_WORKOUT));
     }
 
-    public static const ITEM_END_WORKOUT = "__end__";
-    public static const ITEM_ADD_EXERCISE = "__add__";
+    //! Drawn after every item, so it is the one place that knows a whole frame
+    //! has been rendered. Without it the scroll timer would never stop.
+    public function drawForeground(dc as Graphics.Dc) as Void {
+        Marquee.endFrame();
+    }
+
+    public function onHide() as Void {
+        Marquee.stop();
+    }
+}
+
+//! The workout's name, across the top of the list.
+//!
+//! Scrolls when it has to, for the same reason the rows do: "Dos + Triceps"
+//! fits and "Upper Body Push (Heavy)" does not, and shrinking the title until
+//! it fits is how a heading becomes a smudge.
+class OverviewTitle extends WatchUi.Drawable {
+
+    private var _text as String;
+
+    public function initialize(text as String) {
+        Drawable.initialize({});
+        _text = text;
+    }
+
+    public function draw(dc as Graphics.Dc) as Void {
+        var height = dc.getHeight();
+        var font = Theme.captionFont();
+        var top = (height - dc.getFontHeight(font)) / 2;
+        if (top < 0) {
+            top = 0;
+        }
+        Marquee.draw(dc, top, _text.toUpper(),
+            [font] as Array<Graphics.FontDefinition>, Theme.colorAccent(),
+            RowLayout.textWidth(dc));
+    }
+}
+
+//! Where the text goes in a list row, on any screen size.
+//!
+//! Shared by the rows and the title so they line up, and kept out of both so
+//! the numbers are stated once.
+module RowLayout {
+
+    //! Width available to text, centred on the screen.
+    //!
+    //! The gutter is taken off **both** sides even though only the left one
+    //! holds an icon. The text is then centred on the screen rather than
+    //! centred in what is left over, which is what stops a list of short names
+    //! from looking pushed to the right.
+    public function textWidth(dc as Graphics.Dc) as Number {
+        var width = dc.getWidth();
+        var usable = width - gutter(dc) * 2;
+        return usable < 1 ? 1 : usable;
+    }
+
+    //! The icon column, mirrored as a margin on the right.
+    public function gutter(dc as Graphics.Dc) as Number {
+        return dc.getWidth() / 5;
+    }
+
+    //! Where the state icon's centre goes.
+    //!
+    //! Not at the left edge of the gutter, which is where it was: a row two
+    //! places from the focus sits near the top or bottom of a round screen,
+    //! where the display has already curved away from x=0, and the icons on
+    //! those rows came out with a slice missing. A third of the way in clears
+    //! the curve on every row the menu shows and still leaves the icon clear
+    //! of the text.
+    public function iconCentre(dc as Graphics.Dc) as Number {
+        return (gutter(dc) * 7) / 10;
+    }
+}
+
+//! One exercise: state icon, name, and what is done of it.
+class ExerciseMenuItem extends WatchUi.CustomMenuItem {
+
+    private var _exercise as Exercise;
+
+    public function initialize(exercise as Exercise) {
+        CustomMenuItem.initialize(exercise.id, {});
+        _exercise = exercise;
+    }
+
+    public function draw(dc as Graphics.Dc) as Void {
+        var height = dc.getHeight();
+        var focused = isFocused();
+
+        var nameFont = Theme.captionFont();
+        var subFont = Theme.captionFont();
+        var nameHeight = dc.getFontHeight(nameFont);
+        var subHeight = dc.getFontHeight(subFont);
+        var gap = height / 16;
+
+        var block = nameHeight + gap + subHeight;
+        var top = (height - block) / 2;
+        if (top < 0) {
+            top = 0;
+        }
+
+        // Wide spacing, and a space before the unit: "2/4    20 kg" reads as
+        // two facts, "2/420kg" as one run-on. ASCII only — the Fenix 6 Pro has
+        // no glyph for a middot and draws a "?" box instead.
+        var sub = _exercise.completedSetCount().toString() + "/" +
+            _exercise.targetSets.toString() + "    " +
+            Theme.formatPlannedWeight(_exercise.plannedWeight()) + " " + Units.label();
+
+        var textWidth = RowLayout.textWidth(dc);
+        var nameColor = focused ? Theme.colorText() : Theme.colorDim();
+        if (_exercise.state == EX_SKIPPED) {
+            // A skipped exercise is a fact about the session, not a headline.
+            nameColor = Theme.colorFaint();
+        }
+
+        if (focused) {
+            Marquee.draw(dc, top, _exercise.name,
+                [nameFont] as Array<Graphics.FontDefinition>, nameColor, textWidth);
+        } else {
+            Theme.drawClipped(dc, dc.getWidth() / 2, top, _exercise.name, nameFont,
+                nameColor, textWidth);
+        }
+
+        Theme.drawClipped(dc, dc.getWidth() / 2, top + nameHeight + gap, sub, subFont,
+            focused ? Theme.colorAccent() : Theme.colorFaint(), textWidth);
+
+        // The icon sits in the left gutter, centred on the row as a whole.
+        // StateIcon draws its dot at 44% across its own box rather than in the
+        // middle of it, so the box is placed to put that dot where it belongs
+        // instead of assuming the two coincide.
+        var iconSize = (RowLayout.gutter(dc) * 4) / 5;
+        var icon = new StateIcon(_exercise.state, iconSize);
+        icon.setLocation(RowLayout.iconCentre(dc) - (iconSize * 44) / 100,
+            (height - iconSize) / 2);
+        icon.draw(dc);
+    }
+}
+
+//! A plain action row: "Add exercise", "End workout".
+class ActionMenuItem extends WatchUi.CustomMenuItem {
+
+    private var _label as String;
+
+    public function initialize(label as String, id as String) {
+        CustomMenuItem.initialize(id, {});
+        _label = label;
+    }
+
+    public function draw(dc as Graphics.Dc) as Void {
+        var font = Theme.captionFont();
+        var top = (dc.getHeight() - dc.getFontHeight(font)) / 2;
+        if (top < 0) {
+            top = 0;
+        }
+        Theme.drawClipped(dc, dc.getWidth() / 2, top, _label, font,
+            isFocused() ? Theme.colorText() : Theme.colorDim(),
+            RowLayout.textWidth(dc));
+    }
 }
 
 class WorkoutOverviewDelegate extends WatchUi.Menu2InputDelegate {
