@@ -29,7 +29,8 @@ class RepFlowApp extends Application.AppBase {
     //! firmware's decision, not the app's — so this cannot be the only way in,
     //! and MENU on the workout picker opens the same menu.
     public function getSettingsView() as [WatchUi.Views] or [WatchUi.Views, WatchUi.InputDelegates] or Null {
-        return [AppSettingsMenu.build(), new AppSettingsDelegate(true)];
+        var menu = AppSettingsMenu.build();
+        return [menu, new AppSettingsDelegate(true, menu)];
     }
 
     //! Settings changed — either the athlete's, written from the phone, or the

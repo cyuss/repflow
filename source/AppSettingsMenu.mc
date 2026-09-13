@@ -28,8 +28,14 @@ module AppSettingsMenu {
     const ITEM_REPS = "reps";
     const ITEM_ANIM = "anim";
 
-    //! Build the menu. Rebuilt rather than updated after every change, because
-    //! a Menu2 item's sublabel cannot be changed in place.
+    //! Build the menu.
+    //!
+    //! This used to be rebuilt after every change, on the belief that a Menu2
+    //! item's sublabel could not be altered in place. `MenuItem.setSubLabel`
+    //! has existed since API 3.0, and rebuilding put the cursor back at the top
+    //! of the list every time a setting was toggled — so changing two things in
+    //! a row meant scrolling down twice. A wrong comment cost more than the
+    //! code it described.
     public function build() as WatchUi.Menu2 {
         var menu = new WatchUi.Menu2({
             :title => WatchUi.loadResource(Rez.Strings.AppSettings) as String
@@ -49,8 +55,7 @@ module AppSettingsMenu {
             Theme.formatDuration(Settings.restDefault()), ITEM_REST, {}));
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.WeightLabel) as String,
-            "+/- " + Theme.formatNumber(Units.step()) + " " + Units.label(),
-            ITEM_STEP, {}));
+            stepLabel(), ITEM_STEP, {}));
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.SetHaptics) as String,
             onOff(Settings.haptics()), ITEM_HAPTICS, {}));
@@ -64,7 +69,8 @@ module AppSettingsMenu {
     }
 
     public function show() as Void {
-        WatchUi.switchToView(build(), new AppSettingsDelegate(false), WatchUi.SLIDE_UP);
+        var menu = build();
+        WatchUi.switchToView(menu, new AppSettingsDelegate(false, menu), WatchUi.SLIDE_UP);
     }
 
     public function onOff(value as Boolean) as String {
@@ -91,6 +97,11 @@ module AppSettingsMenu {
             " (" + Units.label() + ")";
     }
 
+    //! The weight step, in whichever unit is in force.
+    public function stepLabel() as String {
+        return "+/- " + Theme.formatNumber(Units.step()) + " " + Units.label();
+    }
+
     public function restModeLabel() as String {
         return WatchUi.loadResource(Settings.restMode() == Tuning.REST_OPEN
             ? Rez.Strings.RestOpen
@@ -114,10 +125,18 @@ module AppSettingsMenu {
 class AppSettingsDelegate extends WatchUi.Menu2InputDelegate {
 
     private var _fromSystem as Boolean;
+    //! The menu being driven, so a change can update a neighbouring row —
+    //! switching units rewrites the weight-step row as well as its own.
+    private var _menu as WatchUi.Menu2;
+    //! Which row opened the number editor, so returning from it lands back on
+    //! that row rather than at the top of the list.
+    private var _editing as String?;
 
-    public function initialize(fromSystem as Boolean) {
+    public function initialize(fromSystem as Boolean, menu as WatchUi.Menu2) {
         Menu2InputDelegate.initialize();
         _fromSystem = fromSystem;
+        _menu = menu;
+        _editing = null;
     }
 
     public function onSelect(item as WatchUi.MenuItem) as Void {
@@ -127,7 +146,7 @@ class AppSettingsDelegate extends WatchUi.Menu2InputDelegate {
             Settings.setTheme(Settings.theme() == Tuning.THEME_LIGHT
                 ? Tuning.THEME_DARK
                 : Tuning.THEME_LIGHT);
-            _rebuild();
+            _update(item, AppSettingsMenu.themeLabel());
             return;
         }
         if (id.equals(AppSettingsMenu.ITEM_UNITS)) {
@@ -137,19 +156,23 @@ class AppSettingsDelegate extends WatchUi.Menu2InputDelegate {
             }
             Settings.writeNumber("units", next);
             Settings.invalidate();
-            _rebuild();
+            // The weight step is quoted in whichever unit is in force, so it
+            // changes too — and a row that silently disagrees with the one
+            // above it is worse than a rebuild.
+            _updateById(AppSettingsMenu.ITEM_STEP, AppSettingsMenu.stepLabel());
+            _update(item, AppSettingsMenu.unitsLabel());
             return;
         }
         if (id.equals(AppSettingsMenu.ITEM_HAPTICS)) {
             Settings.writeBoolean("haptics", !Settings.haptics());
             Settings.invalidate();
-            _rebuild();
+            _update(item, AppSettingsMenu.onOff(Settings.haptics()));
             return;
         }
         if (id.equals(AppSettingsMenu.ITEM_REPS)) {
             Settings.writeBoolean("repCounter", !Settings.repCounter());
             Settings.invalidate();
-            _rebuild();
+            _update(item, AppSettingsMenu.onOff(Settings.repCounter()));
             return;
         }
         if (id.equals(AppSettingsMenu.ITEM_ANIM)) {
@@ -159,22 +182,24 @@ class AppSettingsDelegate extends WatchUi.Menu2InputDelegate {
             }
             Settings.writeNumber("animations", next);
             Settings.invalidate();
-            _rebuild();
+            _update(item, AppSettingsMenu.animLabel());
             return;
         }
         if (id.equals(AppSettingsMenu.ITEM_REST_MODE)) {
             Settings.setRestMode(Settings.restMode() == Tuning.REST_OPEN
                 ? Tuning.REST_TIMED
                 : Tuning.REST_OPEN);
-            _rebuild();
+            _update(item, AppSettingsMenu.restModeLabel());
             return;
         }
         if (id.equals(AppSettingsMenu.ITEM_REST)) {
+            _editing = AppSettingsMenu.ITEM_REST;
             _number(WatchUi.loadResource(Rez.Strings.RestLabel) as String, "s",
                 Settings.restDefault(), 10, 900, 5, false, method(:onRest));
             return;
         }
         if (id.equals(AppSettingsMenu.ITEM_STEP)) {
+            _editing = AppSettingsMenu.ITEM_STEP;
             _number(WatchUi.loadResource(Rez.Strings.WeightLabel) as String,
                 Units.label().toUpper(), Settings.weightStepTenths(), 1, 250, 1, true,
                 method(:onStep));
@@ -208,8 +233,42 @@ class AppSettingsDelegate extends WatchUi.Menu2InputDelegate {
         WatchUi.switchToView(list, new WorkoutListDelegate(list), WatchUi.SLIDE_DOWN);
     }
 
+    //! Change one row's sublabel where it stands.
+    //!
+    //! No view switch, so the cursor stays exactly where the athlete left it.
+    //! Toggling three settings in a row used to mean scrolling back down twice.
+    private function _update(item as WatchUi.MenuItem, sub as String) as Void {
+        item.setSubLabel(sub);
+        WatchUi.requestUpdate();
+    }
+
+    //! The same, for a row other than the one that was pressed.
+    private function _updateById(id as String, sub as String) as Void {
+        var index = _menu.findItemById(id);
+        if (index < 0) {
+            return;
+        }
+        var item = _menu.getItem(index);
+        if (item != null) {
+            (item as WatchUi.MenuItem).setSubLabel(sub);
+        }
+    }
+
+    //! Rebuild the menu, landing on the row that was being edited.
+    //!
+    //! Only the number editors need this: they replace the whole view, so there
+    //! is no menu left to update in place. Restoring the focus is what stops a
+    //! trip into "Default rest" from dumping the athlete back at "Background".
     function _rebuild() as Void {
-        WatchUi.switchToView(AppSettingsMenu.build(), new AppSettingsDelegate(_fromSystem),
+        var menu = AppSettingsMenu.build();
+        var id = _editing;
+        if (id != null && menu has :setFocus) {
+            var index = menu.findItemById(id as String);
+            if (index >= 0) {
+                menu.setFocus(index);
+            }
+        }
+        WatchUi.switchToView(menu, new AppSettingsDelegate(_fromSystem, menu),
             WatchUi.SLIDE_IMMEDIATE);
     }
 

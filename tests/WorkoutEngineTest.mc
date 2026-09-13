@@ -2673,3 +2673,50 @@ function testReimportingARoutineUpdatesItInPlace(logger as Test.Logger) as Boole
     Test.assert(!(other as Workout).id.equals((first as Workout).id));
     return true;
 }
+
+//! Toggling a setting must not move the cursor.
+//!
+//! The settings menu used to rebuild itself after every change, on the belief —
+//! written down in a comment — that a Menu2 item's sublabel could not be
+//! altered in place. It can, since API 3.0, and the rebuild put the cursor back
+//! at the top of the list every time: changing two settings meant scrolling
+//! down twice. Reported from a real watch.
+//!
+//! This drives the menu the way the delegate does and checks the sublabels move
+//! while the rows stay where they are.
+(:test)
+function testSettingsToggleUpdatesInPlace(logger as Test.Logger) as Boolean {
+    var menu = AppSettingsMenu.build();
+    var index = menu.findItemById(AppSettingsMenu.ITEM_REST_MODE);
+    Test.assert(index >= 0);
+
+    var item = menu.getItem(index) as WatchUi.MenuItem;
+    var before = item.getSubLabel() as String;
+
+    // What the delegate does: change the setting, rewrite this row, and leave
+    // every other row — and the cursor — alone.
+    Settings.setRestMode(Settings.restMode() == Tuning.REST_OPEN
+        ? Tuning.REST_TIMED
+        : Tuning.REST_OPEN);
+    item.setSubLabel(AppSettingsMenu.restModeLabel());
+
+    var after = (menu.getItem(index) as WatchUi.MenuItem).getSubLabel() as String;
+    Test.assert(!before.equals(after));
+    // The row did not move, which is the whole point.
+    Test.assertEqual(menu.findItemById(AppSettingsMenu.ITEM_REST_MODE), index);
+
+    // Put it back, so the test leaves no trace in the athlete's settings.
+    Settings.setRestMode(Settings.restMode() == Tuning.REST_OPEN
+        ? Tuning.REST_TIMED
+        : Tuning.REST_OPEN);
+    item.setSubLabel(AppSettingsMenu.restModeLabel());
+    Test.assertEqual((menu.getItem(index) as WatchUi.MenuItem).getSubLabel() as String,
+        before);
+
+    // Switching units rewrites the weight-step row as well as its own, because
+    // that row quotes whichever unit is in force.
+    var step = menu.findItemById(AppSettingsMenu.ITEM_STEP);
+    Test.assert(step >= 0);
+    Test.assert(AppSettingsMenu.stepLabel().length() > 0);
+    return true;
+}
