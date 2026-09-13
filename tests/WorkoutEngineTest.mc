@@ -2613,3 +2613,63 @@ function testRestAnnouncesItselfOnce(logger as Test.Logger) as Boolean {
     Test.assert(controller.restOverSignalled());
     return true;
 }
+
+//! A Hevy routine imported twice is one workout, not two.
+//!
+//! The workout keeps Hevy's own routine id, which is the whole reason it is not
+//! generated locally: edit a routine in Hevy, import again, and the copy on the
+//! watch is updated in place. Generating an id here would leave the athlete
+//! with a growing pile of near-identical workouts and no way to tell which one
+//! was current.
+(:test)
+function testReimportingARoutineUpdatesItInPlace(logger as Test.Logger) as Boolean {
+    var first = HevyMap.routineToWorkout({
+        "id" => "r-123",
+        "title" => "Dos + Triceps",
+        "exercises" => [{
+            "title" => "Lat Pulldown (Cable)",
+            "exercise_template_id" => "t-lat",
+            "sets" => [{ "reps" => 10, "weight_kg" => 60.0 }]
+        } as Object] as Array
+    } as Dictionary);
+    Test.assert(first != null);
+
+    // The same routine, renamed and with a second movement added in Hevy.
+    var second = HevyMap.routineToWorkout({
+        "id" => "r-123",
+        "title" => "Back + Triceps",
+        "exercises" => [
+            {
+                "title" => "Lat Pulldown (Cable)",
+                "exercise_template_id" => "t-lat",
+                "sets" => [{ "reps" => 12, "weight_kg" => 65.0 }]
+            } as Object,
+            {
+                "title" => "Seated Row (Machine)",
+                "exercise_template_id" => "t-row",
+                "sets" => [{ "reps" => 10, "weight_kg" => 50.0 }]
+            } as Object
+        ] as Array
+    } as Dictionary);
+    Test.assert(second != null);
+
+    // Same id, so storage replaces rather than appends. A different id here
+    // would be the bug this test exists to catch.
+    Test.assert((first as Workout).id.equals((second as Workout).id));
+    Test.assertEqual((second as Workout).exercises.size(), 2);
+    Test.assert(!(first as Workout).name.equals((second as Workout).name));
+
+    // And a different routine is a different workout.
+    var other = HevyMap.routineToWorkout({
+        "id" => "r-456",
+        "title" => "Pecs + Biceps",
+        "exercises" => [{
+            "title" => "Bench Press (Barbell)",
+            "exercise_template_id" => "t-bench",
+            "sets" => [{ "reps" => 8, "weight_kg" => 80.0 }]
+        } as Object] as Array
+    } as Dictionary);
+    Test.assert(other != null);
+    Test.assert(!(other as Workout).id.equals((first as Workout).id));
+    return true;
+}

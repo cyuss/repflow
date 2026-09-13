@@ -29,6 +29,11 @@ module HevySync {
 
     var _state as Number = STATE_IDLE;
     var _message as String = "";
+    //! How many routines the last import wrote, and how many the watch had no
+    //! room for. Reported together, so "9 routines" never silently means
+    //! "twelve, minus three you will not be told about".
+    var _savedCount as Number = 0;
+    var _refusedCount as Number = 0;
     var _page as Number = 1;
     var _collected as Array<Workout> = [] as Array<Workout>;
     var _sending as Dictionary? = null;
@@ -102,22 +107,38 @@ module HevySync {
         _saveImported();
     }
 
+    //! Write the fetched routines into local storage.
+    //!
+    //! A routine keeps Hevy's own id, so importing again after editing it in
+    //! Hevy **updates** the workout on the watch rather than adding a second
+    //! copy of it. That is the whole reason the id is not generated here.
+    //!
+    //! The watch holds a fixed number of custom workouts. More routines than
+    //! that and the ones past the limit are not saved, which used to show up as
+    //! a smaller number with no explanation — an import that says "9 routines"
+    //! when you have twelve looks like it lost three of them at random. It now
+    //! says the storage is full, because that is a thing the athlete can act on.
     function _saveImported() as Void {
         var saved = 0;
+        var refused = 0;
         for (var i = 0; i < _collected.size(); i++) {
             if (WorkoutRepository.saveCustom(_collected[i])) {
                 saved++;
+            } else {
+                refused++;
             }
         }
         _collected = [] as Array<Workout>;
 
         if (saved == 0) {
-            _fail(HevyApi.errorText(0));
+            _fail(refused > 0
+                ? WatchUi.loadResource(Rez.Strings.HevyFull) as String
+                : HevyApi.errorText(0));
             return;
         }
 
-        _message = saved.toString() + " " +
-            (WatchUi.loadResource(Rez.Strings.HevyRoutines) as String);
+        _savedCount = saved;
+        _refusedCount = refused;
         // History next, so "last time" works on the very first session.
         _message = WatchUi.loadResource(Rez.Strings.HevyLastTime) as String;
         WatchUi.requestUpdate();
@@ -139,7 +160,12 @@ module HevySync {
             }
         }
         _state = STATE_DONE;
-        _message = WatchUi.loadResource(Rez.Strings.HevyImported) as String;
+        _message = _savedCount.toString() + " " +
+            (WatchUi.loadResource(Rez.Strings.HevyRoutines) as String);
+        if (_refusedCount > 0) {
+            _message = _message + "\n" +
+                (WatchUi.loadResource(Rez.Strings.HevyFull) as String);
+        }
         WatchUi.requestUpdate();
     }
 

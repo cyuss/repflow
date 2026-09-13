@@ -60,6 +60,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Importing Hevy routines says how many the watch had no room for, instead of
+  reporting a smaller number with no explanation.
 - Values are drawn in Garmin's own number font wherever they fit, which is now
   almost everywhere. They were falling back to a text font because the fit was
   measured against the font's line height, and a number font declares a descent

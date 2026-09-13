@@ -139,6 +139,7 @@
     <string id="HevyDiscard">Supprimer</string>
     <string id="HevyDiscardSure">Supprimer definitivement ?</string>
     <string id="HevyRoutines">seances</string>
+    <string id="HevyFull">Stockage plein</string>
     <string id="HevyLastTime">Recuperation...</string>
     <string id="SetHevyKey">Cle API Hevy (hevy.com/settings?developer)</string>
     <string id="SetPrivate">Publier les seances en prive sur Hevy</string>

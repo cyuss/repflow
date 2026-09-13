@@ -140,5 +140,6 @@
     <string id="HevyDiscard">Discard</string>
     <string id="HevyDiscardSure">Discard for good?</string>
     <string id="HevyRoutines">routines</string>
+    <string id="HevyFull">Storage full</string>
     <string id="HevyLastTime">Fetching last time...</string>
 </strings>
