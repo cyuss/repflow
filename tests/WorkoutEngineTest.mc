@@ -1,5 +1,6 @@
 import Toybox.Lang;
 import Toybox.Test;
+import Toybox.FitContributor;
 import Toybox.Graphics;
 
 //! Behaviour tests for the flexible workout engine.
@@ -2072,5 +2073,67 @@ function testIso8601(logger as Test.Logger) as Boolean {
     Test.assertEqual(stamp.substring(10, 11) as String, "T");
     Test.assertEqual(stamp.substring(19, 20) as String, "Z");
     Test.assertEqual(stamp, "2024-08-14T12:00:00Z");
+    return true;
+}
+
+//! The POC fixture: Bench Press 3x8x80, Lat Pulldown 3x10x60.
+//!
+//! One minimal session, performed end to end, so each of the three integration
+//! routes in docs/garmin-strength-integration-poc.md can be measured against
+//! the same data rather than against three different ones.
+(:test)
+function testPocStrengthSession(logger as Test.Logger) as Boolean {
+    var bench = new Exercise("c_bench", "Bench Press", 3, 8, 80.0, 120);
+    bench.muscle = Muscle.CHEST;
+    bench.hevyId = "D04AC939";
+    var pulldown = new Exercise("b_lat_pulldown", "Lat Pulldown", 3, 10, 60.0, 90);
+    pulldown.muscle = Muscle.BACK;
+    pulldown.hevyId = "05293BCA";
+
+    var workout = new Workout("poc", "POC Strength", [bench, pulldown] as Array<Exercise>);
+    var engine = new WorkoutEngine(new WorkoutSession(workout, TestSupport.T0));
+
+    engine.selectExercise("c_bench");
+    for (var i = 0; i < 3; i++) {
+        engine.completeCurrentSet(8, 80.0, TestSupport.T0 + 60 + i * 180);
+    }
+    engine.selectExercise("b_lat_pulldown");
+    for (var i = 0; i < 3; i++) {
+        engine.completeCurrentSet(10, 60.0, TestSupport.T0 + 700 + i * 150);
+    }
+
+    // POC A — what ActivityRecording can carry: totals on the session message,
+    // one lap per set with the detail as developer fields.
+    var summary = engine.finishWorkout(TestSupport.T0 + 1800);
+    Test.assertEqual(summary.completedSets, 6);
+    Test.assertEqual(summary.totalReps, 54);                 // 3x8 + 3x10
+    Test.assertEqual(summary.totalVolume, 3720.0);           // 1920 + 1800
+    Test.assertEqual(summary.plannedSets, 6);
+    Test.assertEqual(summary.exercisesWorked, 2);
+
+    // POC C — the same session as the body of a Hevy POST, which is also the
+    // shape a backend would turn into FIT SetMessages.
+    var payload = HevyMap.sessionToPayload(workout, TestSupport.T0,
+        TestSupport.T0 + 1800, true);
+    Test.assert(payload != null);
+    var exercises = ((payload as Dictionary)["workout"] as Dictionary)["exercises"] as Array;
+    Test.assertEqual(exercises.size(), 2);
+
+    var benchSets = (exercises[0] as Dictionary)["sets"] as Array;
+    Test.assertEqual(benchSets.size(), 3);
+    Test.assert(((benchSets[0] as Dictionary)["weight_kg"] as Float) == 80.0);
+    Test.assertEqual((benchSets[0] as Dictionary)["reps"] as Number, 8);
+    Test.assertEqual((exercises[0] as Dictionary)["exercise_template_id"] as String, "D04AC939");
+
+    var pulldownSets = (exercises[1] as Dictionary)["sets"] as Array;
+    Test.assertEqual(pulldownSets.size(), 3);
+    Test.assert(((pulldownSets[0] as Dictionary)["weight_kg"] as Float) == 60.0);
+    Test.assertEqual((pulldownSets[0] as Dictionary)["reps"] as Number, 10);
+
+    // POC B — the gap, stated as an assertion rather than as prose. A developer
+    // field can target exactly three FIT message types, and none of them is the
+    // `set` message Garmin Connect's strength view is built from.
+    Test.assertEqual(FitContributor.MESG_TYPE_SESSION, FitContributor.MESG_TYPE_SESSION);
+    Test.assert(!(FitContributor has :MESG_TYPE_SET));
     return true;
 }
