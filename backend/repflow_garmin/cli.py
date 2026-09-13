@@ -5,6 +5,7 @@
     repflow-garmin fill                 # write it, after showing and confirming
     repflow-garmin fill --activity 123  # a specific one
     repflow-garmin fill --yes           # unattended
+    repflow-garmin hevy                 # send the same session to Hevy
 
 `show` and `fill --dry-run` never write. `fill` prints the payload, says what it
 is replacing, and asks — because the endpoint replaces the activity's entire set
@@ -20,6 +21,14 @@ from typing import Any
 
 from . import __version__
 from .fitread import NotARepFlowActivity
+from .hevy import (
+    HevyError,
+    already_posted,
+    build_workout,
+    post_workout,
+    summarise as summarise_hevy,
+    templates,
+)
 from .garmin import (
     GarminError,
     connect,
@@ -146,6 +155,112 @@ def _cmd_fill(args: argparse.Namespace) -> int:
     return 0
 
 
+def _hevy_key(explicit: str | None) -> str:
+    """The Hevy API key, from the flag, the environment, or the terminal.
+
+    Never written to disk by this tool. A key is read+write access to the
+    athlete's entire training history, so it is not cached the way Garmin's
+    session token is — that one Garmin issues and can revoke, this one cannot
+    be scoped.
+    """
+    import getpass
+    import os
+    import sys
+
+    key = (explicit or os.getenv("HEVY_API_KEY") or "").strip()
+    if key:
+        return key
+    if not sys.stdin.isatty():
+        raise HevyError(
+            "no Hevy API key. Pass --key, or set HEVY_API_KEY, or run this in a "
+            "terminal so it can be typed without landing in shell history."
+        )
+    return getpass.getpass("Hevy API key: ").strip()
+
+
+def _cmd_hevy(args: argparse.Namespace) -> int:
+    key = _hevy_key(args.key)
+    client = connect()
+    activity = None
+    activity_id = args.activity
+    if activity_id is None:
+        activity = latest_strength(client)
+        activity_id = activity.activity_id
+        print(f"Activity: {activity}")
+    else:
+        print(f"Activity: {activity_id}")
+
+    sets = logged_sets(client, int(activity_id))
+    print(f"  read {len(sets)} sets from the activity's FIT file")
+
+    print("  fetching your Hevy exercise catalogue...")
+    catalogue = templates(key)
+    print(f"  {len(catalogue)} templates, custom exercises included")
+
+    title = activity.name if activity is not None else f"RepFlow {activity_id}"
+    body, unmatched = build_workout(title, sets, catalogue, is_private=args.private)
+    print(f"  would post \"{title}\": {summarise_hevy(body)}\n")
+    _print_hevy_mapping(sets, catalogue)
+    if unmatched:
+        print(
+            "\n  NOT sent — no Hevy template matches:\n    "
+            + "\n    ".join(sorted(unmatched))
+        )
+
+    if args.json:
+        print(json.dumps(body, indent=1))
+
+    existing = already_posted(key, sets[0].start_time)
+    if existing is not None:
+        print(
+            f"\n  Hevy already has a workout starting at that moment "
+            f"(\"{existing.get('title')}\"). Posting again would duplicate it."
+        )
+        if not args.force:
+            print("  Nothing sent. Pass --force to post it anyway.")
+            return 1
+
+    if args.dry_run:
+        print("\nDry run — nothing sent.")
+        return 0
+    if not args.yes:
+        answer = input("\nPost this workout to Hevy? [y/N] ").strip().lower()
+        if answer not in {"y", "yes"}:
+            print("Nothing sent.")
+            return 1
+
+    post_workout(key, body)
+    print("Posted. Open Hevy and pull to refresh.")
+    return 0
+
+
+def _print_hevy_mapping(sets: list[Any], catalogue: list[Any]) -> None:
+    """Which Hevy movement each RepFlow name became.
+
+    Same reason as the Garmin one: a rejected template id is loud, and a
+    plausible but wrong match is silent and lands in the athlete's own training
+    history where they will believe it.
+    """
+    from .hevy import resolve as resolve_hevy
+
+    seen: dict[str, Any] = {}
+    counts: dict[str, int] = {}
+    for logged in sets:
+        template = resolve_hevy(logged.exercise, catalogue)
+        if template is None:
+            continue
+        seen.setdefault(logged.exercise, template)
+        counts[logged.exercise] = counts.get(logged.exercise, 0) + 1
+    if not seen:
+        return
+
+    width = max(len(name) for name in seen)
+    print("  Exercise mapping:\n")
+    for name, template in seen.items():
+        exact = "exact" if name.strip().lower() == template.title.strip().lower() else "matched"
+        print(f"    {name:<{width}}  x{counts[name]}  ->  {template.title}  ({exact})")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="repflow-garmin", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -169,10 +284,20 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--yes", action="store_true", help="do not ask")
         p.set_defaults(func=func)
 
+    p_hevy = sub.add_parser("hevy", help="send the session to Hevy")
+    p_hevy.add_argument("--activity", type=int, default=None)
+    p_hevy.add_argument("--key", default=None, help="Hevy API key; else HEVY_API_KEY, else prompted")
+    p_hevy.add_argument("--private", action="store_true", help="post it as a private workout")
+    p_hevy.add_argument("--dry-run", action="store_true")
+    p_hevy.add_argument("--force", action="store_true", help="post even if Hevy already has it")
+    p_hevy.add_argument("--yes", action="store_true", help="do not ask")
+    p_hevy.add_argument("--json", action="store_true")
+    p_hevy.set_defaults(func=_cmd_hevy)
+
     args = parser.parse_args(argv)
     try:
         return int(args.func(args))
-    except (GarminError, NotARepFlowActivity) as exc:
+    except (GarminError, NotARepFlowActivity, HevyError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 

@@ -20,7 +20,8 @@ export TYPECHECK
 
 .PHONY: help doctor bootstrap key devices devices-all devices-missing \
         build build-all test test-watch test-backend sim sim-fresh sim-attach \
-        shot sideload clean package release-check backend-setup fill fill-show
+        shot sideload clean package release-check backend-setup \
+        sync-garmin sync-garmin-show sync-hevy sync-hevy-show
 
 help: ## Show this help
 	@echo "RepFlow — your workout, your order."
@@ -66,11 +67,17 @@ test-watch: ## Run the watch app's unit tests in the simulator
 test-backend: ## Run the Garmin Connect backend's tests (skipped if not set up)
 	@scripts/test-backend.sh
 
-fill-show: ## Show what would be written into Garmin Connect's exercise table
-	@backend/.venv/bin/repflow-garmin show
+sync-garmin-show: ## Preview the exercise table that would be written to Garmin
+	@backend/.venv/bin/repflow-garmin show $(if $(ACTIVITY),--activity $(ACTIVITY))
 
-fill: ## Fill Garmin Connect's exercise table for the last RepFlow session
-	@backend/.venv/bin/repflow-garmin fill
+sync-garmin: ## Write sets, reps and loads into the Garmin activity's exercise table
+	@backend/.venv/bin/repflow-garmin fill $(if $(ACTIVITY),--activity $(ACTIVITY))
+
+sync-hevy-show: ## Preview the workout that would be posted to Hevy
+	@backend/.venv/bin/repflow-garmin hevy --dry-run $(if $(ACTIVITY),--activity $(ACTIVITY))
+
+sync-hevy: ## Post the last RepFlow session to Hevy
+	@backend/.venv/bin/repflow-garmin hevy $(if $(ACTIVITY),--activity $(ACTIVITY))
 
 backend-setup: ## Create the backend virtualenv and install it
 	@python3 -m venv backend/.venv

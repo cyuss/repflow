@@ -24,9 +24,15 @@ LAP_FIELDS = (
     ("reps", 12, "uint16"),
     ("weight", 13, "float32"),
     ("rest", 14, "uint16"),
+    ("rpe", 15, "float32"),
 )
 
 _DEVELOPER_DATA_INDEX = 0
+
+
+#: Fields added after the first release. A fixture can leave them out to stand
+#: in for a file written by an older build of the watch app.
+LATER_FIELDS = frozenset({"rest", "rpe"})
 
 
 def _descriptions(include_rest: bool = True) -> dict[str, dict]:
@@ -37,7 +43,7 @@ def _descriptions(include_rest: bool = True) -> dict[str, dict]:
     }
     out = {}
     for name, number, base_type in LAP_FIELDS:
-        if name == "rest" and not include_rest:
+        if name in LATER_FIELDS and not include_rest:
             continue
         out[name] = {
             "developer_data_id_mesg": developer_data_id,
@@ -83,7 +89,7 @@ def build_fit(laps: list[dict], include_rest: bool = True) -> bytes:
         developer_fields = {
             name: lap[name]
             for name, _, _ in LAP_FIELDS
-            if name in lap and (name != "rest" or include_rest)
+            if name in lap and (name not in LATER_FIELDS or include_rest)
         }
         encoder.write_mesg(
             {

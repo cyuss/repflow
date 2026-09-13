@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Garmin's Work Time / Rest Time split has nothing to read.
 - `make test` now runs the backend's tests alongside the watch app's, and skips
   them cleanly on a machine where the backend is not set up.
+- `make sync-garmin` / `just sync-garmin` — fill Garmin Connect's native
+  exercise table for a recorded session. `sync-garmin-show` previews it.
+- `make sync-hevy` / `just sync-hevy` — post the same session to Hevy, read from
+  the same FIT file on Garmin's servers, so a session the watch could not send
+  can be recovered weeks later without the watch. `sync-hevy-show` previews it.
+  The API key is asked for and never stored.
 
 - **RPE** — an effort rating on each set, on the scale Hevy's API actually
   accepts (6, 7, 7.5, 8, 8.5, 9, 9.5, 10 — there is no 6.5, and a value off the

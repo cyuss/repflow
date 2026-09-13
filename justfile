@@ -50,6 +50,38 @@ build-all:
 # Run the unit tests in the simulator
 test target=device:
     TYPECHECK={{typecheck}} scripts/test.sh {{target}}
+    scripts/test-backend.sh
+
+# Run only the watch app's tests
+test-watch target=device:
+    TYPECHECK={{typecheck}} scripts/test.sh {{target}}
+
+# Run only the Garmin Connect / Hevy backend's tests
+test-backend:
+    scripts/test-backend.sh
+
+# Install the backend that syncs a finished session (one time)
+backend-setup:
+    python3 -m venv backend/.venv
+    backend/.venv/bin/pip -q install --upgrade pip
+    backend/.venv/bin/pip -q install -e 'backend[dev]'
+    @echo "[OK]   backend ready"
+
+# Preview the exercise table that would be written to Garmin Connect
+sync-garmin-show activity="":
+    backend/.venv/bin/repflow-garmin show {{ if activity == "" { "" } else { "--activity " + activity } }}
+
+# Write sets, reps and loads into the Garmin activity's exercise table
+sync-garmin activity="":
+    backend/.venv/bin/repflow-garmin fill {{ if activity == "" { "" } else { "--activity " + activity } }}
+
+# Preview the workout that would be posted to Hevy
+sync-hevy-show activity="":
+    backend/.venv/bin/repflow-garmin hevy --dry-run {{ if activity == "" { "" } else { "--activity " + activity } }}
+
+# Post the last RepFlow session to Hevy (asks for the API key)
+sync-hevy activity="":
+    backend/.venv/bin/repflow-garmin hevy {{ if activity == "" { "" } else { "--activity " + activity } }}
 
 # Build and launch RepFlow in the simulator (returns to the prompt)
 sim target=device:

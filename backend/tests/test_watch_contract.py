@@ -31,6 +31,7 @@ LAP_FIELDS = {
     "reps": 12,
     "weight": 13,
     "rest": 14,
+    "rpe": 15,
 }
 
 
@@ -60,6 +61,7 @@ def test_the_reader_names_match_the_watch(name: str) -> None:
         fitread.FIELD_REPS,
         fitread.FIELD_WEIGHT,
         fitread.FIELD_REST,
+        fitread.FIELD_RPE,
     }
     assert name in readable
 

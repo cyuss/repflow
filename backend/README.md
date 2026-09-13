@@ -51,8 +51,11 @@ make backend-setup            # from the repository root
 ## Use
 
 ```sh
-make fill-show                # what would be written, writes nothing
-make fill                     # write it, after confirming
+make sync-garmin-show         # what would be written, writes nothing
+make sync-garmin              # write it, after confirming
+
+make sync-hevy-show           # what would be posted to Hevy, posts nothing
+make sync-hevy                # post it, after confirming
 ```
 
 Nothing runs between those commands. This is a program you start, which talks to
@@ -66,7 +69,36 @@ The full command, for the options the `make` targets do not cover:
 backend/.venv/bin/repflow-garmin list           # which activities can be filled in
 backend/.venv/bin/repflow-garmin fill --activity 123
 backend/.venv/bin/repflow-garmin fill --dry-run
+backend/.venv/bin/repflow-garmin hevy --private
 ```
+
+Both `make` targets take `ACTIVITY=` to name one; `just` takes it positionally.
+
+## Hevy
+
+`make sync-hevy` sends the same session to Hevy, read from the same place — the
+FIT file on Garmin's servers. The watch posts to Hevy itself when it can; this
+is how to catch up when it could not, and it works weeks later without the watch
+being involved.
+
+It asks for your Hevy API key (Hevy app → Settings → Developer) and **does not
+store it**. Garmin's session token is cached because Garmin issued it and can
+revoke it; a Hevy key is read and write over your entire training history and
+cannot be scoped, so it is asked for each time. `HEVY_API_KEY` works if you
+prefer, bearing in mind that an environment variable is visible to everything in
+the session.
+
+Two of Hevy's rules lose the **whole** workout rather than one set when broken,
+so both are enforced before anything is sent:
+
+- `exercise_template_id` must be a real template. Your own custom exercises are
+  fetched along with Hevy's, and a movement that matches nothing is reported
+  rather than filed under the nearest one.
+- `rpe` must be 6, 7, 7.5, 8, 8.5, 9, 9.5 or 10. There is no 6.5.
+
+The endpoint creates rather than updates, so running it twice would put the
+session in twice. It checks your recent workouts for one starting at the same
+moment and stops if it finds one; `--force` overrides that.
 
 `fill` prints the payload, says how many sets it is replacing, and asks before
 writing. `--dry-run` never writes; `--yes` skips the question; `--activity <id>`
@@ -130,6 +162,7 @@ variant left off, and each one says so in `mapping.py`.
 | `mapping.py` | RepFlow's vocabulary, mapped by hand |
 | `payload.py` | Build the request body — pure, fully tested |
 | `garmin.py` | Sign in, download, read and write the sets |
+| `hevy.py` | Match movements to Hevy templates and build the workout |
 | `cli.py` | The command line |
 
 `payload.py`, `mapping.py` and `catalogue.py` are pure and need no account, which

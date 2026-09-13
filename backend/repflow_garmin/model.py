@@ -33,6 +33,9 @@ class LoggedSet:
     start_time: datetime
     duration_s: float
     rest_s: float | None = None
+    #: How hard the set felt, on the ladder Hevy accepts. None means unrated,
+    #: which is not an effort level and is never turned into one.
+    rpe: float | None = None
 
     @property
     def work_s(self) -> float:

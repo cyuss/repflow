@@ -31,6 +31,7 @@ FIELD_SET = "set"
 FIELD_REPS = "reps"
 FIELD_WEIGHT = "weight"
 FIELD_REST = "rest"
+FIELD_RPE = "rpe"
 
 
 class NotARepFlowActivity(Exception):
@@ -85,6 +86,7 @@ def read_sets(fit_bytes: bytes) -> list[LoggedSet]:
 
         weight = _number(lap.get(FIELD_WEIGHT))
         rest = _number(lap.get(FIELD_REST))
+        rpe = _number(lap.get(FIELD_RPE))
         duration = _number(lap.get("total_elapsed_time")) or _number(
             lap.get("total_timer_time")
         )
@@ -100,6 +102,7 @@ def read_sets(fit_bytes: bytes) -> list[LoggedSet]:
                 start_time=start,
                 duration_s=duration if duration is not None else 0.0,
                 rest_s=rest,
+                rpe=rpe,
             )
         )
 
