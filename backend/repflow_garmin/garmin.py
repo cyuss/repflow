@@ -76,6 +76,7 @@ def connect(email: str | None = None, password: str | None = None) -> Garmin:
     cached, in `TOKEN_STORE`.
     """
     import getpass
+    import sys
 
     store = str(pathlib.Path(TOKEN_STORE).expanduser())
 
@@ -86,10 +87,19 @@ def connect(email: str | None = None, password: str | None = None) -> Garmin:
     except Exception:
         pass  # no usable cached token; fall through to a full sign-in
 
-    email = email or os.getenv("GARMIN_EMAIL") or input("Garmin Connect email: ").strip()
-    password = password or os.getenv("GARMIN_PASSWORD") or getpass.getpass(
-        "Garmin Connect password: "
-    )
+    email = email or os.getenv("GARMIN_EMAIL")
+    password = password or os.getenv("GARMIN_PASSWORD")
+    if (not email or not password) and not sys.stdin.isatty():
+        # Prompting into a pipe produces an EOFError three frames deep, which
+        # reads as a bug rather than as "this needs a terminal".
+        raise GarminError(
+            "Garmin Connect sign-in needs a terminal. Run this in your own "
+            "shell, or set GARMIN_EMAIL and GARMIN_PASSWORD — bearing in mind "
+            "that an environment variable is visible to everything in the "
+            "session and usually lands in shell history."
+        )
+    email = email or input("Garmin Connect email: ").strip()
+    password = password or getpass.getpass("Garmin Connect password: ")
     client = Garmin(
         email=email,
         password=password,
