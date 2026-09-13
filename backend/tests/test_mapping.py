@@ -105,3 +105,39 @@ class TestNamesThatArriveFromElsewhere:
 
     def test_nonsense_resolves_to_nothing_rather_than_to_something(self) -> None:
         assert resolve("qqqq zzzz") is None
+
+
+class TestWhatTheAthleteIsShownBeforeWriting:
+    """`show` has to print the mapping in a form a person can check.
+
+    A rejected pair is loud. A plausible but wrong one is silent, and the
+    category draws the muscle map — so the check has to happen here or nowhere.
+    """
+
+    def test_a_named_variant_is_shown_by_garmins_own_words(self) -> None:
+        from repflow_garmin.catalogue import display_name
+
+        assert display_name("PULL_UP", "LAT_PULLDOWN") == "Lat Pull-down"
+
+    def test_a_category_without_a_variant_reads_as_the_category(self) -> None:
+        # This is what Garmin Connect itself displays for name=None.
+        from repflow_garmin.catalogue import display_name
+
+        assert display_name("TRICEPS_EXTENSION", None) == "Triceps Extension"
+
+    def test_the_report_distinguishes_curated_from_matched(self, capsys) -> None:
+        from datetime import datetime, timezone
+
+        from repflow_garmin.cli import _print_mapping
+        from repflow_garmin.model import LoggedSet
+
+        moment = datetime(2026, 9, 13, 12, 7, tzinfo=timezone.utc)
+        _print_mapping(
+            [
+                LoggedSet("Bench Press", 1, 8, 80.0, moment, 60.0),
+                LoggedSet("Kettlebell Windmill", 1, 8, 12.0, moment, 60.0),
+            ]
+        )
+        printed = capsys.readouterr().out
+        assert "Bench Press" in printed and "(curated)" in printed
+        assert "Kettlebell Windmill" in printed and "(matched)" in printed

@@ -34,13 +34,52 @@ from .payload import build, summarise
 
 def _report(sets: list[Any], payload: dict[str, Any], unmapped: list[str]) -> None:
     print(f"  read {len(sets)} sets from the activity's FIT file")
-    print(f"  would write {summarise(payload['exerciseSets'])}")
+    print(f"  would write {summarise(payload['exerciseSets'])}\n")
+    _print_mapping(sets)
     if unmapped:
         print(
             "\n  NOT written — Garmin's exercise enum has no match for:\n    "
             + "\n    ".join(sorted(unmapped))
             + "\n  Add them to repflow_garmin/mapping.py to include them."
         )
+
+
+def _print_mapping(sets: list[Any]) -> None:
+    """Show which Garmin exercise each RepFlow name became.
+
+    This is the one thing worth reading before writing. A rejected pair is loud;
+    a *plausible but wrong* one is silent, and the category is what draws the
+    muscle map — so "Barbell Curl became a wrist curl" has to be visible here or
+    it is not visible anywhere.
+    """
+    from .catalogue import display_name
+    from .mapping import lookup, resolve
+
+    seen: dict[str, tuple[str, str | None]] = {}
+    counts: dict[str, int] = {}
+    for logged in sets:
+        target = resolve(logged.exercise)
+        if target is None:
+            continue
+        seen.setdefault(logged.exercise, target)
+        counts[logged.exercise] = counts.get(logged.exercise, 0) + 1
+
+    if not seen:
+        return
+
+    width = max(len(name) for name in seen)
+    tally = max(len(f"x{count}") for count in counts.values())
+    indent = 4 + width + 2 + tally + len("  ->  ")   # align under the arrow
+
+    print("  Exercise mapping — check the muscle group, not just the name:\n")
+    for name, (category, exercise) in seen.items():
+        # "curated" means a person wrote this pair down; "matched" means it was
+        # inferred from the name, which is where a wrong answer would come from.
+        origin = "curated" if lookup(name) is not None else "matched"
+        detail = category if exercise is None else f"{category} / {exercise}"
+        print(f"    {name:<{width}}  {f'x{counts[name]}':<{tally}}  ->  "
+              f"{display_name(category, exercise)}")
+        print(f"{'':<{indent}}{detail}  ({origin})")
 
 
 def _cmd_list(args: argparse.Namespace) -> int:

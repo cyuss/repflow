@@ -110,6 +110,25 @@ def categories() -> frozenset[str]:
 
 
 @lru_cache(maxsize=1)
+def _display_names() -> dict[tuple[str, str | None], str]:
+    return {(m.category, m.exercise): m.display for m in catalogue()}
+
+
+def display_name(category: str, exercise: str | None) -> str:
+    """The name Garmin Connect will show for this pair.
+
+    The only form of the answer an athlete can check against the movement they
+    actually performed — `PULL_UP / LAT_PULLDOWN` tells them nothing, "Lat
+    Pull-down" tells them everything. A category with no named variant falls
+    back to the category's own words, which is exactly what Garmin displays.
+    """
+    named = _display_names().get((category, exercise))
+    if named is not None:
+        return named
+    return category.replace("_", " ").title()
+
+
+@lru_cache(maxsize=1)
 def _pairs() -> frozenset[tuple[str, str | None]]:
     return frozenset((m.category, m.exercise) for m in catalogue())
 
