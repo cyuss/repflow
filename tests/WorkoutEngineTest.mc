@@ -3092,6 +3092,61 @@ function testRestSurvivesALookAtTheList(logger as Test.Logger) as Boolean {
     return true;
 }
 
+//! An accent in a workout name used to kill the app at the moment you started.
+//!
+//! `ActivityRecording.createSession` on a fēnix 6 Pro refuses
+//! "Épaules + Biceps + Triceps (~90 min)" with `Invalid Value: Failed invoking
+//! <symbol>`, and a Monkey C runtime error is not catchable — so the app died
+//! on the press that begins the workout. The same string with a plain "E"
+//! records fine, and so does a 64-character ASCII name, so it is the character
+//! rather than the length. A short accented name survives, which is what makes
+//! it dangerous: it looks like it works until somebody's routine gets long.
+//!
+//! Every Hevy routine this was found with is French. Folding rather than
+//! stripping is the difference between "Epaules" and "paules".
+(:test)
+function testGarminNeverSeesACharacterItCannotCarry(logger as Test.Logger) as Boolean {
+    var folded = GarminRecorder.asciiSafe("Épaules + Biceps + Triceps (~90 min)");
+    logger.debug("folded: " + folded);
+    Test.assertEqual(folded, "Epaules + Biceps + Triceps (~90 min)");
+
+    // One character, one byte: the property the lap truncation depends on.
+    var chars = folded.toCharArray();
+    for (var i = 0; i < chars.size(); i++) {
+        Test.assert(chars[i].toNumber() >= 32);
+        Test.assert(chars[i].toNumber() <= 126);
+    }
+
+    // The rest of the accents an athlete might actually type.
+    Test.assertEqual(GarminRecorder.asciiSafe("Développé couché"), "Developpe couche");
+    Test.assertEqual(GarminRecorder.asciiSafe("Tracción · Dorsales"), "Traccion  Dorsales");
+    Test.assertEqual(GarminRecorder.asciiSafe("Übung für Rücken"), "Ubung fur Rucken");
+    Test.assertEqual(GarminRecorder.asciiSafe("Cœur"), "Coeur");
+
+    // Nothing Latin to keep. Better a short name than a dead app.
+    Test.assertEqual(GarminRecorder.asciiSafe("胸のトレーニング"), "");
+    return true;
+}
+
+//! Truncating a lap's exercise name counts characters into a field that counts
+//! bytes, so folding has to happen first or the field overflows at the limit.
+(:test)
+function testALapNameIsCutToSomethingFitCanHold(logger as Test.Logger) as Boolean {
+    var long = "Développé couché incliné avec haltères longues";
+    var cut = GarminRecorder.fitText(long, 40);
+    logger.debug("cut: " + cut);
+    Test.assertEqual(cut.length(), 40);
+
+    var chars = cut.toCharArray();
+    for (var i = 0; i < chars.size(); i++) {
+        Test.assert(chars[i].toNumber() <= 126);
+    }
+
+    // Short enough to keep whole is kept whole.
+    Test.assertEqual(GarminRecorder.fitText("Lat Pulldown", 40), "Lat Pulldown");
+    return true;
+}
+
 //! A rest that has run out is still a rest.
 //!
 //! The countdown reaching zero is a signal to the athlete, not a state change

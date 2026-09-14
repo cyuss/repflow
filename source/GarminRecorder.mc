@@ -88,6 +88,81 @@ class GarminRecorder {
         return (Toybox has :ActivityRecording);
     }
 
+    //! Longest session name handed to Garmin.
+    //!
+    //! 64 plain ASCII characters were verified to record without complaint on a
+    //! fēnix 6 Pro. That is a measurement, not a documented limit — Garmin
+    //! publishes none — so it is used as a ceiling rather than as a promise.
+    private const SESSION_NAME_MAX = 64;
+
+    //! Text that FIT can carry, with the accents folded rather than dropped.
+    //!
+    //! **A non-ASCII character in a session name can kill the app.** On a
+    //! fēnix 6 Pro, `createSession` with "Épaules + Biceps + Triceps (~90 min)"
+    //! fails with `Invalid Value: Failed invoking <symbol>` — and a Monkey C
+    //! runtime error is not an Exception, so the `try` below does not catch it
+    //! and the app dies at the very moment the athlete pressed start. The same
+    //! string with a plain "E" records fine, as does a 64-character ASCII name,
+    //! and as does a short accented one: the failure depends on the length as
+    //! well as the character, which makes it worse than an outright refusal —
+    //! it lets short names through and ambushes the long ones. Every string
+    //! that leaves for Garmin is therefore folded, not just the ones that look
+    //! risky.
+    //!
+    //! Folding rather than stripping, because "Epaules" is a French athlete's
+    //! session and "paules" is nothing. Anything with no Latin equivalent is
+    //! dropped: a name is better short than a name is unrecorded.
+    //!
+    //! It matters twice. The second is `EXERCISE_NAME_MAX`, which truncates by
+    //! **character** into a field measured in **bytes** — "Développé couché" at
+    //! the limit would overflow it. After folding the two counts are the same,
+    //! which is what makes that truncation safe.
+    public static function asciiSafe(text as String) as String {
+        var chars = text.toCharArray();
+        var out = "";
+        for (var i = 0; i < chars.size(); i++) {
+            var n = chars[i].toNumber();
+            if (n >= 32 && n <= 126) {
+                out += chars[i].toString();
+            } else if (n >= 0xC0 && n <= 0xC5) { out += "A";
+            } else if (n == 0xC6) { out += "AE";
+            } else if (n == 0xC7) { out += "C";
+            } else if (n >= 0xC8 && n <= 0xCB) { out += "E";
+            } else if (n >= 0xCC && n <= 0xCF) { out += "I";
+            } else if (n == 0xD1) { out += "N";
+            } else if ((n >= 0xD2 && n <= 0xD6) || n == 0xD8) { out += "O";
+            } else if (n >= 0xD9 && n <= 0xDC) { out += "U";
+            } else if (n == 0xDD) { out += "Y";
+            } else if (n == 0xDF) { out += "ss";
+            } else if (n >= 0xE0 && n <= 0xE5) { out += "a";
+            } else if (n == 0xE6) { out += "ae";
+            } else if (n == 0xE7) { out += "c";
+            } else if (n >= 0xE8 && n <= 0xEB) { out += "e";
+            } else if (n >= 0xEC && n <= 0xEF) { out += "i";
+            } else if (n == 0xF1) { out += "n";
+            } else if ((n >= 0xF2 && n <= 0xF6) || n == 0xF8) { out += "o";
+            } else if (n >= 0xF9 && n <= 0xFC) { out += "u";
+            } else if (n == 0xFD || n == 0xFF) { out += "y";
+            } else if (n == 0x152) { out += "OE";
+            } else if (n == 0x153) { out += "oe";
+            }
+            // Everything else — emoji, Cyrillic, CJK — has no Latin reading and
+            // is dropped rather than guessed at.
+        }
+        return out;
+    }
+
+    //! Fold, then cut to `max` characters. Safe to count in characters only
+    //! because folding has already made one character one byte.
+    public static function fitText(text as String, max as Number) as String {
+        var folded = asciiSafe(text);
+        if (folded.length() <= max) {
+            return folded;
+        }
+        var cut = folded.substring(0, max);
+        return cut == null ? "" : cut;
+    }
+
     //! Create and start a strength-training session.
     //! Returns false when recording is unavailable — the workout still runs.
     public function start(workoutName as String) as Boolean {
@@ -95,8 +170,14 @@ class GarminRecorder {
             return false;
         }
         try {
+            var name = fitText(workoutName, SESSION_NAME_MAX);
+            if (name.length() == 0) {
+                // A name of nothing but characters FIT cannot carry. The
+                // activity is worth more than its title.
+                name = "Strength";
+            }
             var session = ActivityRecording.createSession({
-                :name => workoutName,
+                :name => name,
                 :sport => Activity.SPORT_TRAINING,
                 :subSport => Activity.SUB_SPORT_STRENGTH_TRAINING
             });
@@ -214,12 +295,8 @@ class GarminRecorder {
         }
         try {
             if (_lapExerciseField != null) {
-                var name = exerciseName;
-                if (name.length() > EXERCISE_NAME_MAX) {
-                    var cut = name.substring(0, EXERCISE_NAME_MAX);
-                    name = cut == null ? "" : cut;
-                }
-                (_lapExerciseField as FitContributor.Field).setData(name);
+                (_lapExerciseField as FitContributor.Field).setData(
+                    fitText(exerciseName, EXERCISE_NAME_MAX));
             }
             if (_lapSetField != null) {
                 (_lapSetField as FitContributor.Field).setData(setNumber);

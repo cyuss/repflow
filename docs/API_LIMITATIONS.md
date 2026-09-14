@@ -374,3 +374,49 @@ is not there.
 
 **The general rule:** a remote API's maximum page size is not a watch's maximum
 response size, and nothing warns you where the second one is. Page small.
+
+---
+
+## 13. A non-ASCII character in a session name can kill the app
+
+`ActivityRecording.createSession` on a fēnix 6 Pro — simulator, API 3.4.5,
+firmware 27.00 — refuses this name:
+
+```
+Épaules + Biceps + Triceps (~90 min)
+```
+
+with `Error: Invalid Value / Details: 'Failed invoking <symbol>'`, thrown from
+the `createSession` call itself. **A Monkey C runtime error is not an Exception**
+(see §9), so the `try` around it catches nothing and the app dies on the press
+that starts the workout.
+
+**Measured, one variable at a time, each from cleared storage:**
+
+| Name | Characters | Bytes | Result |
+|---|---|---|---|
+| `Épaules` | 7 | 8 | records |
+| `Epaules + Biceps + Triceps (~90 min)` | 36 | 36 | records |
+| `Epaules + Biceps + Triceps (~90 minX)` | 37 | 37 | records |
+| `Push day upper body chest ... tail 80ch` | 64 | 64 | records |
+| **`Épaules + Biceps + Triceps (~90 min)`** | **36** | **37** | **crash** |
+
+So it is neither the accent alone nor the length alone. A short accented name
+records, a long ASCII one records, and the two together do not — which is worse
+than an outright refusal, because it lets the short names through and ambushes
+whoever writes a long one.
+
+**It is firmware-dependent.** The athlete's own fēnix 6 Pro has recorded a
+session under that exact name. This reproduces in the 3.4.5 simulator and should
+be assumed present on some devices in the wild rather than absent everywhere.
+
+**What RepFlow does:** `GarminRecorder.asciiSafe` folds accented Latin letters
+to their base letter — "Épaules" becomes "Epaules", not "paules" — and drops
+anything with no Latin reading. Everything bound for Garmin goes through it:
+the session name, capped at 64 characters, and each lap's exercise name.
+
+**The second reason it matters.** A `DATA_TYPE_STRING` developer field declares
+its size with `:count`, which is **bytes**. RepFlow truncated the lap's exercise
+name by **characters**. "Développé couché incliné avec haltères" at the limit
+would therefore have overflowed the field. After folding, one character is one
+byte and the truncation is sound again — the fix removes both faults at once.
