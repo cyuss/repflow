@@ -92,6 +92,18 @@ module HevyMap {
                     reps = r as Number;
                 }
                 weight = _float((first as Dictionary)["weight_kg"] as Object?);
+                // Hevy writes 0 where a routine sets no target load, and its
+                // own app shows an empty field for those — 60 of the 102 set
+                // rows in the athlete's four routines are zeros of that kind.
+                //
+                // Taken literally it means "open every set at nothing and dial
+                // up from there", and worse, it overrides the load inherited
+                // from the last time the movement was performed, which is the
+                // pre-fill that makes importing worth anything. An absent
+                // target is absent.
+                if (weight != null && (weight as Float) <= 0.0) {
+                    weight = null;
+                }
             }
         }
 

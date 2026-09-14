@@ -68,8 +68,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Buttons follow the watch's own activity screens.** BACK is the LAP button
   and now means what LAP means during a Garmin activity: the set is done, or the
-  rest is over. START opens the set first, for when something changed. The
-  exercise list moved to MENU, where it is the first item.
+  rest is over. On the exercise screen START opens the set first, for when
+  something changed; on the rest screen it opens the exercise list, which is the
+  other thing anybody does while resting. The list is also the first item on
+  MENU, from both screens.
 - The rest screen gives its countdown a fifth of the glass rather than nearly a
   half, so the fields under it can be read rather than deciphered.
 - Holding a button to change the load accelerates gradually — one step, then
@@ -80,6 +82,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `sync-hevy` put a second copy of a session into Hevy. The watch posts at Save
+  now that it carries the key, and this tool posts from the FIT file whose first
+  lap begins a second later — the duplicate check wanted an exact second and
+  missed by one. It matches within two minutes now, and says plainly that the
+  watch already sent it.
+- A routine's `weight_kg: 0` is treated as "no target" rather than zero kilos.
+  Hevy writes 0 where a routine sets none and shows an empty field for it; taken
+  literally it opened every set at nothing and overrode the load inherited from
+  the last time the movement was performed.
 - KCAL, AVG and MAX were "--" on every recap. They were read while drawing, and
   `getActivityInfo` answers null once the recording is closed — so the values
   were there for as long as it took to stop it and gone by the time anyone

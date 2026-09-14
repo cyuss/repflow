@@ -2945,3 +2945,70 @@ function testRestScreenIsDividedFairly(logger as Test.Logger) as Boolean {
     Test.assert(rest > hero);
     return true;
 }
+
+//! A routine's zero load means "no target", not "zero kilos".
+//!
+//! Hevy writes 0 where a routine sets no target and shows an empty field for
+//! it — sixty of the hundred-odd set rows in the athlete's own routines are
+//! zeros of that kind. Taken literally it opens every set at nothing, and it
+//! overrides the load inherited from the last time the movement was performed,
+//! which is the pre-fill that makes importing worth anything.
+(:test)
+function testAZeroRoutineTargetIsNoTarget(logger as Test.Logger) as Boolean {
+    var workout = HevyMap.routineToWorkout({
+        "id" => "r-1",
+        "title" => "Epaules",
+        "exercises" => [
+            {
+                "title" => "Shoulder Press (Dumbbell)",
+                "exercise_template_id" => "878CD1D0",
+                "sets" => [{ "reps" => 8, "weight_kg" => 0 } as Object] as Array
+            } as Object,
+            {
+                "title" => "Bench Press (Barbell)",
+                "exercise_template_id" => "79D0BB3A",
+                "sets" => [{ "reps" => 12, "weight_kg" => 20.0 } as Object] as Array
+            } as Object
+        ] as Array
+    } as Dictionary);
+    Test.assert(workout != null);
+
+    var list = (workout as Workout).exercises;
+    // No target: the screen shows "--" and the athlete's own history fills it.
+    Test.assert(list[0].plannedWeight() == null);
+    Test.assertEqual(Theme.formatPlannedWeight(list[0].plannedWeight()), "--");
+    // A real target still arrives as one.
+    Test.assert(list[1].plannedWeight() != null);
+    return true;
+}
+
+//! The two things done during a rest have a button each, and they do not clash.
+//!
+//! BACK ends the rest — it is the LAP button, and LAP ends a step during any
+//! Garmin activity. START opens the exercise list, because a rest is exactly
+//! when an athlete looks at what is left and decides what to do next, usually
+//! because the machine they planned on is taken.
+//!
+//! What this guards is the way back: opening the list must not cost the rest.
+//! The clock keeps running, and leaving the list returns to it.
+(:test)
+function testRestSurvivesALookAtTheList(logger as Test.Logger) as Boolean {
+    var controller = AppController.instance();
+    controller.startWorkout(TestSupport.abcWorkout());
+    controller.selectExercise("A");
+    controller.startRest(120);
+    Test.assert(controller.restTimer().isRunning());
+
+    // Ten seconds pass while the list is open.
+    for (var i = 0; i < 10; i++) {
+        controller.onTick();
+    }
+    // Still resting, and the countdown moved: browsing is not skipping.
+    Test.assert(controller.restTimer().isRunning());
+    Test.assertEqual(controller.restTimer().remaining(), 110);
+
+    // And nothing has been announced, so coming back does not find a rest that
+    // quietly ended while it was out of sight.
+    Test.assert(!controller.restOverSignalled());
+    return true;
+}

@@ -163,3 +163,32 @@ def test_the_summary_describes_what_is_about_to_be_posted() -> None:
 def test_the_summary_does_not_say_one_sets() -> None:
     body, _ = build_workout("W", [a_set(reps=1, weight_kg=None, exercise="Push Up")], CATALOGUE)
     assert summarise(body) == "1 exercise, 1 set, 1 rep, 0 kg"
+
+
+class TestNotPostingTheSessionTwice:
+    """The watch posts at Save. This tool must not post it again."""
+
+    def test_a_session_seconds_apart_is_the_same_session(self) -> None:
+        # The watch uses the moment its session began; this tool uses the first
+        # lap in the FIT, which is a second or so later. Requiring an exact
+        # match missed it and Hevy ended up with two copies of one workout.
+        from repflow_garmin.hevy import SAME_SESSION_SECONDS, _parse_iso
+
+        watch = _parse_iso("2026-09-14T10:44:55+00:00")
+        from_fit = _parse_iso("2026-09-14T10:44:56+00:00")
+        assert abs((watch - from_fit).total_seconds()) <= SAME_SESSION_SECONDS
+
+    def test_a_different_session_is_not_matched(self) -> None:
+        from repflow_garmin.hevy import SAME_SESSION_SECONDS, _parse_iso
+
+        today = _parse_iso("2026-09-14T10:44:55+00:00")
+        yesterday = _parse_iso("2026-09-13T17:15:05+00:00")
+        assert abs((today - yesterday).total_seconds()) > SAME_SESSION_SECONDS
+
+    def test_hevy_timestamps_parse_in_both_shapes(self) -> None:
+        from repflow_garmin.hevy import _parse_iso
+
+        assert _parse_iso("2026-09-14T10:44:55+00:00") is not None
+        assert _parse_iso("2026-09-14T10:44:55Z") is not None
+        assert _parse_iso("") is None
+        assert _parse_iso("not a date") is None

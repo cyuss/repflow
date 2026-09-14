@@ -233,20 +233,48 @@ def build_workout(
     return body, unmatched
 
 
-def already_posted(key: str, start: datetime) -> dict[str, Any] | None:
-    """A workout already in Hevy that starts at the same moment.
+#: How far apart two start times may be and still be the same session.
+#:
+#: Not zero, which is what this used to require. The watch posts to Hevy itself
+#: at Save, using the moment its own session began; this tool posts from the FIT
+#: file, whose first lap begins a second or so later. One second of difference
+#: was enough to miss the match, and the session went into Hevy twice — observed,
+#: with both copies an second apart and one set different between them.
+#:
+#: Two minutes is safe in the other direction: nobody finishes a strength
+#: session and starts another inside two minutes.
+SAME_SESSION_SECONDS = 120
 
-    The endpoint is a create, not an upsert: running the command twice would
-    put the session in twice. Start time is the identity — two RepFlow sessions
-    cannot begin in the same second.
+
+def already_posted(key: str, start: datetime) -> dict[str, Any] | None:
+    """A workout already in Hevy that is this session.
+
+    The endpoint creates rather than updates, so posting twice puts the session
+    in twice — and the watch may well have posted it already, which is the
+    common case now that it carries the key.
+
+    Matched on a window rather than an exact second: see SAME_SESSION_SECONDS.
     """
     body = _request(f"/workouts?page=1&pageSize={WORKOUT_PAGE_SIZE}", key) or {}
-    wanted = _iso(start)[:19]
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=timezone.utc)
     for workout in body.get("workouts") or []:
-        existing = str(workout.get("start_time") or "")
-        if existing[:19] == wanted:
+        existing = _parse_iso(str(workout.get("start_time") or ""))
+        if existing is None:
+            continue
+        if abs((existing - start).total_seconds()) <= SAME_SESSION_SECONDS:
             return workout
     return None
+
+
+def _parse_iso(text: str) -> datetime | None:
+    """Hevy's timestamps, which come back zoned and sometimes with a Z."""
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 def post_workout(key: str, body: dict[str, Any]) -> Any:

@@ -239,9 +239,17 @@ class RestDelegate extends WatchUi.BehaviorDelegate {
         BehaviorDelegate.initialize();
     }
 
-    //! START — rest is over, back to the exercise.
+    //! START — the exercise list.
+    //!
+    //! BACK ends the rest, the way LAP ends a step during any Garmin activity.
+    //! That leaves START free, and a rest is exactly when an athlete looks at
+    //! what is left and decides what to do next — often because the machine
+    //! they planned on is taken, which is the situation this app exists for.
+    //!
+    //! Backing out of the list returns here, with the clock still running.
     public function onSelect() as Boolean {
-        AppController.instance().endRest();
+        WatchUi.switchToView(new WorkoutOverviewView(), new WorkoutOverviewDelegate(),
+            WatchUi.SLIDE_LEFT);
         return true;
     }
 
@@ -263,15 +271,11 @@ class RestDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
-    //! BACK — rest is over, the same as START.
+    //! BACK — rest is over, back to the bar.
     //!
-    //! Two buttons for one action, deliberately. BACK is LAP, and LAP during a
-    //! Garmin activity moves to the next thing; START is where this app had it
-    //! before. Neither is wrong and an athlete mid-session should not have to
-    //! remember which.
-    //!
-    //! The exercise list, which BACK used to open, is on MENU — one press
-    //! further, and it no longer competes with the gesture for "done".
+    //! This is the LAP button and that is what LAP means during an activity on
+    //! this watch. START shows the exercise list instead, which is the other
+    //! thing anybody does while resting.
     public function onBack() as Boolean {
         AppController.instance().endRest();
         return true;

@@ -231,13 +231,18 @@ def _cmd_hevy(args: argparse.Namespace) -> int:
 
     existing = already_posted(key, sets[0].start_time)
     if existing is not None:
+        started = str(existing.get("start_time") or "?")[:19].replace("T", " ")
         print(
-            f"\n  Hevy already has a workout starting at that moment "
-            f"(\"{existing.get('title')}\"). Posting again would duplicate it."
+            f"\n  Hevy already has this session: \"{existing.get('title')}\""
+            f" starting {started}."
+        )
+        print(
+            "  The watch posts to Hevy itself at Save when it has the key, so "
+            "this is the normal outcome and there is nothing to catch up."
         )
         if not args.force:
-            print("  Nothing sent. Pass --force to post it anyway.")
-            return 1
+            print("  Nothing sent. Pass --force to post a second copy anyway.")
+            return 0
 
     if args.dry_run:
         print("\nDry run — nothing sent.")
