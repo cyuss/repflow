@@ -31,12 +31,18 @@ mkdir -p "$BUILD_DIR"
 # every installer read and write over one person's whole training history.
 # ---------------------------------------------------------------------------
 PROPERTIES="$REPO_ROOT/resources/properties.xml"
+KEY_SOURCE="$REPO_ROOT/source/HevyKey.mc"
 PROPERTIES_BACKUP=""
+KEY_SOURCE_BACKUP=""
 
 restore_properties() {
   if [ -n "$PROPERTIES_BACKUP" ] && [ -f "$PROPERTIES_BACKUP" ]; then
     mv -f "$PROPERTIES_BACKUP" "$PROPERTIES"
     PROPERTIES_BACKUP=""
+  fi
+  if [ -n "$KEY_SOURCE_BACKUP" ] && [ -f "$KEY_SOURCE_BACKUP" ]; then
+    mv -f "$KEY_SOURCE_BACKUP" "$KEY_SOURCE"
+    KEY_SOURCE_BACKUP=""
   fi
 }
 
@@ -60,17 +66,38 @@ inject_hevy_key() {
     die "The Hevy key does not look like a UUID. Check secrets/hevy-key.txt."
   fi
   PROPERTIES_BACKUP="$(mktemp)"
+  KEY_SOURCE_BACKUP="$(mktemp)"
   cp "$PROPERTIES" "$PROPERTIES_BACKUP"
+  cp "$KEY_SOURCE" "$KEY_SOURCE_BACKUP"
   trap 'restore_properties' EXIT INT TERM
-  python3 - "$PROPERTIES" "$key" <<'PYEOF'
+  # Two places, because they reach the watch differently.
+  #
+  # The property is what the phone's settings pane shows, so a key put there is
+  # visible and editable. But a property default only ever reaches a **first
+  # install** — an update keeps whatever the property already held, which is how
+  # a watch that had RepFlow before the key existed went on saying "No API key"
+  # with the key sitting unread inside that very build.
+  #
+  # The constant has no such history and is read last, after anything the
+  # athlete entered themselves.
+  python3 - "$PROPERTIES" "$KEY_SOURCE" "$key" <<'PYEOF'
 import re, sys
-path, key = sys.argv[1], sys.argv[2]
-text = open(path, encoding="utf-8").read()
-pattern = r'(<property id="hevyApiKey"\s+type="string">)[^<]*(</property>)'
-patched, count = re.subn(pattern, lambda m: m.group(1) + key + m.group(2), text)
+properties, source, key = sys.argv[1], sys.argv[2], sys.argv[3]
+
+text = open(properties, encoding="utf-8").read()
+patched, count = re.subn(
+    r'(<property id="hevyApiKey"\s+type="string">)[^<]*(</property>)',
+    lambda m: m.group(1) + key + m.group(2), text)
 if count != 1:
     sys.exit("could not find the hevyApiKey property to inject into")
-open(path, "w", encoding="utf-8").write(patched)
+open(properties, "w", encoding="utf-8").write(patched)
+
+text = open(source, encoding="utf-8").read()
+patched, count = re.subn(r'(const COMPILED = ")[^"]*(";)',
+                         lambda m: m.group(1) + key + m.group(2), text)
+if count != 1:
+    sys.exit("could not find HevyKey.COMPILED to inject into")
+open(source, "w", encoding="utf-8").write(patched)
 PYEOF
   info "Hevy key baked into this build (personal build — do not publish)"
 }

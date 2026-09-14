@@ -106,8 +106,12 @@ echo
 if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
   COMMITTED_KEY="$(git -C "$REPO_ROOT" show HEAD:resources/properties.xml 2>/dev/null \
       | sed -n 's/.*<property id="hevyApiKey"[^>]*>\([^<]*\)<.*/\1/p' || true)"
-  if [ -n "$COMMITTED_KEY" ]; then
-    fail "A Hevy API key is committed in resources/properties.xml"; note_problem
+  COMMITTED_CONST="$(git -C "$REPO_ROOT" show HEAD:source/HevyKey.mc 2>/dev/null \
+      | sed -n 's/.*const COMPILED = "\([^"]*\)".*/\1/p' || true)"
+  if [ -n "$COMMITTED_KEY" ] || [ -n "$COMMITTED_CONST" ]; then
+    fail "A Hevy API key is committed"; note_problem
+    [ -n "$COMMITTED_KEY" ] && info "  in resources/properties.xml"
+    [ -n "$COMMITTED_CONST" ] && info "  in source/HevyKey.mc"
     info "Every clone and every build carries it. See secrets/README.md."
   else
     ok "No API key committed"

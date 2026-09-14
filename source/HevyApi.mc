@@ -39,8 +39,18 @@ module HevyApi {
     // The key
     // ------------------------------------------------------------------
 
-    //! The key, from wherever it was set. Storage wins because it is what the
-    //! watch itself wrote; Properties is what the phone wrote.
+    //! The key, from wherever it was set.
+    //!
+    //! Three places, in the order of who said it most recently and most
+    //! deliberately: Storage is what the watch itself wrote, Properties is what
+    //! the phone wrote, and the compiled-in key is what the build carried.
+    //!
+    //! The last of those exists because a property's default reaches the watch
+    //! **only on a first install**. An update keeps whatever the property
+    //! already held, so a watch that had RepFlow before the key existed kept the
+    //! empty string and reported "No API key" while the key sat unread inside
+    //! that very build. A constant has no such history — and being read last, it
+    //! never overrides a key the athlete entered themselves.
     public function apiKey() as String {
         var stored = normalize(Application.Storage.getValue(KEY_STORAGE));
         if (stored != null) {
@@ -53,7 +63,11 @@ module HevyApi {
             fromPhone = null;
         }
         var phone = normalize(fromPhone);
-        return phone == null ? "" : phone as String;
+        if (phone != null) {
+            return phone as String;
+        }
+        var built = normalize(HevyKey.compiled());
+        return built == null ? "" : built as String;
     }
 
     public function hasKey() as Boolean {

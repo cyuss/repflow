@@ -66,6 +66,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A compiled-in Hevy key is now read by the app. Injecting it as the setting's
+  default only reached a **first install** — an update kept whatever the
+  property already held, so a watch that had RepFlow before the key existed went
+  on reporting "No API key" with the key sitting unread inside that build.
+- Workout names on the picker keep their size and scroll, instead of shrinking
+  until they fit. The scrolling window also stops short of the page dots.
 - The three shipped workouts could not reach Hevy at all. Their exercises had
   no Hevy template id, and Hevy files a set against `exercise_template_id` with
   no free-text alternative — so performing one logged it to Garmin and silently

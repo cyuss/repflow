@@ -59,8 +59,13 @@ class WorkoutListView extends WatchUi.View {
 
         // Centre the workout name in the space between the header and the
         // action bar, rather than pinning it to a fixed fraction of the screen.
-        var nameFont = Theme.pickFont(dc, workout.name, Theme.fontsTitle(),
-            Theme.usableWidth(dc, h / 2));
+        //
+        // The name is drawn at the ladder's largest size whatever its length,
+        // so the height of the block is known before the text is measured.
+        // "Épaules + Biceps + Triceps (~90 min)" used to be shrunk until it
+        // fitted, which is how a routine name becomes a smudge — and pointless
+        // here, because a name too wide to fit scrolls.
+        var nameFont = Theme.fontsTitle()[0];
         var nameHeight = dc.getFontHeight(nameFont);
         var countText = workout.exercises.size().toString() + " exercises";
         var countHeight = dc.getFontHeight(Graphics.FONT_XTINY);
@@ -70,13 +75,30 @@ class WorkoutListView extends WatchUi.View {
             blockTop = y;
         }
 
-        var afterName = Marquee.drawFitted(dc, blockTop, workout.name,
-            Theme.fontsTitle(), Theme.colorText(), Theme.usableWidth(dc, blockTop));
+        // draw, not drawFitted: the first walks the ladder and shrinks, the
+        // second keeps the size and moves the line instead. Shrinking is right
+        // for a fixed label with nowhere to go; a name is not that.
+        //
+        // The scrolling window stops short of the page dots. They live in a
+        // column down the right edge, and a name sliding under them reads as a
+        // fault. Symmetric, because the line is centred: whatever clearance the
+        // right end needs, the left end gets too.
+        var afterName = Marquee.draw(dc, blockTop, workout.name,
+            Theme.fontsTitle(), Theme.colorText(), _nameWidth(dc, blockTop));
         Theme.drawFitted(dc, afterName + gap, countText,
             [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.colorDim());
 
         Theme.drawPageDots(dc, _workouts.size() + 1, _index);
         Marquee.endFrame();
+    }
+
+    //! How wide the workout name may be: the chord, stopped short of the dots.
+    private function _nameWidth(dc as Graphics.Dc, y as Number) as Number {
+        var centre = dc.getWidth() / 2;
+        var half = Theme.pageDotsLeft(dc) - dc.getWidth() / 12 - centre;
+        var capped = half > 0 ? half * 2 : 0;
+        var chord = Theme.usableWidth(dc, y);
+        return chord < capped ? chord : capped;
     }
 
     //! The last page: start from nothing and build as you go.
