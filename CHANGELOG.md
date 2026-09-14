@@ -66,6 +66,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The three shipped workouts could not reach Hevy at all. Their exercises had
+  no Hevy template id, and Hevy files a set against `exercise_template_id` with
+  no free-text alternative — so performing one logged it to Garmin and silently
+  not to Hevy. They now carry the ids, and two names take Hevy's exact spelling.
 - `Leg Extension (Machine)` was filed under `HIP_RAISE` — a glute movement, on
   the wrong half of the muscle map, silently. Equipment suffixes now fall back
   to the curated entry for the bare movement when the full name misses, without

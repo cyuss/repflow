@@ -165,6 +165,19 @@ module WorkoutRepository {
     // The built-ins
     // ------------------------------------------------------------------
 
+    //! One row of a shipped workout.
+    //!
+    //! `hevyId` is Hevy's own template id for the movement, and without it the
+    //! exercise is a dead end: `HevyMap.sessionToPayload` files a set against
+    //! `exercise_template_id` and drops anything that has none, so a workout of
+    //! nameless exercises reaches Hevy as nothing at all. These shipped
+    //! workouts had none, which meant performing one logged it to Garmin and
+    //! silently not to Hevy.
+    //!
+    //! The ids are from Hevy's public catalogue — 451 templates, none of them
+    //! anybody's custom exercise — so they are the same for every account and
+    //! carry nothing personal. An id Hevy does not recognise costs a 400 and
+    //! the session stays queued for the next attempt; nothing is lost.
     function _ex(
         id as String,
         name as String,
@@ -172,10 +185,12 @@ module WorkoutRepository {
         reps as Number,
         weight as Float,
         rest as Number,
-        muscle as Number
+        muscle as Number,
+        hevyId as String
     ) as Exercise {
         var ex = new Exercise(id, name, sets, reps, weight, rest);
         ex.muscle = muscle;
+        ex.hevyId = hevyId;
         return ex;
     }
 
@@ -195,25 +210,25 @@ module WorkoutRepository {
 
     public function backAndTriceps() as Workout {
         return new Workout("w_back_tri", "Dos + Triceps", [
-            _ex("b_lat_pulldown", "Lat Pulldown (Cable)", 4, 8, 0.0, 120, Muscle.BACK),
-            _ex("b_seated_row", "Seated Row (Machine)", 4, 8, 0.0, 120, Muscle.BACK),
-            _ex("b_db_row", "Dumbbell Row", 4, 10, 0.0, 90, Muscle.BACK),
-            _ex("b_iso_low_row", "Iso-Lateral Low Row", 4, 10, 0.0, 90, Muscle.BACK),
-            _ex("tr_pushdown", "Triceps Pushdown", 4, 10, 0.0, 75, Muscle.TRICEPS),
-            _ex("tr_cable_ext", "Triceps Extension (Cable)", 4, 10, 0.0, 75, Muscle.TRICEPS),
-            _ex("tr_rope", "Triceps Rope Pushdown", 4, 12, 0.0, 60, Muscle.TRICEPS)
+            _ex("b_lat_pulldown", "Lat Pulldown (Cable)", 4, 8, 0.0, 120, Muscle.BACK, "6A6C31A5"),
+            _ex("b_seated_row", "Seated Row (Machine)", 4, 8, 0.0, 120, Muscle.BACK, "1DF4A847"),
+            _ex("b_db_row", "Dumbbell Row", 4, 10, 0.0, 90, Muscle.BACK, "F1E57334"),
+            _ex("b_iso_low_row", "Iso-Lateral Low Row", 4, 10, 0.0, 90, Muscle.BACK, "91FAFBA3"),
+            _ex("tr_pushdown", "Triceps Pushdown", 4, 10, 0.0, 75, Muscle.TRICEPS, "93A552C6"),
+            _ex("tr_cable_ext", "Triceps Extension (Cable)", 4, 10, 0.0, 75, Muscle.TRICEPS, "21310F5F"),
+            _ex("tr_rope", "Triceps Rope Pushdown", 4, 12, 0.0, 60, Muscle.TRICEPS, "94B7239B")
         ] as Array<Exercise>);
     }
 
     public function chestAndBiceps() as Workout {
         return new Workout("w_chest_bi", "Pecs + Biceps", [
-            _ex("c_bench", "Bench Press (Barbell)", 4, 12, 20.0, 150, Muscle.CHEST),
-            _ex("c_incline_db", "Incline Bench Press (DB)", 4, 10, 14.0, 120, Muscle.CHEST),
-            _ex("c_pec_deck", "Chest Fly (Machine)", 4, 12, 39.0, 90, Muscle.CHEST),
-            _ex("c_chest_press", "Chest Press (Machine)", 4, 10, 25.0, 90, Muscle.CHEST),
-            _ex("bi_db_curl", "Bicep Curl (Dumbbell)", 4, 10, 9.0, 75, Muscle.BICEPS),
-            _ex("bi_hammer", "Hammer Curl (Dumbbell)", 4, 8, 9.0, 75, Muscle.BICEPS),
-            _ex("bi_concentration", "Concentration Curl", 4, 10, 0.0, 60, Muscle.BICEPS)
+            _ex("c_bench", "Bench Press (Barbell)", 4, 12, 20.0, 150, Muscle.CHEST, "79D0BB3A"),
+            _ex("c_incline_db", "Incline Bench Press (Dumbbell)", 4, 10, 14.0, 120, Muscle.CHEST, "07B38369"),
+            _ex("c_pec_deck", "Chest Fly (Machine)", 4, 12, 39.0, 90, Muscle.CHEST, "78683336"),
+            _ex("c_chest_press", "Chest Press (Machine)", 4, 10, 25.0, 90, Muscle.CHEST, "7EB3F7C3"),
+            _ex("bi_db_curl", "Bicep Curl (Dumbbell)", 4, 10, 9.0, 75, Muscle.BICEPS, "37FCC2BB"),
+            _ex("bi_hammer", "Hammer Curl (Dumbbell)", 4, 8, 9.0, 75, Muscle.BICEPS, "7E3BC8B6"),
+            _ex("bi_concentration", "Concentration Curl", 4, 10, 0.0, 60, Muscle.BICEPS, "724CDE60")
         ] as Array<Exercise>);
     }
 
@@ -222,13 +237,13 @@ module WorkoutRepository {
     //! neighbours and is the only value here that was not read directly.
     public function legs() as Workout {
         return new Workout("w_shoulders_arms", "Epaules + Bras", [
-            _ex("s_db_press", "Shoulder Press (Dumbbell)", 4, 8, 0.0, 120, Muscle.SHOULDERS),
-            _ex("s_lateral", "Lateral Raise (Dumbbell)", 4, 12, 0.0, 75, Muscle.SHOULDERS),
-            _ex("s_arnold", "Arnold Press (Dumbbell)", 4, 10, 0.0, 90, Muscle.SHOULDERS),
-            _ex("bi_bb_curl", "Bicep Curl (Barbell)", 4, 8, 0.0, 90, Muscle.BICEPS),
-            _ex("bi_hammer_cable", "Hammer Curl (Cable)", 4, 10, 0.0, 75, Muscle.BICEPS),
-            _ex("tr_db_ext", "Triceps Extension (DB)", 4, 10, 0.0, 90, Muscle.TRICEPS),
-            _ex("tr_rope", "Triceps Rope Pushdown", 4, 12, 0.0, 75, Muscle.TRICEPS)
+            _ex("s_db_press", "Shoulder Press (Dumbbell)", 4, 8, 0.0, 120, Muscle.SHOULDERS, "878CD1D0"),
+            _ex("s_lateral", "Lateral Raise (Dumbbell)", 4, 12, 0.0, 75, Muscle.SHOULDERS, "422B08F1"),
+            _ex("s_arnold", "Arnold Press (Dumbbell)", 4, 10, 0.0, 90, Muscle.SHOULDERS, "A69FF221"),
+            _ex("bi_bb_curl", "Bicep Curl (Barbell)", 4, 8, 0.0, 90, Muscle.BICEPS, "A5AC6449"),
+            _ex("bi_hammer_cable", "Hammer Curl (Cable)", 4, 10, 0.0, 75, Muscle.BICEPS, "36E8F14E"),
+            _ex("tr_db_ext", "Triceps Extension (Dumbbell)", 4, 10, 0.0, 90, Muscle.TRICEPS, "3765684D"),
+            _ex("tr_rope", "Triceps Rope Pushdown", 4, 12, 0.0, 75, Muscle.TRICEPS, "94B7239B")
         ] as Array<Exercise>);
     }
 }

@@ -2800,3 +2800,42 @@ function testEndWorkoutChoiceIsDeferredThenActedOnce(logger as Test.Logger) as B
     Test.assert(!controller.closingIsPending());
     return true;
 }
+
+//! Every shipped workout can actually reach Hevy.
+//!
+//! Hevy files a set against `exercise_template_id` and has no free-text name,
+//! so an exercise without one is dropped from the payload — and a workout whose
+//! exercises all lack one reaches Hevy as nothing at all. The three workouts
+//! RepFlow ships were in exactly that state: performing one logged it to Garmin
+//! and silently not to Hevy, which is the worst shape a sync can take, because
+//! the athlete only finds out later.
+(:test)
+function testShippedWorkoutsCanReachHevy(logger as Test.Logger) as Boolean {
+    var workouts = [WorkoutRepository.backAndTriceps(),
+                    WorkoutRepository.chestAndBiceps(),
+                    WorkoutRepository.legs()] as Array<Workout>;
+
+    for (var w = 0; w < workouts.size(); w++) {
+        var workout = workouts[w];
+        var list = workout.exercises;
+        for (var i = 0; i < list.size(); i++) {
+            var ex = list[i];
+            Test.assert(ex.hevyId != null);
+            // Hevy's template ids are short hex, not names. A name slipped in
+            // here would be accepted by the compiler and rejected by Hevy.
+            Test.assert((ex.hevyId as String).length() >= 6);
+        }
+
+        // Perform one set of everything, and the payload must carry every
+        // exercise — not a subset, and not null.
+        for (var i = 0; i < list.size(); i++) {
+            list[i].recordSet(list[i].plannedReps(), 20.0, null, TestSupport.T0 + i);
+        }
+        var payload = HevyMap.sessionToPayload(workout, TestSupport.T0,
+            TestSupport.T0 + 3600, true);
+        Test.assert(payload != null);
+        var sent = ((payload as Dictionary)["workout"] as Dictionary)["exercises"] as Array;
+        Test.assertEqual(sent.size(), list.size());
+    }
+    return true;
+}
