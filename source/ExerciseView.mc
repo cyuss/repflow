@@ -79,11 +79,23 @@ class ExerciseView extends WatchUi.View {
             return;
         }
 
+        // Progress on the rim belongs to the **exercise**, not to one of its
+        // pages. It used to be drawn inside the set page, so glancing at your
+        // heart rate between sets took away the one thing that said how much of
+        // the exercise was left. Drawn first, for every page, in the same place
+        // on each — the rim means the same thing wherever you are.
+        var done = exercise.completedSetCount();
+        var target = exercise.targetSets;
+        Theme.drawProgressRing(dc,
+            (target > 0 ? done.toFloat() / target.toFloat() : 0.0) * Animator.value(),
+            Theme.colorDone());
+        var inset = Theme.progressRingInset(dc);
+
         var page = controller.exercisePage();
         if (page == Tuning.PAGE_BODY) {
-            MetricPages.drawBody(dc, exercise.name, 0);
+            MetricPages.drawBody(dc, exercise.name, inset);
         } else if (page == Tuning.PAGE_WORKOUT) {
-            MetricPages.drawWorkout(dc, engine as WorkoutEngine, 0);
+            MetricPages.drawWorkout(dc, engine as WorkoutEngine, inset);
         } else {
             _drawSetPage(dc, controller, exercise);
         }
@@ -115,13 +127,6 @@ class ExerciseView extends WatchUi.View {
         exercise as Exercise
     ) as Void {
         var h = dc.getHeight();
-        var done = exercise.completedSetCount();
-        var target = exercise.targetSets;
-
-        // Progress on the rim: the one area a round screen gives away free.
-        Theme.drawProgressRing(dc,
-            (target > 0 ? done.toFloat() / target.toFloat() : 0.0) * Animator.value(),
-            Theme.colorDone());
 
         // No action button. START logs the set, and a button saying so was only
         // repeating what the athlete already knows while eating the space the

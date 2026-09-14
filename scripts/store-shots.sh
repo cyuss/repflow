@@ -80,15 +80,19 @@ if [ "$NAME" = "calibrate" ]; then
   WIN="$(mktemp -t repflow-win).png"
   window_capture "$WIN"
 
-  # The largest black component that is smaller than the display itself is the
-  # disc inside the progress ring.
+  # The component that is exactly the size of the disc inside the progress ring.
+  #
+  # Matched by size rather than by colour: the disc is black under the dark
+  # theme and white under the light one, and an athlete who set the light theme
+  # should not have to change it to take a screenshot. Nothing else on the
+  # screen is a square of exactly this size, so the size alone identifies it.
   EXPECTED=$((RESOLUTION - 15))
-  BOX="$(magick "$WIN" -colorspace Gray -threshold 18% \
+  BOX="$(magick "$WIN" -colorspace Gray -threshold 70% \
       -define connected-components:verbose=true \
       -define connected-components:area-threshold=10000 \
       -connected-components 8 null: 2>&1 \
     | awk -v want="$EXPECTED" '
-        $NF ~ /graya\(0/ {
+        {
           split($2, a, /[x+]/)
           w = a[1]; h = a[2]
           if (w == want && h == want) { print $2; exit }

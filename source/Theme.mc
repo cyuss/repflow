@@ -1038,6 +1038,21 @@ module Theme {
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
     }
 
+    //! Distance from the glass to the outside of the rim ring, and its pen.
+    //! Named because the inset a page has to respect is derived from them, and
+    //! a ring whose geometry drifted from that inset would cross the text.
+    const RING_MARGIN = 5;
+    const RING_PEN = 5;
+
+    //! How far in from the glass a page must stay to clear the rim ring.
+    //!
+    //! The ring's inner edge, plus a little air. Text measured against the
+    //! glass instead runs over the ring at the top and bottom of a round
+    //! screen, which reads as a rendering fault rather than as two layers.
+    public function progressRingInset(dc as Graphics.Dc) as Number {
+        return RING_MARGIN + RING_PEN / 2 + dc.getHeight() / 36;
+    }
+
     //! A ring around the rim showing progress from 0.0 to 1.0.
     //!
     //! The rim is the one area of a round display a field grid cannot use, so it
@@ -1050,11 +1065,11 @@ module Theme {
     ) as Void {
         var w = dc.getWidth();
         var h = dc.getHeight();
-        var radius = (w < h ? w : h) / 2 - 5;
+        var radius = (w < h ? w : h) / 2 - RING_MARGIN;
         var cx = w / 2;
         var cy = h / 2;
 
-        dc.setPenWidth(5);
+        dc.setPenWidth(RING_PEN);
         dc.setColor(colorFaint(), Graphics.COLOR_TRANSPARENT);
         dc.drawCircle(cx, cy, radius);
 
