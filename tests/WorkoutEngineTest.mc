@@ -2,6 +2,7 @@ import Toybox.Lang;
 import Toybox.Test;
 import Toybox.FitContributor;
 import Toybox.Graphics;
+import Toybox.Math;
 import Toybox.WatchUi;
 
 //! Behaviour tests for the flexible workout engine.
@@ -2984,6 +2985,46 @@ function testRestScreenIsDividedFairly(logger as Test.Logger) as Boolean {
     return true;
 }
 
+//! The rest ring frames every rest page, and the pages fit inside it.
+//!
+//! The countdown ring used to be drawn by the countdown page alone, so paging
+//! to the body or the session totals during a rest hid the only number that
+//! screen exists to show. Drawing it on all three means the widest text on the
+//! other two — the exercise name in the header, at the narrowest part of a
+//! round screen — has to be measured against the ring instead of the glass.
+//!
+//! Both halves are asserted: that the inset title fits, and that the un-inset
+//! one did not. The second is the bug, kept here so the inset cannot be
+//! quietly dropped as redundant.
+(:test)
+function testTheRestRingFramesEveryRestPage(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+    var w = dc.getWidth();
+    var h = dc.getHeight();
+
+    // The same geometry RestView draws with: margin 5, pen Device.stroke(27).
+    var pen = Device.stroke(27);
+    var innerRadius = (w < h ? w : h) / 2 - 5 - pen / 2;
+    var inset = 5 + pen / 2 + h / 36;
+
+    // Room inside the ring at the height the header's title sits at.
+    var y = h / 14;
+    var dy = (h / 2 - y).toFloat();
+    var room = Math.sqrt((innerRadius * innerRadius).toFloat() - dy * dy);
+
+    var fitted = Theme.usableWidthWithin(dc, y, inset) / 2;
+    var unfitted = Theme.usableWidth(dc, y) / 2;
+    logger.debug("title half-width " + fitted.toString() + " (was " +
+        unfitted.toString() + "), room inside the ring " + room.toNumber().toString());
+
+    Test.assert(fitted <= room);
+    Test.assert(unfitted > room);
+    return true;
+}
+
 //! A routine's zero load means "no target", not "zero kilos".
 //!
 //! Hevy writes 0 where a routine sets no target and shows an empty field for
@@ -3048,6 +3089,37 @@ function testRestSurvivesALookAtTheList(logger as Test.Logger) as Boolean {
     // And nothing has been announced, so coming back does not find a rest that
     // quietly ended while it was out of sight.
     Test.assert(!controller.restOverSignalled());
+    return true;
+}
+
+//! A rest that has run out is still a rest.
+//!
+//! The countdown reaching zero is a signal to the athlete, not a state change
+//! in the app: nobody is back under the bar until they say so. Everything that
+//! asks "is this athlete resting" has to keep saying yes, so that the list
+//! opened from the rest screen still goes back to the rest screen — which is
+//! what START promised when it opened the list.
+//!
+//! It stops being a rest when the athlete ends it, or picks something to do.
+(:test)
+function testAFinishedCountdownIsStillARest(logger as Test.Logger) as Boolean {
+    var controller = AppController.instance();
+    controller.startWorkout(TestSupport.abcWorkout());
+    controller.selectExercise("A");
+    controller.startRest(3);
+    Test.assert(controller.isResting());
+
+    for (var i = 0; i < 5; i++) {
+        controller.onTick();
+    }
+    // The clock has stopped. The rest has not.
+    Test.assert(!controller.restTimer().isRunning());
+    Test.assert(controller.restOverSignalled());
+    Test.assert(controller.isResting());
+
+    // Choosing something from the list is one of the two ways out.
+    controller.selectExercise("B");
+    Test.assert(!controller.isResting());
     return true;
 }
 

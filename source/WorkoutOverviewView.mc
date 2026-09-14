@@ -354,9 +354,17 @@ class WorkoutOverviewDelegate extends WatchUi.Menu2InputDelegate {
         }
         // Opening the list mid-rest to see what is left is browsing, not
         // choosing. Backing out of it has to put the athlete back where they
-        // were — the clock is still running, and landing on an exercise screen
-        // instead loses the one thing they were watching.
-        if (controller.restTimer().isRunning()) {
+        // were — landing on an exercise screen instead loses the one thing they
+        // were watching.
+        //
+        // "Mid-rest" is the whole rest, not just the part with a countdown
+        // still running it. This asked the timer, so the moment it hit zero the
+        // same BACK press stopped returning to the rest screen and started
+        // dropping the athlete onto an exercise — which is how "START shows me
+        // the list" turned into "it puts me on the next exercise" a few seconds
+        // after the beep. The rest ends when the athlete ends it: BACK on the
+        // rest screen, or choosing something from this list.
+        if (controller.isResting()) {
             WatchUi.switchToView(new RestView(), new RestDelegate(), WatchUi.SLIDE_DOWN);
             return;
         }

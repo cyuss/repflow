@@ -750,6 +750,21 @@ class AppController {
         return _restSignalled;
     }
 
+    //! Is the athlete between sets right now?
+    //!
+    //! Deliberately **not** "is the countdown running". A countdown that has
+    //! reached zero has not put the athlete back under the bar — they are still
+    //! standing there, and the rest interval is still open. Every question of
+    //! the form "where does this screen go back to" wants this, not the timer:
+    //! asking the timer sends someone who paged through the list six seconds
+    //! after the beep somewhere they did not ask to go.
+    //!
+    //! The interval is closed by ending the rest or by choosing an exercise,
+    //! which are the two ways a rest actually stops.
+    public function isResting() as Boolean {
+        return _restBeganAt != 0;
+    }
+
     //! Stop counting rest, and remember how much of it there was.
     //!
     //! Called from every way out of the rest screen, not just the timer

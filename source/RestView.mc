@@ -49,20 +49,30 @@ class RestView extends WatchUi.View {
         Marquee.stop();
     }
 
+    //! The countdown ring belongs to the **rest**, not to one of its pages.
+    //!
+    //! It used to be drawn inside the countdown page, so paging across to the
+    //! body or the session totals left the athlete resting with no idea how
+    //! much rest was left — which is the one thing a rest screen exists to say.
+    //! It is now drawn first, for every page, with the same geometry on each:
+    //! the time remaining is in the same place whatever you are looking at.
     public function onUpdate(dc as Graphics.Dc) as Void {
         Theme.clear(dc);
         var controller = AppController.instance();
         var page = controller.restPage();
+        var inset = _ringInset(dc);
+
+        _drawProgressArc(dc, controller.restTimer());
 
         if (page == Tuning.PAGE_BODY) {
             var exercise = _next(controller);
             MetricPages.drawBody(dc, exercise != null
                 ? (exercise as Exercise).name
-                : WatchUi.loadResource(Rez.Strings.Rest) as String);
+                : WatchUi.loadResource(Rez.Strings.Rest) as String, inset);
         } else if (page == Tuning.PAGE_WORKOUT) {
             var engine = controller.engine();
             if (engine != null) {
-                MetricPages.drawWorkout(dc, engine as WorkoutEngine);
+                MetricPages.drawWorkout(dc, engine as WorkoutEngine, inset);
             }
         } else {
             _drawCountdown(dc, controller);
@@ -81,8 +91,6 @@ class RestView extends WatchUi.View {
     private function _drawCountdown(dc as Graphics.Dc, controller as AppController) as Void {
         var rest = controller.restTimer();
         var h = dc.getHeight();
-
-        _drawProgressArc(dc, rest);
 
         // The countdown is the hero, but it was taking nearly half the glass:
         // a fixed 26% for the digits on top of its label and the air around

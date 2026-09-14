@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 340" width="1280" height="340"
+     role="img" aria-label="RepFlow — your workout, your order. A Garmin Connect IQ strength app.">
+  <title>RepFlow — your workout, your order</title>
+
+  <!--
+    Hand-authored, and deliberately abstract: no screenshot, no numbers, nothing
+    that could be read as data the app produced. The palette is the app's own —
+    Theme.mc's DARK_ACCENT #00AAFF on a black watch face — and the motion is the
+    one idea the whole project exists for: the focus does not walk down the list.
+  -->
+
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#0A0C10"/>
+      <stop offset="55%"  stop-color="#070809"/>
+      <stop offset="100%" stop-color="#0B1119"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%"   stop-color="#00AAFF" stop-opacity="0.18"/>
+      <stop offset="70%"  stop-color="#00AAFF" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#00AAFF" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="face">
+      <circle cx="1032" cy="170" r="104"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1280" height="340" fill="url(#ground)"/>
+  <circle cx="1032" cy="170" r="190" fill="url(#glow)"/>
+
+  <!-- ── wordmark ─────────────────────────────────────────────────────── -->
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+    <text x="88" y="150" font-size="94" font-weight="800" letter-spacing="-3" fill="#FFFFFF">RepFlow</text>
+
+    <!-- The accent rule draws itself, once, like a set being logged. -->
+    <rect x="92" y="172" height="7" rx="3.5" fill="#00AAFF" width="0">
+      <animate attributeName="width" values="0;318;318;318"
+               keyTimes="0;0.22;0.9;1" dur="7s" repeatCount="indefinite"/>
+    </rect>
+
+    <text x="92" y="228" font-size="35" font-weight="600" fill="#00AAFF">Your workout. Your order.</text>
+    <text x="94" y="274" font-size="15" font-weight="600" letter-spacing="4.5" fill="#5E6874">
+      GARMIN CONNECT IQ  ·  STRENGTH TRAINING  ·  GPL-3.0
+    </text>
+  </g>
+
+  <!-- ── the watch face ───────────────────────────────────────────────── -->
+  <g>
+    <circle cx="1032" cy="170" r="118" fill="#000000" stroke="#161C24" stroke-width="2"/>
+
+    <!-- Rest, running down. The app's own progress ring. -->
+    <circle cx="1032" cy="170" r="111" fill="none" stroke="#141A21" stroke-width="9"/>
+    <circle cx="1032" cy="170" r="111" fill="none" stroke="#00AAFF" stroke-width="9" stroke-linecap="round"
+            stroke-dasharray="697.4" stroke-dashoffset="697.4" transform="rotate(-90 1032 170)">
+      <animate attributeName="stroke-dashoffset" values="697.4;0;0;697.4"
+               keyTimes="0;0.55;0.85;1" dur="7s" repeatCount="indefinite"/>
+    </circle>
+
+    <g clip-path="url(#face)">
+      <!-- Four exercises, waiting. Order is not an instruction. -->
+      <rect x="957" y="116" width="150" height="17" rx="8.5" fill="#161C24"/>
+      <rect x="957" y="151" width="150" height="17" rx="8.5" fill="#161C24"/>
+      <rect x="957" y="186" width="150" height="17" rx="8.5" fill="#161C24"/>
+      <rect x="957" y="221" width="150" height="17" rx="8.5" fill="#161C24"/>
+
+      <!-- Done: two of them, and not the first two. -->
+      <rect x="957" y="151" width="150" height="17" rx="8.5" fill="#00AA55" opacity="0">
+        <animate attributeName="opacity" values="0;0;0.75;0.75;0"
+                 keyTimes="0;0.30;0.36;0.9;1" dur="7s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="957" y="221" width="150" height="17" rx="8.5" fill="#00AA55" opacity="0">
+        <animate attributeName="opacity" values="0;0;0.75;0.75;0"
+                 keyTimes="0;0.62;0.68;0.9;1" dur="7s" repeatCount="indefinite"/>
+      </rect>
+
+      <!-- The focus. It goes 2 → 4 → 1 → 3, because the bench was taken. -->
+      <rect x="951" y="145" width="162" height="29" rx="14.5" fill="none" stroke="#00AAFF" stroke-width="2.5">
+        <animate attributeName="y" values="145;145;215;215;110;110;180;180;145"
+                 keyTimes="0;0.26;0.34;0.56;0.64;0.76;0.84;0.94;1"
+                 dur="7s" repeatCount="indefinite"/>
+      </rect>
+    </g>
+  </g>
+</svg>

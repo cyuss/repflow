@@ -81,9 +81,9 @@ class ExerciseView extends WatchUi.View {
 
         var page = controller.exercisePage();
         if (page == Tuning.PAGE_BODY) {
-            MetricPages.drawBody(dc, exercise.name);
+            MetricPages.drawBody(dc, exercise.name, 0);
         } else if (page == Tuning.PAGE_WORKOUT) {
-            MetricPages.drawWorkout(dc, engine as WorkoutEngine);
+            MetricPages.drawWorkout(dc, engine as WorkoutEngine, 0);
         } else {
             _drawSetPage(dc, controller, exercise);
         }

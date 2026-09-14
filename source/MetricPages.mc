@@ -18,10 +18,20 @@ import Toybox.WatchUi;
 module MetricPages {
 
     //! Title and a rule, the header both pages share.
-    public function header(dc as Graphics.Dc, title as String) as Number {
+    //!
+    //! `inset` is how far in from the glass the caller has drawn something the
+    //! title must not cross. Zero on the exercise screen, which has nothing at
+    //! the rim on these pages; the rest screen's countdown ring on the others.
+    //!
+    //! The title is the only text here that can reach the rim: it is as long as
+    //! the exercise is named, and it sits where a round screen is at its
+    //! narrowest. The fields below are short and centred in their cells, so
+    //! they stay clear of the ring on their own and their layout is left exactly
+    //! as it was.
+    public function header(dc as Graphics.Dc, title as String, inset as Number) as Number {
         var h = dc.getHeight();
         var y = Marquee.drawFitted(dc, h / 14, title, Theme.fontsTitle(), Theme.colorText(),
-            Theme.usableWidth(dc, h / 14));
+            Theme.usableWidthWithin(dc, h / 14, inset));
         y += h / 44;
         FieldGrid.drawRule(dc, y);
         return y + 1;
@@ -39,8 +49,8 @@ module MetricPages {
     //! Heart rate leads because it is the number worth a glance mid-set, and
     //! the elapsed time sits full width at the bottom because "1:02:34" is far
     //! too wide for half a cell on a round screen.
-    public function drawBody(dc as Graphics.Dc, title as String) as Void {
-        var top = header(dc, title);
+    public function drawBody(dc as Graphics.Dc, title as String, inset as Number) as Void {
+        var top = header(dc, title, inset);
         var end = bottom(dc);
         var edge = FieldGrid.edgeHeight(top, end);
         var middleTop = top + edge;
@@ -67,9 +77,9 @@ module MetricPages {
     }
 
     //! The session so far: volume, sets and reps, exercises finished.
-    public function drawWorkout(dc as Graphics.Dc, engine as WorkoutEngine) as Void {
+    public function drawWorkout(dc as Graphics.Dc, engine as WorkoutEngine, inset as Number) as Void {
         var summary = engine.summary(AppController.now());
-        var top = header(dc, engine.getWorkout().name);
+        var top = header(dc, engine.getWorkout().name, inset);
         var end = bottom(dc);
 
         var done = 0;
