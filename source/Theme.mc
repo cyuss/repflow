@@ -728,9 +728,23 @@ module Theme {
     //!
     //! Returns the y just below the row.
     public function drawHeartRateGauge(dc as Graphics.Dc, top as Number) as Number {
+        return drawHeartRateGaugeAt(dc, top, Graphics.FONT_XTINY);
+    }
+
+    //! The same, at a size the caller chooses.
+    //!
+    //! The exercise screen keeps it small: it is one line above a screen whose
+    //! subject is the set, and every pixel it takes comes off the load. The set
+    //! editor has room and needs it larger — at the top of a round screen the
+    //! chord is at its narrowest and a caption-sized heart there is a smudge,
+    //! which is what it was reported as.
+    public function drawHeartRateGaugeAt(
+        dc as Graphics.Dc,
+        top as Number,
+        font as Graphics.FontDefinition
+    ) as Number {
         var hr = LiveMetrics.heartRate();
         var zone = LiveMetrics.zoneFor(hr);
-        var font = Graphics.FONT_XTINY;
         var fontHeight = dc.getFontHeight(font);
         var text = LiveMetrics.format(hr);
 

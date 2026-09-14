@@ -13,6 +13,16 @@ module Tuning {
     //! How much faster the load moves when the athlete is clearly holding the
     //! button down rather than tapping it. Going 60 to 100 kg one kilo at a
     //! time is forty presses; this turns it into eight.
+    //! How far a held button moves the load, in steps, as the hold goes on.
+    //!
+    //! One step, then two, then four. It used to jump straight to five, which
+    //! is 5 kg on a default grid: press twice quickly by accident and the bar
+    //! has gained ten. Ramping means the first repeat is still one step, the
+    //! athlete feels it accelerate, and nothing moves faster than they asked.
+    //!
+    //! Reaching 100 kg from 60 is still eight or nine presses held down, which
+    //! was the point of having an accelerator at all.
+    const COARSE_STEPS = [1, 1, 2, 2, 4] as Array<Number>;
     const COARSE_MULTIPLIER = 5;
     //! Two adjustments closer together than this are a hold, not two taps.
     const COARSE_WINDOW_MS = 350;

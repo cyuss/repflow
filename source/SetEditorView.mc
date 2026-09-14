@@ -52,6 +52,8 @@ class SetEditorView extends WatchUi.View {
     private var _mode as Number;
     //! System.getTimer() at the last load adjustment, for hold detection.
     private var _lastAdjustMs as Number;
+    //! How many presses into the current hold we are. Resets on any pause.
+    private var _heldPresses as Number;
 
     public function initialize(exercise as Exercise, returnTo as Number, mode as Number) {
         View.initialize();
@@ -59,11 +61,22 @@ class SetEditorView extends WatchUi.View {
         _returnTo = returnTo;
         _mode = mode;
         _lastAdjustMs = 0;
+        _heldPresses = 0;
         // Confirming a set starts on the reps: the load is usually what was
         // planned, the reps are what actually came out.
         _focus = mode == Tuning.EDITOR_CONFIRM_LOG
             ? Tuning.FOCUS_REPS
             : Tuning.FOCUS_WEIGHT;
+    }
+
+    //! How many steps this press should move the load.
+    private function _coarseFactor() as Number {
+        var ramp = Tuning.COARSE_STEPS;
+        var at = _heldPresses;
+        if (at >= ramp.size()) {
+            at = ramp.size() - 1;
+        }
+        return ramp[at];
     }
 
     public function mode() as Number {
@@ -90,28 +103,35 @@ class SetEditorView extends WatchUi.View {
     //! Nudge whichever value is focused.
     //!
     //! Presses arriving faster than a person taps are a held button, and the
-    //! load moves five times as far for each one. Going 60 to 100 kg is forty
-    //! taps at one kilo a press; this makes it eight.
+    //! load accelerates — but gradually. The multiplier walks up
+    //! Tuning.COARSE_STEPS, so the first repeat still moves one step and the
+    //! athlete feels it build. Jumping straight to five meant two accidental
+    //! quick presses added ten kilos to the bar.
     //!
     //! Only the load accelerates. Reps live between about 1 and 30, where a
-    //! five-rep jump overshoots more often than it helps.
+    //! multiplied jump overshoots more often than it helps.
     public function adjust(direction as Number) as Void {
         var controller = AppController.instance();
         if (_focus == Tuning.FOCUS_RPE) {
             controller.adjustRpe(direction);
             _lastAdjustMs = 0;
+            _heldPresses = 0;
             WatchUi.requestUpdate();
             return;
         }
         if (_focus == Tuning.FOCUS_REPS) {
             controller.adjustReps(direction);
             _lastAdjustMs = 0;
+            _heldPresses = 0;
         } else {
             var now = System.getTimer();
             var held = _lastAdjustMs != 0 &&
                 (now - _lastAdjustMs) < Tuning.COARSE_WINDOW_MS;
             _lastAdjustMs = now;
-            controller.adjustWeight(held ? direction * Tuning.COARSE_MULTIPLIER : direction);
+            // A gap resets the ramp, so a deliberate single press is always a
+            // single step however fast the last burst was.
+            _heldPresses = held ? _heldPresses + 1 : 0;
+            controller.adjustWeight(direction * _coarseFactor());
         }
         WatchUi.requestUpdate();
     }
@@ -125,7 +145,9 @@ class SetEditorView extends WatchUi.View {
         // The live zone gauge takes the line the exercise name used to have.
         // The name is on the screen this one slid up from; the heart rate is
         // not, and mid-set it is the one number worth a glance.
-        var y = Theme.drawHeartRateGauge(dc, h / 12);
+        // Larger than the exercise screen's: this screen has the room, and at
+        // the top of a round display a caption-sized reading is unreadable.
+        var y = Theme.drawHeartRateGaugeAt(dc, h / 14, Graphics.FONT_TINY);
 
         var title = confirming
             ? (WatchUi.loadResource(Rez.Strings.SetLabel) as String).toUpper() + " " +

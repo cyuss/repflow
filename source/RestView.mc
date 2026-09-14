@@ -84,15 +84,23 @@ class RestView extends WatchUi.View {
 
         _drawProgressArc(dc, rest);
 
-        // The countdown is the hero: it owns the top third outright.
+        // The countdown is the hero, but it was taking nearly half the glass:
+        // a fixed 26% for the digits on top of its label and the air around
+        // them, which left the two fields and the next-up block squeezed into
+        // what remained. Two thirds of the screen for one number the athlete
+        // glances at, and a third for everything they read.
+        //
+        // It now takes a fifth. The digits stay large — a fifth of a 260px
+        // screen is still the number font — and the fields below get room to be
+        // read rather than deciphered.
         var inset = _ringInset(dc);
-        var y = h / 9;
+        var y = h / 11;
         y = Theme.drawFittedWithin(dc, y, WatchUi.loadResource(Rez.Strings.Rest) as String,
             [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>, Theme.colorDim(),
             inset);
 
         var countdownTop = y + h / 60;
-        var countdownHeight = (h * 26) / 100;
+        var countdownHeight = (h * 20) / 100;
         var timerFont = Theme.pickFontFitting(dc, rest.format(), Theme.fontsHero(),
             (Theme.usableWidthWithin(dc, countdownTop + countdownHeight / 2, inset) * 80) / 100,
             countdownHeight);
@@ -255,10 +263,17 @@ class RestDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
-    //! BACK — the overview, to go and do something else instead.
+    //! BACK — rest is over, the same as START.
+    //!
+    //! Two buttons for one action, deliberately. BACK is LAP, and LAP during a
+    //! Garmin activity moves to the next thing; START is where this app had it
+    //! before. Neither is wrong and an athlete mid-session should not have to
+    //! remember which.
+    //!
+    //! The exercise list, which BACK used to open, is on MENU — one press
+    //! further, and it no longer competes with the gesture for "done".
     public function onBack() as Boolean {
-        WatchUi.switchToView(new WorkoutOverviewView(), new WorkoutOverviewDelegate(),
-            WatchUi.SLIDE_RIGHT);
+        AppController.instance().endRest();
         return true;
     }
 }
@@ -275,12 +290,18 @@ module RestActionsMenu {
     const ACTION_SKIP = "skip";
     const ACTION_END = "end";
     const ACTION_MODE = "mode";
+    const ACTION_OVERVIEW = "overview";
 
     public function show() as Void {
         var rest = AppController.instance().restTimer();
         var menu = new WatchUi.Menu2({
             :title => WatchUi.loadResource(Rez.Strings.Rest) as String
         });
+        // The exercise list first: it is what this menu is opened for most,
+        // now that BACK means "rest is over" rather than "show me the list".
+        menu.addItem(new WatchUi.MenuItem(
+            WatchUi.loadResource(Rez.Strings.Exercises) as String, null,
+            ACTION_OVERVIEW, {}));
         // Switch the rest between a countdown and an open clock from here, not
         // only from the settings screen: which one you want is a decision about
         // the gym you are standing in, and it changes between sets.
@@ -328,6 +349,11 @@ class RestActionsDelegate extends WatchUi.Menu2InputDelegate {
         if (id.equals(RestActionsMenu.ACTION_SUB)) {
             controller.restTimer().extend(-Tuning.REST_STEP);
             _back();
+            return;
+        }
+        if (id.equals(RestActionsMenu.ACTION_OVERVIEW)) {
+            WatchUi.switchToView(new WorkoutOverviewView(),
+                new WorkoutOverviewDelegate(), WatchUi.SLIDE_LEFT);
             return;
         }
         if (id.equals(RestActionsMenu.ACTION_MODE)) {

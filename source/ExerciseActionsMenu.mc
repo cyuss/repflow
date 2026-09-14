@@ -38,8 +38,12 @@ module ExerciseActionsMenu {
         if (last != null) {
             menu.addItem(new WatchUi.MenuItem(last, null, ACTION_LAST, {}));
         }
-        // Editing the set is the reason this menu is opened most often, so it
-        // sits under the cursor the moment it appears.
+        // The exercise list first. BACK logs the set now, so this menu is how
+        // "select any exercise at any time" is reached — and that is the
+        // promise the whole app is built on, not a buried option.
+        menu.addItem(new WatchUi.MenuItem(
+            WatchUi.loadResource(Rez.Strings.Exercises) as String, null,
+            ACTION_OVERVIEW, {}));
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.EditSet) as String,
             exercise.plannedReps().toString() + " x " +
@@ -54,8 +58,6 @@ module ExerciseActionsMenu {
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.AddSet) as String,
             (exercise.targetSets + 1).toString() + " x", ACTION_ADD_SET, {}));
-        menu.addItem(new WatchUi.MenuItem(
-            WatchUi.loadResource(Rez.Strings.ActionOverview) as String, null, ACTION_OVERVIEW, {}));
         if (exercise.completedSetCount() > 0) {
             menu.addItem(new WatchUi.MenuItem(
                 WatchUi.loadResource(Rez.Strings.ActionMarkDone) as String, null, ACTION_MARK_DONE, {}));

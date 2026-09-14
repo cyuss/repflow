@@ -343,13 +343,21 @@ class WorkoutOverviewDelegate extends WatchUi.Menu2InputDelegate {
     }
 
     //! BACK returns to training rather than dropping out of the workout: the
-    //! selected exercise, else the next sensible one, else the end-of-workout
-    //! flow. The overview is never a dead end.
+    //! rest you were in, else the selected exercise, else the next sensible
+    //! one, else the end-of-workout flow. The overview is never a dead end.
     public function onBack() as Void {
         var controller = AppController.instance();
         var engine = controller.engine();
         if (engine == null) {
             WatchUi.popView(WatchUi.SLIDE_RIGHT);
+            return;
+        }
+        // Opening the list mid-rest to see what is left is browsing, not
+        // choosing. Backing out of it has to put the athlete back where they
+        // were — the clock is still running, and landing on an exercise screen
+        // instead loses the one thing they were watching.
+        if (controller.restTimer().isRunning()) {
+            WatchUi.switchToView(new RestView(), new RestDelegate(), WatchUi.SLIDE_DOWN);
             return;
         }
         if (engine.currentExercise() != null) {

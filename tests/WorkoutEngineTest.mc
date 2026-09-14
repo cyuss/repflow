@@ -868,8 +868,11 @@ function testSummaryPagesDraw(logger as Test.Logger) as Boolean {
         ["Bench Press", History.RECORD_WEIGHT, 5, 82.5] as Array,
         ["Lat Pulldown", History.RECORD_1RM, 8, 60.0] as Array
     ] as Array;
+    // Metrics captured while the recording was open — which is the only moment
+    // they can be read. See RecapMetrics.
+    var metrics = new RecapMetrics(212, 128, 156, 71, 24);
     var view = new WorkoutSummaryView(summary, engine.getWorkout(), zones, weekly,
-        records, 71, 24, true);
+        records, metrics, true);
     for (var page = 0; page < WorkoutSummaryView.PAGE_COUNT; page++) {
         view.onUpdate(dc);
         view.turnPage(1);
@@ -882,7 +885,8 @@ function testSummaryPagesDraw(logger as Test.Logger) as Boolean {
     // And with nothing measurable at all: no records, no battery, no recovery.
     var empty = new WorkoutSummaryView(
         new SessionSummary(), TestSupport.abcWorkout(), new ZoneTracker(),
-        emptyWeek, [] as Array, null, null, false);
+        emptyWeek, [] as Array,
+        new RecapMetrics(null, null, null, null, null), false);
     for (var page = 0; page < WorkoutSummaryView.PAGE_COUNT; page++) {
         empty.onUpdate(dc);
         empty.turnPage(1);
@@ -2842,3 +2846,102 @@ function testImportedWorkoutsReachHevyWhole(logger as Test.Logger) as Boolean {
     return true;
 }
 
+
+//! Garmin's own numbers have to be captured before the recording is closed.
+//!
+//! `Activity.getActivityInfo()` answers null once there is no activity, so a
+//! recap that asks for calories while drawing gets "--" every time. That is
+//! exactly what happened: KCAL, AVG and MAX were blank on every summary, and
+//! the values had been there a moment earlier.
+(:test)
+function testRecapKeepsGarminsNumbers(logger as Test.Logger) as Boolean {
+    // Captured values survive whatever the activity does afterwards.
+    var kept = new RecapMetrics(212, 128, 156, 71, 24);
+    Test.assert(_is(kept.calories, 212));
+    Test.assert(_is(kept.averageHeartRate, 128));
+    Test.assert(_is(kept.maxHeartRate, 156));
+    Test.assert(_is(kept.batteryStart, 71));
+    Test.assert(_is(kept.recovery, 24));
+
+    // And absence stays absence. A watch with no strap paired, or a session too
+    // short to burn a calorie Garmin will admit to, is "--" and not a zero.
+    var nothing = new RecapMetrics(null, null, null, null, null);
+    Test.assert(nothing.calories == null);
+    Test.assertEqual(LiveMetrics.format(nothing.calories), LiveMetrics.NO_VALUE);
+    Test.assertEqual(LiveMetrics.format(nothing.maxHeartRate), LiveMetrics.NO_VALUE);
+
+    // capture() reads whatever the device can answer right now. In the test
+    // harness there is no activity, so what matters is that it does not throw
+    // and that it carries the two values it is handed through unchanged.
+    var live = RecapMetrics.capture(66, 18);
+    Test.assert(_is(live.batteryStart, 66));
+    Test.assert(_is(live.recovery, 18));
+    return true;
+}
+
+//! Compare a nullable reading with an expected one.
+//!
+//! Test.assertEqual takes Objects and a `Number?` is not one — the type checker
+//! is right to refuse it, and a cast would only move the problem.
+function _is(actual as Number?, expected as Number) as Boolean {
+    return actual != null && (actual as Number) == expected;
+}
+
+//! The load accelerates gradually, never in a jump the athlete did not ask for.
+//!
+//! A held button used to multiply every press by five — 5 kg on a default grid
+//! — so two quick presses by accident put ten kilos on the bar. The ramp starts
+//! at one step and builds, and any pause resets it, so a deliberate single
+//! press is always a single step however fast the last burst was.
+(:test)
+function testLoadAcceleratesGradually(logger as Test.Logger) as Boolean {
+    var ramp = Tuning.COARSE_STEPS;
+    Test.assert(ramp.size() >= 2);
+    // The first repeat is still one step: that is the whole point.
+    Test.assertEqual(ramp[0] as Number, 1);
+    Test.assertEqual(ramp[1] as Number, 1);
+    // It only ever grows, and never as far as the old flat multiplier.
+    for (var i = 1; i < ramp.size(); i++) {
+        Test.assert((ramp[i] as Number) >= (ramp[i - 1] as Number));
+        Test.assert((ramp[i] as Number) < Tuning.COARSE_MULTIPLIER);
+    }
+    return true;
+}
+
+//! The rest screen divides its glass fairly between what it shows.
+//!
+//! The countdown used to claim a fixed 26% for its digits, and with its label
+//! and the air around it that came to nearly half the screen — for one number
+//! the athlete glances at, leaving the two fields and the next-up block to
+//! share what was left. Reported from a real watch as "the first one takes half
+//! the screen".
+//!
+//! Checked as a proportion rather than by eye, because a proportion is what was
+//! wrong and what a different screen size has to preserve.
+(:test)
+function testRestScreenIsDividedFairly(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+    var h = dc.getHeight();
+
+    // What _drawCountdown lays out, in the same order it does.
+    var labelTop = h / 11;
+    var labelHeight = dc.getFontHeight(Graphics.FONT_XTINY);
+    var countdownTop = labelTop + labelHeight + h / 60;
+    var countdownHeight = (h * 20) / 100;
+
+    var heroEnd = countdownTop + countdownHeight;
+    var hero = heroEnd;                 // everything from the top of the glass
+    var rest = h - heroEnd;             // fields and what is coming next
+
+    logger.debug("hero " + hero.toString() + "px of " + h.toString() +
+        " (" + ((hero * 100) / h).toString() + "%), rest " + rest.toString());
+
+    // The headline may lead, but it may not take half.
+    Test.assert(hero < h / 2);
+    // And what is read has to have more room than what is glanced at.
+    Test.assert(rest > hero);
+    return true;
+}

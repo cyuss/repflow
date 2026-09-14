@@ -858,8 +858,10 @@ class AppController {
         // Read once, here, rather than from a draw call: the recap pages are
         // repainted on every tick and Storage is not free.
         var weekly = History.volumeForWeek(finishedAt);
+        // Captured while the recording is still open: see RecapMetrics.
+        var metrics = RecapMetrics.capture(_batteryStart, _recovery.best());
         var view = new WorkoutSummaryView(summary, workout, _zones, weekly,
-            _records, _batteryStart, _recovery.best(), save);
+            _records, metrics, save);
         WatchUi.switchToView(view, new WorkoutSummaryDelegate(view), WatchUi.SLIDE_UP);
 
         // Closing the recording and queueing the session for Hevy happen after

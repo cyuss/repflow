@@ -64,8 +64,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `make package` refuses while one is present, and `make doctor` checks that
   none has been committed.
 
+### Changed
+
+- **Buttons follow the watch's own activity screens.** BACK is the LAP button
+  and now means what LAP means during a Garmin activity: the set is done, or the
+  rest is over. START opens the set first, for when something changed. The
+  exercise list moved to MENU, where it is the first item.
+- The rest screen gives its countdown a fifth of the glass rather than nearly a
+  half, so the fields under it can be read rather than deciphered.
+- Holding a button to change the load accelerates gradually — one step, then
+  two, then four — instead of jumping straight to five. Any pause resets it.
+- The heart rate reading on the set editor is drawn a size larger.
+- The effort chart carries a dashed line at the session's own average, so the
+  bars have something to be a shape against.
+
 ### Fixed
 
+- KCAL, AVG and MAX were "--" on every recap. They were read while drawing, and
+  `getActivityInfo` answers null once the recording is closed — so the values
+  were there for as long as it took to stop it and gone by the time anyone
+  looked. They are captured now, before the recording closes.
+- Backing out of the exercise list while resting returns to the rest screen
+  instead of an exercise screen, so looking at what is left no longer costs the
+  clock you were watching.
 - A compiled-in Hevy key is now read by the app. Injecting it as the setting's
   default only reached a **first install** — an update kept whatever the
   property already held, so a watch that had RepFlow before the key existed went

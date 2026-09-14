@@ -33,10 +33,8 @@ class WorkoutSummaryView extends WatchUi.View {
     private var _weekly as Array<Number>;
     //! What was beaten this session: `[name, History.RECORD_*, reps, kg]` rows.
     private var _records as Array;
-    //! Garmin's Body Battery when the session began, for the before-and-after.
-    private var _batteryStart as Number?;
-    //! Best one-minute heart rate recovery this session.
-    private var _recovery as Number?;
+    //! What Garmin measured, read before the recording was closed.
+    private var _metrics as RecapMetrics;
     private var _saved as Boolean;
     private var _page as Number;
 
@@ -46,8 +44,7 @@ class WorkoutSummaryView extends WatchUi.View {
         zones as ZoneTracker,
         weekly as Array<Number>,
         records as Array,
-        batteryStart as Number?,
-        recovery as Number?,
+        metrics as RecapMetrics,
         saved as Boolean
     ) {
         View.initialize();
@@ -56,8 +53,7 @@ class WorkoutSummaryView extends WatchUi.View {
         _zones = zones;
         _weekly = weekly;
         _records = records;
-        _batteryStart = batteryStart;
-        _recovery = recovery;
+        _metrics = metrics;
         _saved = saved;
         _page = 0;
     }
@@ -210,13 +206,13 @@ class WorkoutSummaryView extends WatchUi.View {
         // Best beats dropped in a minute of rest, and what the session cost in
         // Body Battery. Both are "--" when the watch could not measure them,
         // never a zero that reads like a result.
-        var recoveryText = _recovery == null
+        var recoveryText = _metrics.recovery == null
             ? LiveMetrics.NO_VALUE
-            : "-" + (_recovery as Number).toString();
+            : "-" + (_metrics.recovery as Number).toString();
 
         var batteryText = LiveMetrics.NO_VALUE;
         var batteryColor = Theme.colorFaint();
-        var start = _batteryStart;
+        var start = _metrics.batteryStart;
         var finish = LiveMetrics.bodyBattery();
         if (start != null && finish != null) {
             var spent = (start as Number) - (finish as Number);
@@ -235,17 +231,17 @@ class WorkoutSummaryView extends WatchUi.View {
         FieldGrid.drawPair(dc, middleTop, bottomTop - middleTop,
             recoveryText,
             WatchUi.loadResource(Rez.Strings.FieldRecovery) as String,
-            _recovery == null ? Theme.colorFaint() : Theme.colorDone(),
-            LiveMetrics.format(LiveMetrics.calories()),
+            _metrics.recovery == null ? Theme.colorFaint() : Theme.colorDone(),
+            LiveMetrics.format(_metrics.calories),
             WatchUi.loadResource(Rez.Strings.FieldKcal) as String,
             Theme.colorWarm());
 
         FieldGrid.drawRule(dc, bottomTop);
         FieldGrid.drawPair(dc, bottomTop, edge,
-            LiveMetrics.format(LiveMetrics.averageHeartRate()),
+            LiveMetrics.format(_metrics.averageHeartRate),
             WatchUi.loadResource(Rez.Strings.FieldAvgHr) as String,
             Theme.colorHr(),
-            LiveMetrics.format(LiveMetrics.maxHeartRate()),
+            LiveMetrics.format(_metrics.maxHeartRate),
             WatchUi.loadResource(Rez.Strings.FieldMaxHr) as String,
             Theme.colorHr());
     }
@@ -300,7 +296,7 @@ class WorkoutSummaryView extends WatchUi.View {
         FieldGrid.drawSingle(dc, top, edge, Rpe.format(_nearestRung(average)),
             WatchUi.loadResource(Rez.Strings.AvgRpe) as String, Rpe.color(_nearestRung(average)));
         FieldGrid.drawRule(dc, top + edge);
-        _drawEffortChart(dc, top + edge, bottom, rated);
+        _drawEffortChart(dc, top + edge, bottom, rated, _nearestRung(average));
     }
 
     //! The rung nearest a computed average, so it can be drawn and coloured.
@@ -327,7 +323,8 @@ class WorkoutSummaryView extends WatchUi.View {
         dc as Graphics.Dc,
         top as Number,
         bottom as Number,
-        rated as Array
+        rated as Array,
+        average as Float
     ) as Void {
         var count = rated.size();
         if (count <= 0) {
@@ -379,6 +376,26 @@ class WorkoutSummaryView extends WatchUi.View {
 
         dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
         dc.fillRectangle(left, baseline, width, 1);
+
+        // A line at the session's own average, which is the number printed
+        // above. Without it the bars are a shape with nothing to be a shape
+        // *against*: you can see they rise and fall, not which of them were the
+        // hard ones. With it, everything above the line is a set that cost more
+        // than the session's average and everything below it cost less.
+        var mean = Rpe.indexOf(average);
+        if (mean >= 0) {
+            var meanY = baseline - (span * (mean + 1)) / rungs;
+            dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
+            // Dashed, so it reads as a reference and not as another bar.
+            var dash = width / 26;
+            if (dash < 2) {
+                dash = 2;
+            }
+            for (var x = left; x < left + width; x += dash * 2) {
+                var run = (x + dash > left + width) ? (left + width - x) : dash;
+                dc.fillRectangle(x, meanY, run, 1);
+            }
+        }
     }
 
     //! What was beaten today, and by how much.

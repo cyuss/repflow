@@ -24,11 +24,23 @@ import Toybox.System;
 //! ("1:02:34", "3.2 t") always take a full-width band — that is what the
 //! geometry of a round display allows. See FieldGrid.
 //!
-//! Buttons:
-//!   START      complete the set (one press, from any page)
+//! Buttons, following the watch's own activity screens rather than inventing a
+//! scheme of their own:
+//!
+//!   BACK       log the set — this is the LAP button, and on a Garmin mid
+//!              activity LAP means "that piece is done, move on". One press.
+//!   START      open the set first, to change reps, load or effort before
+//!              logging it. START then logs.
 //!   UP / DOWN  previous / next data screen
-//!   BACK       workout overview (pick any exercise)
-//!   MENU       exercise actions — edit weight and reps live here
+//!   MENU       everything else, the exercise list included
+//!
+//! BACK used to open the exercise list and START used to open the set. Both
+//! worked and neither matched the reflex: an athlete who has used a Garmin
+//! workout reaches for BACK when a set is finished, and got the list.
+//!
+//! The list moved to MENU rather than losing its place, because "select any
+//! exercise at any time" is what this app is for — it is one press further away
+//! and it is the first item, under the cursor the moment the menu opens.
 class ExerciseView extends WatchUi.View {
 
     //! The page constants live in Tuning: Monkey C does not expose a class-level
@@ -250,9 +262,9 @@ class ExerciseDelegate extends WatchUi.BehaviorDelegate {
         BehaviorDelegate.initialize();
     }
 
-    //! START — the set is done. Hand control back before the rest timer takes
-    //! the screen: the values recorded should be the ones actually performed.
-    //! One more press of START logs them unchanged, so the hot path stays short.
+    //! START — open the set before logging it, for when something changed:
+    //! fewer reps than planned, a different load, an effort worth recording.
+    //! START again logs it. BACK logs it without asking.
     public function onSelect() as Boolean {
         var engine = AppController.instance().engine();
         if (engine == null) {
@@ -282,10 +294,20 @@ class ExerciseDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
-    //! BACK — workout overview is always one press away.
+    //! BACK — the set is done. This is the LAP button and that is what LAP
+    //! means during an activity on this watch.
+    //!
+    //! Logged as planned, with whatever the wrist counted if it was counting.
+    //! Nothing to confirm: the values are on screen, the athlete has been
+    //! looking at them, and a set logged wrongly is undone from the menu.
     public function onBack() as Boolean {
-        WatchUi.switchToView(new WorkoutOverviewView(), new WorkoutOverviewDelegate(),
-            WatchUi.SLIDE_RIGHT);
+        var controller = AppController.instance();
+        var engine = controller.engine();
+        if (engine == null || engine.currentExercise() == null) {
+            return true;
+        }
+        controller.applyCountedReps();
+        controller.completeSet();
         return true;
     }
 
