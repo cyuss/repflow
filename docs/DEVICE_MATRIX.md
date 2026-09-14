@@ -85,7 +85,7 @@ For each device, verify:
 | Compilation | `make build DEVICE=<id>` — no errors, no warnings |
 | Screen resolution | Layout readable; `Theme.drawFitted` picked a sensible font |
 | Memory constraints | Simulator → *File → View Memory*; headroom at peak (overview with a long workout) |
-| Buttons | START completes a set; BACK opens the overview; UP/DOWN adjust weight; MENU opens actions |
+| Buttons | BACK ends a set and a rest; START opens the exercise list; UP/DOWN page; MENU opens actions |
 | Touch support | Optional tap on reps works where present; **everything works with touch disabled** |
 | ActivityRecording | Activity starts, laps are marked per set, saves successfully |
 | Storage | Session persists across an app restart |

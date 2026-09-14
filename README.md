@@ -57,18 +57,21 @@ one, it makes no difference to the app.
 At the end you get a recap: what you lifted, how long it took, what your heart
 did, which muscles you worked this week, and anything that was a personal best.
 
-Two buttons carry the whole session. They are the same two Garmin uses on its
-own activity screens, so they already mean what your thumb expects:
+Two buttons carry the whole session, and each means one thing the whole way
+through. They are the same two Garmin uses on its own activity screens, so they
+already mean what your thumb expects:
 
-| While you are lifting | |
-|---|---|
-| **BACK** | the set is done — start resting |
-| **START** | change the weight or reps first |
+| | While you are lifting | While you are resting |
+|---|---|---|
+| **BACK** | the set is done | rest is over, back to the bar |
+| **START** | show me the exercise list | show me the exercise list |
 
-| While you are resting | |
-|---|---|
-| **BACK** | rest is over, back to the bar |
-| **START** | show me the exercise list |
+BACK is the LAP button, and LAP has always meant "that piece is done". Finishing
+a set shows you what is about to be recorded — weight, reps, and how hard it
+was — and one more press of START logs it and starts the rest. Nothing changed?
+That is two presses. Eight reps where the plan said ten? Correct it there, in
+the two seconds while the set is still in your arms, instead of discovering it
+in an app that evening.
 
 **UP** and **DOWN** turn the page — heart rate on one, the session's running
 totals on another. Holding **UP** opens the menu, where everything else lives.

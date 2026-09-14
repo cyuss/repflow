@@ -61,17 +61,20 @@ where it was left.
 
 ## Core flows
 
-**Complete a set** — one press of START. The next set inherits the weight and
-reps you actually just performed, not the template's.
+**Complete a set** — BACK (the LAP button) ends it and shows what is about to
+be recorded; START logs that and starts the rest. The next set inherits the
+weight and reps you actually just performed, not the template's.
 
 **Machine busy** — MENU → *Skip for now*. The exercise becomes `PENDING`, the
 overview opens, pick something else.
 
-**Come back** — open the overview (BACK, one press), select the pending
-exercise. It resumes on the correct set with the correct weight.
+**Come back** — open the overview (START, one press, from the exercise screen
+or the rest screen), select the pending exercise. It resumes on the correct set
+with the correct weight.
 
-**Superset** — complete a set of A, press BACK during rest, pick B, complete a
-set, go back to A. Both stay `PENDING` between turns and neither loses state.
+**Superset** — complete a set of A, press START during the rest, pick B,
+complete a set, go back to A. Both stay `PENDING` between turns and neither
+loses state.
 
 **Finish** — RepFlow refuses to quietly call the workout done while anything is
 unfinished or pending; ending then requires an explicit confirmation.

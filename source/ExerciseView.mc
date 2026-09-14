@@ -267,21 +267,18 @@ class ExerciseDelegate extends WatchUi.BehaviorDelegate {
         BehaviorDelegate.initialize();
     }
 
-    //! START — open the set before logging it, for when something changed:
-    //! fewer reps than planned, a different load, an effort worth recording.
-    //! START again logs it. BACK logs it without asking.
+    //! START — the exercise list, exactly as it is during a rest.
+    //!
+    //! One meaning per button for the whole session: BACK finishes the set,
+    //! START asks what else there is. That is the app's own rule reduced to a
+    //! press — the bench is taken, so look at the list — and it works from the
+    //! exercise screen and the rest screen alike, which is the point.
+    //!
+    //! START used to open the set editor. BACK goes through it now, so that
+    //! job is done and the press is better spent.
     public function onSelect() as Boolean {
-        var engine = AppController.instance().engine();
-        if (engine == null) {
-            return true;
-        }
-        var exercise = engine.currentExercise();
-        if (exercise == null) {
-            return true;
-        }
-        // Whatever the wrist counted becomes the value the editor opens on.
-        AppController.instance().applyCountedReps();
-        SetEditor.confirm(exercise);
+        WatchUi.switchToView(new WorkoutOverviewView(), new WorkoutOverviewDelegate(),
+            WatchUi.SLIDE_LEFT);
         return true;
     }
 
@@ -302,17 +299,31 @@ class ExerciseDelegate extends WatchUi.BehaviorDelegate {
     //! BACK — the set is done. This is the LAP button and that is what LAP
     //! means during an activity on this watch.
     //!
-    //! Logged as planned, with whatever the wrist counted if it was counting.
-    //! Nothing to confirm: the values are on screen, the athlete has been
-    //! looking at them, and a set logged wrongly is undone from the menu.
+    //! It opens the set that was just performed rather than logging it
+    //! outright. What you planned and what you did are different things: eight
+    //! reps where the routine said ten is the normal case, the load moves, and
+    //! the effort is worth a rating while the set is still in your arms.
+    //!
+    //! It used to log immediately and hand you the rest screen, which made the
+    //! honest number the expensive one — you had to notice, then go back into
+    //! the menu and correct a set that was already recorded. Confirming first
+    //! costs one press when nothing changed (BACK, then START) and saves a
+    //! correction every time something did.
+    //!
+    //! Nothing is recorded here. `SetEditorView` logs it and starts the rest.
     public function onBack() as Boolean {
         var controller = AppController.instance();
         var engine = controller.engine();
-        if (engine == null || engine.currentExercise() == null) {
+        if (engine == null) {
             return true;
         }
+        var exercise = engine.currentExercise();
+        if (exercise == null) {
+            return true;
+        }
+        // Whatever the wrist counted becomes the value the editor opens on.
         controller.applyCountedReps();
-        controller.completeSet();
+        SetEditor.confirm(exercise);
         return true;
     }
 

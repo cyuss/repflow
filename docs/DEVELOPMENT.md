@@ -131,22 +131,25 @@ Useful simulator menus:
 
 ### Buttons
 
-| Screen | START | UP / DOWN | BACK | MENU (long press) |
+| Screen | BACK (LAP) | START | UP / DOWN | MENU (long UP) |
 |---|---|---|---|---|
-| Workout list | start workout | change workout | exit | — |
-| Exercise | **log the active set** | **change data screen** | overview | exercise actions (edit set first) |
-| Rest | skip rest | rest ± 15 s | overview | **edit next set** |
-| Overview | select exercise | scroll | back to training | — |
-| Set editor | next field / confirm | change value | previous field / leave | — |
-| Summary | save activity | page metrics | save/discard menu | save/discard menu |
+| Workout list | exit | start workout | change workout | edit, new, Hevy, settings |
+| Exercise | **the set is done** → confirm | **exercise list** | data screens | exercise actions |
+| Confirm | cycle reps → weight → effort | **log it, rest starts** | change the value | abandon without logging |
+| Rest | **rest is over** → back to the bar | **exercise list** | data screens | rest actions |
+| Overview | back where you came from | choose an exercise | scroll | — |
+| Summary | save/discard menu | save activity | page metrics | save/discard menu |
 
-The design rule: completing a set is always one press of START, and the
-overview is always one press of BACK.
+The design rule, and the reason the table has so few different words in it:
+**BACK finishes the thing you are in, START asks what else there is.** During a
+Garmin activity BACK *is* the LAP button, and LAP has always meant "that piece
+is done" — so a set ends and a rest ends with the same press, and the exercise
+list is one press away from either.
 
 ### Logging a set
 
 ```
-LOG SET  ->  confirm screen  ->  rest  ->  (exercise finished?) next exercise
+BACK  ->  confirm screen  ->  START  ->  rest  ->  (exercise finished?) next exercise
 ```
 
 The confirm screen exists because what you planned and what you performed are
@@ -158,11 +161,12 @@ that reason.
 |---|---|
 | START | log the set and start the rest |
 | UP / DOWN | adjust the highlighted value |
-| BACK | swap between reps and weight |
+| BACK | cycle: reps → weight → effort |
 | MENU | abandon the set without logging it |
 
-START is spent on logging, so BACK swaps the field. That keeps a set to a single
-extra press when nothing needs changing, which is the common case.
+START is spent on logging, so BACK cycles the field rather than leaving. That
+keeps a set to one extra press when nothing needs changing, which is the common
+case: BACK to finish, START to log.
 
 ### The workflow
 

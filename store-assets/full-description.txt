@@ -19,8 +19,9 @@ ON THE GYM FLOOR
   already did are kept, not deleted
 - Add an unplanned exercise, or one more set than you planned, mid-session
 - The next set is pre-filled with the weight and reps you actually performed
-- One press of START completes a set, then you correct the reps if they came
-  out differently
+- BACK ends a set — it is the LAP button — and shows what is about to be
+  recorded, so eight reps where you planned ten is corrected in two seconds
+  rather than in an app that evening
 
 BUILD YOUR OWN, ON THE WATCH
 - 82 movements across ten muscle groups

@@ -51,7 +51,7 @@ logging, and editing before the rest. The other five are what this list is for.
 
 | # | Feature | Why it matters in the gym | Feasibility | Effort | State |
 |---|---|---|---|---|---|
-| 2.1 | One press of START logs the set | Chalked hands, pumped forearms | — | — | **shipped** |
+| 2.1 | Two presses log a set, and neither is a menu | Chalked hands, pumped forearms | — | — | **shipped** — BACK ends it, START logs it |
 | 2.2 | Weight and reps inherited from the last performed set | You almost always repeat the load | — | — | **shipped** |
 | 2.3 | Edit weight and reps *before* the rest timer takes the screen | Reps rarely match the plan | — | — | **shipped** |
 | 2.4 | **Plate calculator** — "82.5 kg = bar + 20 + 10 + 1.25 a side" | Removes arithmetic from every single working set. Cheap to build, used twenty times a session | Pure arithmetic; needs a bar-weight and available-plates setting | S | **next — best value per hour of work in this list** |
