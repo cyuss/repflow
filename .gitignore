@@ -35,3 +35,6 @@ backend/**/__pycache__/
 # Local secrets — a Hevy API key is read+write over a whole training history
 secrets/*
 !secrets/README.md
+
+# Draft posts and other things written to be published elsewhere, not here.
+REDDIT_POST.md

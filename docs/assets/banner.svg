@@ -33,7 +33,7 @@
     <text x="88" y="150" font-size="94" font-weight="800" letter-spacing="-3" fill="#FFFFFF">RepFlow</text>
 
     <!-- The accent rule draws itself, once, like a set being logged. -->
-    <rect x="92" y="172" height="7" rx="3.5" fill="#00AAFF" width="0">
+    <rect x="92" y="172" height="7" rx="3.5" fill="#00AAFF" width="318">
       <animate attributeName="width" values="0;318;318;318"
                keyTimes="0;0.22;0.9;1" dur="7s" repeatCount="indefinite"/>
     </rect>
@@ -51,7 +51,7 @@
     <!-- Rest, running down. The app's own progress ring. -->
     <circle cx="1032" cy="170" r="111" fill="none" stroke="#141A21" stroke-width="9"/>
     <circle cx="1032" cy="170" r="111" fill="none" stroke="#00AAFF" stroke-width="9" stroke-linecap="round"
-            stroke-dasharray="697.4" stroke-dashoffset="697.4" transform="rotate(-90 1032 170)">
+            stroke-dasharray="697.4" stroke-dashoffset="209" transform="rotate(-90 1032 170)">
       <animate attributeName="stroke-dashoffset" values="697.4;0;0;697.4"
                keyTimes="0;0.55;0.85;1" dur="7s" repeatCount="indefinite"/>
     </circle>
@@ -64,11 +64,11 @@
       <rect x="957" y="221" width="150" height="17" rx="8.5" fill="#161C24"/>
 
       <!-- Done: two of them, and not the first two. -->
-      <rect x="957" y="151" width="150" height="17" rx="8.5" fill="#00AA55" opacity="0">
+      <rect x="957" y="151" width="150" height="17" rx="8.5" fill="#00AA55" opacity="0.75">
         <animate attributeName="opacity" values="0;0;0.75;0.75;0"
                  keyTimes="0;0.30;0.36;0.9;1" dur="7s" repeatCount="indefinite"/>
       </rect>
-      <rect x="957" y="221" width="150" height="17" rx="8.5" fill="#00AA55" opacity="0">
+      <rect x="957" y="221" width="150" height="17" rx="8.5" fill="#00AA55" opacity="0.75">
         <animate attributeName="opacity" values="0;0;0.75;0.75;0"
                  keyTimes="0;0.62;0.68;0.9;1" dur="7s" repeatCount="indefinite"/>
       </rect>

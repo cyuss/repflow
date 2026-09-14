@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 330" width="1000" height="330"
+     role="img" aria-label="One session: bench set 1, rows set 1, bench set 2, curls set 1, rows set 2 — in that order, on purpose.">
+  <title>Any exercise, any time</title>
+
+  <rect width="1000" height="330" fill="#07080A"/>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+
+    <!-- lanes -->
+    <g stroke="#171D25" stroke-width="2" stroke-dasharray="3 9" stroke-linecap="round">
+      <line x1="300" y1="85"  x2="950" y2="85"/>
+      <line x1="300" y1="155" x2="950" y2="155"/>
+      <line x1="300" y1="225" x2="950" y2="225"/>
+    </g>
+    <g fill="#9AA6B4" font-size="21" font-weight="600" text-anchor="end">
+      <text x="270" y="92">Bench press</text>
+      <text x="270" y="162">Rows</text>
+      <text x="270" y="232">Curls</text>
+    </g>
+
+    <g id="sequence">
+      <animate attributeName="opacity" values="1;1;1;0" keyTimes="0;0.70;0.92;1"
+               dur="8s" repeatCount="indefinite"/>
+
+      <!-- the path the athlete actually took -->
+      <polyline points="330,85 470,155 610,85 750,225 890,155"
+                fill="none" stroke="#00AAFF" stroke-width="3.5"
+                stroke-linecap="round" stroke-linejoin="round"
+                stroke-dasharray="670" stroke-dashoffset="0">
+        <animate attributeName="stroke-dashoffset" values="670;670;0;0;0"
+                 keyTimes="0;0.06;0.70;0.92;1" dur="8s" repeatCount="indefinite"/>
+      </polyline>
+
+      <!-- each set, appearing as the line reaches it -->
+      <g>
+        <circle cx="330" cy="85" r="13" fill="#07080A" stroke="#00AAFF" stroke-width="3.5">
+          <animate attributeName="r" values="0;0;13;13" keyTimes="0;0.060;0.095;1" dur="8s" repeatCount="indefinite"/>
+        </circle>
+        <text x="330" y="52" fill="#6B7684" font-size="17" font-weight="600" text-anchor="middle" opacity="1">set 1
+          <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.060;0.095;1" dur="8s" repeatCount="indefinite"/>
+        </text>
+
+        <circle cx="470" cy="155" r="13" fill="#07080A" stroke="#00AAFF" stroke-width="3.5">
+          <animate attributeName="r" values="0;0;13;13" keyTimes="0;0.210;0.245;1" dur="8s" repeatCount="indefinite"/>
+        </circle>
+        <text x="470" y="122" fill="#6B7684" font-size="17" font-weight="600" text-anchor="middle" opacity="1">set 1
+          <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.210;0.245;1" dur="8s" repeatCount="indefinite"/>
+        </text>
+
+        <circle cx="610" cy="85" r="13" fill="#07080A" stroke="#00AAFF" stroke-width="3.5">
+          <animate attributeName="r" values="0;0;13;13" keyTimes="0;0.360;0.395;1" dur="8s" repeatCount="indefinite"/>
+        </circle>
+        <text x="610" y="52" fill="#6B7684" font-size="17" font-weight="600" text-anchor="middle" opacity="1">set 2
+          <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.360;0.395;1" dur="8s" repeatCount="indefinite"/>
+        </text>
+
+        <circle cx="750" cy="225" r="13" fill="#07080A" stroke="#00AAFF" stroke-width="3.5">
+          <animate attributeName="r" values="0;0;13;13" keyTimes="0;0.550;0.585;1" dur="8s" repeatCount="indefinite"/>
+        </circle>
+        <text x="750" y="272" fill="#6B7684" font-size="17" font-weight="600" text-anchor="middle" opacity="1">set 1
+          <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.550;0.585;1" dur="8s" repeatCount="indefinite"/>
+        </text>
+
+        <circle cx="890" cy="155" r="13" fill="#07080A" stroke="#00AAFF" stroke-width="3.5">
+          <animate attributeName="r" values="0;0;13;13" keyTimes="0;0.700;0.735;1" dur="8s" repeatCount="indefinite"/>
+        </circle>
+        <text x="890" y="122" fill="#6B7684" font-size="17" font-weight="600" text-anchor="middle" opacity="1">set 2
+          <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.700;0.735;1" dur="8s" repeatCount="indefinite"/>
+        </text>
+      </g>
+    </g>
+
+    <text x="50" y="305" fill="#6B7684" font-size="19">
+      Somebody was on the bench. You did rows instead, and came back. Nothing was lost.
+    </text>
+  </g>
+</svg>

@@ -27,6 +27,20 @@ and [`ARCHITECTURE.md`](ARCHITECTURE.md) if you want to know how it is built.
 | [garmin-strength-integration-poc.md](garmin-strength-integration-poc.md) | The three routes into Garmin Connect's native strength table, why only one is open, and the evidence for each claim |
 | [HEVY_SYNC_FEASIBILITY.md](HEVY_SYNC_FEASIBILITY.md) | What Hevy's API does and does not carry |
 
+## The pictures
+
+`assets/` holds the diagrams the README uses. They are hand-written animated
+SVGs rather than screenshots, so that they explain the app without pretending to
+be it, and they stay readable in a still frame for anything that will not
+animate them.
+
+| | |
+|---|---|
+| [assets/banner.svg](assets/banner.svg) | The wordmark, and the focus moving out of order |
+| [assets/any-order.svg](assets/any-order.svg) | One session, taken in the order the gym allowed |
+| [assets/a-session.svg](assets/a-session.svg) | Choose, lift, rest, recap |
+| [assets/where-it-goes.svg](assets/where-it-goes.svg) | What leaves the watch by itself, and what needs a command |
+
 ## Devices and release
 
 | | |

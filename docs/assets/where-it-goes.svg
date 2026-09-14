@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 1000 400" width="1000" height="400"
+     role="img" aria-label="Where a session ends up: the Garmin activity and the Hevy workout go out by themselves; Garmin's exercise table is filled in afterwards by one command.">
+  <title>Where your session ends up</title>
+
+  <rect width="1000" height="400" fill="#07080A"/>
+
+  <defs>
+    <path id="toActivity" d="M 254 195 C 350 195, 380 88, 468 88"/>
+    <path id="toHevy"     d="M 254 195 L 468 195"/>
+    <path id="toTable"    d="M 254 195 C 350 195, 380 302, 468 302"/>
+  </defs>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+
+    <!-- the watch -->
+    <circle cx="172" cy="195" r="80" fill="#0D1117" stroke="#1F2731" stroke-width="2"/>
+    <circle cx="172" cy="195" r="66" fill="#000000" stroke="#00AAFF" stroke-width="2.5"/>
+    <text x="172" y="188" fill="#FFFFFF" font-size="22" font-weight="700" text-anchor="middle">RepFlow</text>
+    <text x="172" y="214" fill="#6B7684" font-size="15" text-anchor="middle">on your watch</text>
+
+    <!-- the three journeys -->
+    <g fill="none" stroke="#1F2731" stroke-width="2.5" stroke-linecap="round">
+      <use xlink:href="#toActivity" href="#toActivity"/>
+      <use xlink:href="#toHevy" href="#toHevy"/>
+      <use xlink:href="#toTable" href="#toTable" stroke-dasharray="4 9"/>
+    </g>
+
+    <!-- what travels along them -->
+    <circle r="5.5" fill="#00AAFF">
+      <animateMotion dur="3.0s" repeatCount="indefinite">
+        <mpath xlink:href="#toActivity" href="#toActivity"/>
+      </animateMotion>
+    </circle>
+    <circle r="5.5" fill="#00AAFF">
+      <animateMotion dur="3.4s" repeatCount="indefinite">
+        <mpath xlink:href="#toHevy" href="#toHevy"/>
+      </animateMotion>
+    </circle>
+    <circle r="5.5" fill="#FFAA00">
+      <animateMotion dur="3.9s" repeatCount="indefinite">
+        <mpath xlink:href="#toTable" href="#toTable"/>
+      </animateMotion>
+    </circle>
+
+    <!-- destinations -->
+    <g>
+      <rect x="468" y="45" width="492" height="86" rx="14" fill="#0D1117" stroke="#1F2731" stroke-width="2"/>
+      <text x="496" y="80" fill="#E7ECF2" font-size="21" font-weight="700">Garmin Connect — the activity</text>
+      <text x="496" y="110" fill="#6B7684" font-size="16">heart rate, zones, calories</text>
+      <rect x="812" y="93" width="122" height="26" rx="13" fill="#0E2A1C"/>
+      <text x="873" y="111" fill="#3FCB84" font-size="13" font-weight="700" letter-spacing="1" text-anchor="middle">BY ITSELF</text>
+    </g>
+
+    <g>
+      <rect x="468" y="152" width="492" height="86" rx="14" fill="#0D1117" stroke="#1F2731" stroke-width="2"/>
+      <text x="496" y="187" fill="#E7ECF2" font-size="21" font-weight="700">Hevy — the workout</text>
+      <text x="496" y="217" fill="#6B7684" font-size="16">every set: reps, weight, effort</text>
+      <rect x="812" y="200" width="122" height="26" rx="13" fill="#0E2A1C"/>
+      <text x="873" y="218" fill="#3FCB84" font-size="13" font-weight="700" letter-spacing="1" text-anchor="middle">BY ITSELF</text>
+    </g>
+
+    <g>
+      <rect x="468" y="259" width="492" height="86" rx="14" fill="#0D1117" stroke="#2A2113" stroke-width="2"/>
+      <text x="496" y="294" fill="#E7ECF2" font-size="21" font-weight="700">Garmin Connect — the exercise table</text>
+      <text x="496" y="324" fill="#6B7684" font-size="16">sets and reps, and the muscle map</text>
+      <rect x="784" y="307" width="150" height="26" rx="13" fill="#2A2113"/>
+      <text x="859" y="325" fill="#FFAA00" font-size="13" font-weight="700" letter-spacing="1" text-anchor="middle">ONE COMMAND</text>
+    </g>
+
+    <text x="42" y="380" fill="#4E5866" font-size="15">
+      Garmin does not let a watch app write that last one — so it is filled in afterwards, from your computer.
+    </text>
+  </g>
+</svg>

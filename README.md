@@ -1,15 +1,20 @@
 <div align="center">
 
-# RepFlow
+<img src="docs/assets/banner.svg" alt="RepFlow — your workout, your order" width="100%">
 
-**Your workout. Your order.**
+<br>
 
-A Garmin Connect IQ watch app for people who lift in whatever order the gym allows.
+[![Garmin Connect IQ](https://img.shields.io/badge/Garmin-Connect%20IQ-000000?style=flat-square&logo=garmin&logoColor=white)](https://developer.garmin.com/connect-iq/)
+[![Monkey C](https://img.shields.io/badge/Monkey%20C-SDK%209.2.0-00AAFF?style=flat-square)](https://developer.garmin.com/connect-iq/sdk/)
+[![33 devices](https://img.shields.io/badge/devices-33-00AAFF?style=flat-square)](docs/DEVICE_MATRIX.md)
+[![Hevy](https://img.shields.io/badge/Hevy-two--way-8A63F2?style=flat-square)](#hevy)
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Connect IQ](https://img.shields.io/badge/Connect%20IQ-SDK%209.2.0-0092E4.svg)](https://developer.garmin.com/connect-iq/)
-[![Devices](https://img.shields.io/badge/devices-33-0092E4.svg)](docs/DEVICE_MATRIX.md)
-[![Tests](https://img.shields.io/badge/tests-109%20watch%20%2B%20300%20backend-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-113%20watch%20%2B%20300%20backend-00AA55?style=flat-square)](#testing)
+[![Licence](https://img.shields.io/badge/licence-GPL--3.0-0A7BBE?style=flat-square)](LICENSE)
+[![No invented APIs](https://img.shields.io/badge/APIs-verified%20against%20the%20SDK-FFAA00?style=flat-square)](docs/API_LIMITATIONS.md)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-00AA55?style=flat-square)](CONTRIBUTING.md)
+
+**A Garmin watch app for people who lift in whatever order the gym allows.**
 
 </div>
 
@@ -17,37 +22,88 @@ A Garmin Connect IQ watch app for people who lift in whatever order the gym allo
 
 ## The problem
 
-Garmin's own strength mode makes you follow the workout in the order it was
-written. Real gyms do not work that way. The bench is taken, so you do rows
-first. The cable station has a queue, so you come back to it. Someone is curling
-in the squat rack.
+You planned bench, then rows, then curls. You get there and somebody is on the
+bench for the next twenty minutes.
 
-Every strength app on the watch treats that as an exception. RepFlow treats it as
-the normal case.
+Your watch does not care. Garmin's own strength mode walks through the workout
+in the order it was written, and so does every other strength app on the watch:
+do exercise one, then two, then three. Going out of order means fighting the
+app — skipping, backing out, losing count, or giving up and typing it into your
+phone afterwards.
 
-## The rule everything follows
+Real gyms have never worked that way. **RepFlow treats going out of order as
+normal, because it is.**
 
-> **Select any exercise at any time.**
+<div align="center">
+  <img src="docs/assets/any-order.svg" alt="Bench set 1, rows set 1, bench set 2, curls set 1, rows set 2 — one session, taken in that order on purpose" width="100%">
+</div>
 
-This sequence is ordinary, not a recovery path:
+Pick any exercise at any time. Leave one half-finished and come back to it six
+minutes later. Swap a movement for another. Add one that was not in the plan.
+Nothing is lost and nothing has to be undone, because the app never assumes
+where you are going next.
 
-```
-A set 1  →  B set 1  →  A set 2  →  C set 1  →  B set 2
-```
+## How a session goes
 
-There is no cursor. `WorkoutEngine` navigates by stable exercise id and nothing
-in the codebase increments an index. Defer an occupied machine, come back to it
-six minutes later, and the app has not lost a thing.
+<div align="center">
+  <img src="docs/assets/a-session.svg" alt="Four steps: choose, lift a set, rest, recap" width="100%">
+</div>
+
+You start the app, pick a workout, and choose whatever you are actually about to
+do. You lift. One button says the set is done, and the rest timer starts by
+itself. When you are ready you lift again — the same exercise, or a different
+one, it makes no difference to the app.
+
+At the end you get a recap: what you lifted, how long it took, what your heart
+did, which muscles you worked this week, and anything that was a personal best.
+
+Two buttons carry the whole session. They are the same two Garmin uses on its
+own activity screens, so they already mean what your thumb expects:
+
+| While you are lifting | |
+|---|---|
+| **BACK** | the set is done — start resting |
+| **START** | change the weight or reps first |
+
+| While you are resting | |
+|---|---|
+| **BACK** | rest is over, back to the bar |
+| **START** | show me the exercise list |
+
+**UP** and **DOWN** turn the page — heart rate on one, the session's running
+totals on another. Holding **UP** opens the menu, where everything else lives.
+
+## Where your workout ends up
+
+<div align="center">
+  <img src="docs/assets/where-it-goes.svg" alt="The Garmin activity and the Hevy workout are sent automatically; Garmin's exercise table is filled in afterwards by one command" width="100%">
+</div>
+
+RepFlow records a **real Garmin activity** — strength training, with heart rate,
+zones, calories and training effect. It is not a note-taking app pretending to
+be a workout; it is in your Garmin history like a run is.
+
+If you use **[Hevy](https://www.hevyapp.com/)**, it works both ways: your
+routines come down to the watch before the gym, and the finished session goes
+back up on its own when you save it. You never type a set into your phone again.
+
+There is one thing the watch cannot do, and it is Garmin's doing rather than
+ours. Garmin Connect shows a strength activity with a table of sets and reps and
+a little map of the muscles you worked — and Garmin does not let a watch app
+write that table. So RepFlow fills it in afterwards, from your computer, with a
+single command, using what it already recorded. The whole investigation is
+[written up here](docs/garmin-strength-integration-poc.md), including everything
+that does not work and why.
 
 ## What it does
 
 | | |
 |---|---|
 | **Any order** | Pick, defer, resume, substitute or add an exercise mid-session |
-| **Records a real Garmin activity** | `SPORT_TRAINING` + `SUB_SPORT_STRENGTH_TRAINING` — heart rate, zones, calories, training effect |
+| **A real Garmin activity** | `SPORT_TRAINING` + `SUB_SPORT_STRENGTH_TRAINING` — heart rate, zones, calories, training effect |
 | **Hevy, both ways** | Import your routines to the watch; your finished session goes back automatically |
-| **Fills Garmin's native exercise table** | Sets, reps and loads into the table Connect IQ cannot write itself — see [below](#the-table-connect-iq-cannot-write) |
-| **RPE** | On the scale Hevy's API actually accepts, rated after the set, costing no extra press |
+| **Garmin's native exercise table** | Sets, reps and loads into the table Connect IQ cannot write itself |
+| **Effort (RPE)** | On the scale Hevy's API actually accepts, rated after the set, costing no extra press |
 | **Rest, two ways** | A countdown, or a clock that runs until you say stop |
 | **Recap** | Totals, physiology, time in zone, per-exercise breakdown, effort chart, records, the week's volume by muscle |
 
@@ -61,24 +117,72 @@ six minutes later, and the app has not lost a thing.
 
 </div>
 
-## Buttons
+## Hevy
 
-They follow the watch's own activity screens rather than inventing a scheme.
-During an activity on a Garmin, **BACK is the LAP button** and LAP means "that
-piece is done".
+Optional. Without it RepFlow is a complete workout tracker; with it, your
+routines and your history move between the two.
 
-| Screen | BACK | START | UP / DOWN | MENU |
-|---|---|---|---|---|
-| Exercise | log the set | open the set to adjust it first | data screens | exercise list, edit, end… |
-| Rest | rest is over | exercise list | data screens | exercise list, rest mode, ±15 s… |
-| Exercise list | back where you came from | choose | scroll | — |
+Put your API key (Hevy app → Settings → Developer) into RepFlow's settings from
+Garmin Connect on your phone, then on the watch: workout list → **MENU** →
+**Import from Hevy**.
+
+> **A Hevy key is read *and* write over your entire training history and cannot
+> be scoped.** Never commit one anywhere. `make doctor` checks that none has
+> been, and `make package` refuses to build a Store bundle while one is present.
+
+---
+
+<div align="center">
+
+### Everything below is for building it
+
+</div>
+
+## Getting started
+
+**You need** the [Connect IQ SDK](https://developer.garmin.com/connect-iq/sdk/)
+and a Garmin account to download device definitions. The SDK Manager needs a
+signed-in account; there is no way around that.
+
+```sh
+git clone <your fork>
+cd RepFlow
+
+make bootstrap       # SDK, tooling and a developer signing key
+make doctor          # check the environment
+make test            # 113 watch tests + 300 backend tests
+make sim             # run it in the Connect IQ simulator
+```
+
+To put it on a watch, connect it over USB and:
+
+```sh
+make sideload DEVICE=fenix6pro
+```
+
+`make` on its own lists every command with a one-line description, and
+`make devices` lists the device ids your SDK has definitions for.
+
+## The rule the code follows
+
+> **Select any exercise at any time.**
+
+This sequence is ordinary, not a recovery path:
+
+```
+A set 1  →  B set 1  →  A set 2  →  C set 1  →  B set 2
+```
+
+There is no cursor. `WorkoutEngine` navigates by stable exercise id and nothing
+in the codebase increments an index. Defer an occupied machine, come back to it
+six minutes later, and the app has not lost a thing.
 
 ## The table Connect IQ cannot write
 
-Garmin Connect shows a strength activity with an exercise table, a work/rest
-split and a muscle map. All of it is drawn from FIT `set` messages, and
-**Connect IQ cannot write those** — verified three independent ways against SDK
-9.2.0, and asserted in the test suite so it cannot rot quietly.
+Garmin Connect draws its exercise table, work/rest split and muscle map from FIT
+`set` messages, and **Connect IQ cannot write those** — verified three
+independent ways against SDK 9.2.0, and asserted in the test suite so it cannot
+rot quietly.
 
 So a RepFlow activity arrives native and its table arrives empty.
 
@@ -93,45 +197,7 @@ make sync-hevy       # post the session to Hevy (the watch usually did it alread
 ```
 
 It runs on your machine when you ask it to. Nothing is scheduled and nothing
-listens. The full investigation, including what does not work and why, is in
-[`docs/garmin-strength-integration-poc.md`](docs/garmin-strength-integration-poc.md).
-
-## Getting started
-
-**You need** the [Connect IQ SDK](https://developer.garmin.com/connect-iq/sdk/)
-and a Garmin account to download device definitions. The SDK Manager needs a
-signed-in account; there is no way around that.
-
-```sh
-git clone <your fork>
-cd RepFlow
-
-make bootstrap       # SDK, tooling and a developer signing key
-make doctor          # check the environment
-make test            # 109 watch tests + 300 backend tests
-make sim             # run it in the Connect IQ simulator
-```
-
-To put it on a watch, connect it over USB and:
-
-```sh
-make sideload DEVICE=fenix6pro
-```
-
-`make devices` lists the device ids your SDK has definitions for.
-
-## Hevy
-
-Optional. Without it RepFlow is a complete workout tracker; with it, your
-routines and your history move between the two.
-
-Put your API key (Hevy app → Settings → Developer) into the app's settings from
-Garmin Connect on your phone, then on the watch: workout list → **MENU** →
-**Import from Hevy**.
-
-> **A key is read *and* write over your entire training history and cannot be
-> scoped.** Never commit one. `make doctor` checks that none has been, and
-> `make package` refuses to build a Store bundle while one is present.
+listens.
 
 ## Architecture
 
