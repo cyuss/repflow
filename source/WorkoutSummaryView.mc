@@ -618,22 +618,23 @@ class WorkoutSummaryView extends WatchUi.View {
         }
     }
 
-    //! The largest font that shows a few muscle groups at once.
+    //! The same rule as the exercise list, because it is the same kind of page.
+    //!
+    //! Paging between the two should not change the size of the type. They
+    //! carry the same shape of row — a label, a value, a bar underneath — so
+    //! they are sized the same way, for the same number of rows, off the same
+    //! ladder.
     private function _weekFont(
         dc as Graphics.Dc,
         available as Number,
         trained as Number
     ) as Graphics.FontDefinition {
         var ladder = [
-            Graphics.FONT_MEDIUM,
             Graphics.FONT_SMALL,
             Graphics.FONT_TINY,
             Graphics.FONT_XTINY
         ] as Array<Graphics.FontDefinition>;
-        var wanted = trained < LIST_MIN_ROWS ? trained : LIST_MIN_ROWS;
-        if (wanted < 1) {
-            wanted = 1;
-        }
+        var wanted = LIST_MIN_ROWS;
         for (var i = 0; i < ladder.size(); i++) {
             if (wanted * _rowHeight(dc, ladder[i]) <= available) {
                 return ladder[i];
@@ -830,8 +831,14 @@ class WorkoutSummaryView extends WatchUi.View {
     //! list downwards, and the first row is where reading starts.
     private const LIST_MS_PER_PIXEL = 42;
     private const LIST_PAUSE_MS = 2400;
-    //! Below this many rows on screen at once, a list stops reading as a list.
-    private const LIST_MIN_ROWS = 3;
+    //! How many rows a list page is sized for, however many it actually has.
+    //!
+    //! Fixed, not "as many as there are". Sizing to the content meant a week
+    //! with one muscle in it got the biggest font on the watch and a week with
+    //! five got a small one — the same page, a different size every session,
+    //! which reads as the app being unsure rather than as emphasis. Four rows
+    //! is what a list needs to look like a list.
+    private const LIST_MIN_ROWS = 4;
 
     //! How far to lift a list too tall for its page, and keep the frames coming.
     //!
@@ -872,14 +879,12 @@ class WorkoutSummaryView extends WatchUi.View {
         available as Number,
         count as Number
     ) as Graphics.FontDefinition {
-        var wanted = count < LIST_MIN_ROWS ? count : LIST_MIN_ROWS;
-        if (wanted < 1) {
-            wanted = 1;
-        }
-        // No FONT_MEDIUM here, unlike the week page. These rows carry a name
-        // as well as a count, and at MEDIUM every name on a 260px screen was
-        // clipped to a stub — "Lateral Raise" came out as "Latera.". A bigger
-        // font that costs you the word is not a bigger font.
+        // Sized for LIST_MIN_ROWS whatever `count` is: see the constant.
+        var wanted = LIST_MIN_ROWS;
+        // No FONT_MEDIUM. These rows carry a name as well as a count, and at
+        // MEDIUM every name on a 260px screen was clipped to a stub —
+        // "Lateral Raise" came out as "Latera.". A bigger font that costs you
+        // the word is not a bigger font.
         var ladder = [
             Graphics.FONT_SMALL,
             Graphics.FONT_TINY,
