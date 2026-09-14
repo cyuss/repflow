@@ -87,12 +87,35 @@ module WorkoutRepository {
                 continue;
             }
             try {
-                out.add(Workout.fromStorage(entries[i] as Dictionary));
+                var workout = Workout.fromStorage(entries[i] as Dictionary);
+                _healMuscles(workout);
+                out.add(workout);
             } catch (e) {
                 // Skip it and keep going.
             }
         }
         return out;
+    }
+
+    //! Give a second opinion to exercises that never got a muscle group.
+    //!
+    //! The group is worked out once, when a routine is imported, and stored —
+    //! because a workout outlives the catalogue entry it was built from. That
+    //! is right, and it means a fault in the *guessing* is frozen into every
+    //! routine already on the watch: "Shoulder Press (Dumbbell)" was landing in
+    //! OTHER, which the week's chart does not draw, and re-importing was the
+    //! only way to fix it.
+    //!
+    //! So anything still sitting in OTHER is asked again on every load. Only
+    //! OTHER: a group the athlete's own catalogue decided, or that an earlier
+    //! guess got right, is never overruled here.
+    function _healMuscles(workout as Workout) as Void {
+        var list = workout.exercises;
+        for (var i = 0; i < list.size(); i++) {
+            if (list[i].muscle == Muscle.OTHER) {
+                list[i].muscle = HevyMap.muscleFor(list[i].name);
+            }
+        }
     }
 
     //! Insert or replace a custom workout. Returns false when storage refused.

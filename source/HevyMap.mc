@@ -130,9 +130,16 @@ module HevyMap {
         return exercise;
     }
 
-    //! Best guess at the muscle group, by matching the name against RepFlow's
-    //! own catalogue. Only the weekly volume chart depends on it, so a miss
-    //! costs a bar and never a set.
+    //! Best guess at the muscle group: RepFlow's own catalogue first, then the
+    //! words in the name.
+    //!
+    //! The catalogue is a list of movements someone can *build a workout from*,
+    //! not a dictionary of every way a movement can be written, and Hevy writes
+    //! them differently. The catalogue says "DB Shoulder Press" and "Dumbbell
+    //! Curl"; Hevy says "Shoulder Press (Dumbbell)" and "Bicep Curl (Dumbbell)".
+    //! Neither matched, so both landed in OTHER — and OTHER is not drawn, so the
+    //! week's chart quietly lost the volume instead of misplacing it. An athlete
+    //! who trained shoulders saw a page that did not mention shoulders.
     public function muscleFor(title as String) as Number {
         var lower = title.toLower();
         var groups = Muscle.browseOrder();
@@ -145,7 +152,72 @@ module HevyMap {
                 }
             }
         }
+        return byKeyword(lower);
+    }
+
+    //! What the words say, when no catalogue entry matched.
+    //!
+    //! Written as an ordered run of tests rather than a table, because the
+    //! order *is* the logic and it allocates nothing: "leg curl" has to be read
+    //! before "curl" or every hamstring movement becomes a biceps one, and
+    //! "lateral raise" before "row" or an upright row becomes a back exercise.
+    //!
+    //! Anything genuinely ambiguous is left in OTHER rather than guessed at. A
+    //! missing bar is a gap; a wrong bar is a lie about what was trained.
+    public function byKeyword(lower as String) as Number {
+        // Legs, most specific first — "leg curl" must beat "curl".
+        if (_has(lower, "leg curl") || _has(lower, "nordic") ||
+            _has(lower, "good morning") || _has(lower, "romanian")) {
+            return Muscle.HAMSTRINGS;
+        }
+        if (_has(lower, "calf") || _has(lower, "calves")) {
+            return Muscle.CALVES;
+        }
+        if (_has(lower, "squat") || _has(lower, "lunge") ||
+            _has(lower, "leg extension") || _has(lower, "leg press") ||
+            _has(lower, "step-up") || _has(lower, "step up")) {
+            return Muscle.QUADS;
+        }
+        if (_has(lower, "glute") || _has(lower, "hip thrust") ||
+            _has(lower, "hip abduction")) {
+            return Muscle.GLUTES;
+        }
+
+        // Arms — "pushdown" and "extension" before anything with "press".
+        if (_has(lower, "tricep") || _has(lower, "pushdown") ||
+            _has(lower, "skullcrusher") || _has(lower, "skull crusher")) {
+            return Muscle.TRICEPS;
+        }
+        if (_has(lower, "curl")) {
+            return Muscle.BICEPS;
+        }
+
+        // Shoulders before back, so an upright row stays a shoulder movement.
+        if (_has(lower, "shoulder") || _has(lower, "delt") ||
+            _has(lower, "lateral raise") || _has(lower, "front raise") ||
+            _has(lower, "overhead press") || _has(lower, "upright row") ||
+            _has(lower, "arnold")) {
+            return Muscle.SHOULDERS;
+        }
+        if (_has(lower, "row") || _has(lower, "pulldown") || _has(lower, "pull-up") ||
+            _has(lower, "pullup") || _has(lower, "chin-up") || _has(lower, "chinup") ||
+            _has(lower, "deadlift") || _has(lower, "face pull") || _has(lower, "shrug")) {
+            return Muscle.BACK;
+        }
+        if (_has(lower, "bench") || _has(lower, "chest") || _has(lower, "pec") ||
+            _has(lower, "fly") || _has(lower, "push-up") || _has(lower, "pushup")) {
+            return Muscle.CHEST;
+        }
+        if (_has(lower, "plank") || _has(lower, "crunch") || _has(lower, "sit-up") ||
+            _has(lower, "russian twist") || _has(lower, "ab wheel") ||
+            _has(lower, "leg raise")) {
+            return Muscle.CORE;
+        }
         return Muscle.OTHER;
+    }
+
+    function _has(haystack as String, needle as String) as Boolean {
+        return haystack.find(needle) != null;
     }
 
     //! A stable id from a name, for the rare exercise with no template id.

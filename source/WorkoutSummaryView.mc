@@ -421,37 +421,37 @@ class WorkoutSummaryView extends WatchUi.View {
             return;
         }
 
-        var font = Graphics.FONT_XTINY;
+        var available = bottom - top;
+        // A record is two lines, so it wants a font measured against two.
+        var font = _recordFont(dc, available);
         var lineHeight = dc.getFontHeight(font);
         var rowHeight = lineHeight * 2 + lineHeight / 3;
-        var available = bottom - top;
 
-        var shown = _records.size();
-        var rows = available / rowHeight;
-        if (rows < 1) {
-            return;
-        }
-        var truncated = false;
-        if (shown > rows) {
-            shown = rows - 1;
-            truncated = true;
-        }
-        if (shown < 1) {
-            shown = 1;
-            truncated = _records.size() > 1;
-        }
-
-        var used = (shown + (truncated ? 1 : 0)) * rowHeight;
-        var y = top + (available - (used - lineHeight / 3)) / 2;
-        if (y < top) {
-            y = top;
+        var used = _records.size() * rowHeight;
+        var visible = used - lineHeight / 3;
+        var blockTop = top + (available - visible) / 2;
+        if (blockTop < top) {
+            blockTop = top;
         }
 
         var gutter = dc.getWidth() / 14;
-        var width = Theme.bandWidth(dc, y, used) - gutter;
+        var width = Theme.bandWidth(dc, blockTop, visible < available ? visible : available) - gutter;
         var left = (dc.getWidth() - width) / 2;
 
-        for (var i = 0; i < shown; i++) {
+        // Records are rare, so this list almost never scrolls — but a session
+        // that beats five of them is exactly the one you want to read all of.
+        var offset = _scrollOffset(visible, available);
+        var clipped = offset > 0 && (dc has :setClip);
+        if (clipped) {
+            dc.setClip(0, top, dc.getWidth(), available);
+        }
+        var y = offset > 0 ? top - offset : blockTop;
+
+        for (var i = 0; i < _records.size(); i++) {
+            if (y + rowHeight < top || y > bottom) {
+                y += rowHeight;
+                continue;
+            }
             var row = _records[i] as Array;
             Theme.drawClippedAt(dc, left, y, row[0] as String, font,
                 Theme.colorText(), width);
@@ -470,12 +470,26 @@ class WorkoutSummaryView extends WatchUi.View {
             y += rowHeight;
         }
 
-        if (truncated) {
-            dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
-            dc.drawText(dc.getWidth() / 2, y, font,
-                "+" + (_records.size() - shown).toString(),
-                Graphics.TEXT_JUSTIFY_CENTER);
+        if (clipped) {
+            dc.clearClip();
         }
+    }
+
+    //! The largest font that fits two records — four lines — on the page.
+    private function _recordFont(dc as Graphics.Dc, available as Number) as Graphics.FontDefinition {
+        var ladder = [
+            Graphics.FONT_SMALL,
+            Graphics.FONT_TINY,
+            Graphics.FONT_XTINY
+        ] as Array<Graphics.FontDefinition>;
+        var wanted = _records.size() < 2 ? 1 : 2;
+        for (var i = 0; i < ladder.size(); i++) {
+            var line = dc.getFontHeight(ladder[i]);
+            if (wanted * (line * 2 + line / 3) <= available) {
+                return ladder[i];
+            }
+        }
+        return ladder[ladder.size() - 1];
     }
 
     private function _recordLabel(kind as Number) as ResourceId {
@@ -520,61 +534,112 @@ class WorkoutSummaryView extends WatchUi.View {
             return;
         }
 
-        var font = Graphics.FONT_XTINY;
-        var lineHeight = dc.getFontHeight(font);
-        var rowHeight = lineHeight + lineHeight / 5;
+        // Say whose volume this is.
+        //
+        // Without it the page is a workout's name, "Workout done", and a bar
+        // labelled Back — and after a leg session that reads as the app having
+        // decided you trained your back. The numbers were always the week's;
+        // the page just never said so, which is the same as being wrong.
+        var caption = WatchUi.loadResource(Rez.Strings.ThisWeek) as String;
+        var capFont = Graphics.FONT_XTINY;
+        dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
+        dc.drawText(dc.getWidth() / 2, top, capFont, caption, Graphics.TEXT_JUSTIFY_CENTER);
+        var capHeight = dc.getFontHeight(capFont);
+        top += capHeight;
+
         var available = bottom - top;
+        var font = _weekFont(dc, available, trained);
+        var lineHeight = dc.getFontHeight(font);
+        var barHeight = lineHeight / 6;
+        if (barHeight < 3) {
+            barHeight = 3;
+        }
+        var barGap = lineHeight / 6;
+        var rowHeight = _rowHeight(dc, font);
 
-        var rows = available / rowHeight;
-        var shown = trained < rows ? trained : rows;
-        var used = rowHeight * shown;
-        var visible = used - lineHeight / 5;
-        var y = top + (available - visible) / 2;
-        if (y < top) {
-            y = top;
+        var used = rowHeight * trained;
+        var visible = used - lineHeight / 3;
+        var blockTop = top + (available - visible) / 2;
+        if (blockTop < top) {
+            blockTop = top;
         }
 
-        var gutter = dc.getWidth() / 14;
-        var width = Theme.bandWidth(dc, y, used) - gutter;
+        var band = visible < available ? visible : available - rowHeight;
+        var bandTop = visible < available ? blockTop : top + rowHeight / 2;
+        var width = _listWidth(dc, bandTop, band);
         var left = (dc.getWidth() - width) / 2;
-        var labelWidth = (width * 34) / 100;
-        var valueWidth = (width * 26) / 100;
-        var gap = dc.getWidth() / 40;
-        var barLeft = left + labelWidth + gap;
-        var barWidth = width - labelWidth - valueWidth - gap * 2;
-        var barHeight = (lineHeight * 45) / 100;
-        if (barWidth < 4) {
-            return;
-        }
 
-        var drawn = 0;
-        for (var i = 0; i < order.size() && drawn < shown; i++) {
+        var offset = _scrollOffset(visible, available);
+        var clipped = offset > 0 && (dc has :setClip);
+        if (clipped) {
+            dc.setClip(0, top, dc.getWidth(), available);
+        }
+        var y = offset > 0 ? top - offset : blockTop;
+
+        for (var i = 0; i < order.size(); i++) {
             var group = order[i];
             var volume = _weekly[group];
             if (volume <= 0) {
                 continue;
             }
+            if (y + rowHeight < top || y > bottom) {
+                y += rowHeight;
+                continue;
+            }
             var color = Muscle.color(group);
+            var value = Theme.formatVolume(volume.toFloat());
+            var valueWidth = dc.getTextWidthInPixels(value, font);
+            var gap = width / 16;
+
+            dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
+            dc.drawText(left + width, y, font, value, Graphics.TEXT_JUSTIFY_RIGHT);
 
             dc.setColor(Theme.colorText(), Graphics.COLOR_TRANSPARENT);
-            dc.drawText(left, y, font, Theme.clipToWidth(dc, Muscle.name(group), font, labelWidth),
+            dc.drawText(left, y, font,
+                Theme.clipToWidth(dc, Muscle.name(group), font, width - valueWidth - gap),
                 Graphics.TEXT_JUSTIFY_LEFT);
 
-            var barTop = y + (lineHeight - barHeight) / 2;
-            var filled = ((barWidth * volume) / peak) * Animator.value();
+            var barTop = y + lineHeight + barGap;
+            dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
+            dc.fillRectangle(left, barTop, width, barHeight);
+
+            var filled = ((width * volume) / peak) * Animator.value();
             if (filled < 3) {
                 filled = 3;
             }
             dc.setColor(color, Graphics.COLOR_TRANSPARENT);
-            dc.fillRectangle(barLeft, barTop, filled, barHeight);
-
-            dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
-            dc.drawText(left + width, y, font, Theme.formatVolume(volume.toFloat()),
-                Graphics.TEXT_JUSTIFY_RIGHT);
+            dc.fillRectangle(left, barTop, filled, barHeight);
 
             y += rowHeight;
-            drawn++;
         }
+
+        if (clipped) {
+            dc.clearClip();
+        }
+    }
+
+    //! The largest font that shows a few muscle groups at once.
+    private function _weekFont(
+        dc as Graphics.Dc,
+        available as Number,
+        trained as Number
+    ) as Graphics.FontDefinition {
+        var ladder = [
+            Graphics.FONT_MEDIUM,
+            Graphics.FONT_SMALL,
+            Graphics.FONT_TINY,
+            Graphics.FONT_XTINY
+        ] as Array<Graphics.FontDefinition>;
+        var wanted = trained < LIST_MIN_ROWS ? trained : LIST_MIN_ROWS;
+        if (wanted < 1) {
+            wanted = 1;
+        }
+        for (var i = 0; i < ladder.size(); i++) {
+            if (wanted * _rowHeight(dc, ladder[i]) <= available) {
+                return ladder[i];
+            }
+        }
+        return ladder[ladder.size() - 1];
     }
 
     //! Time in heart rate zone, as a bar chart — the screen a Fenix shows at
@@ -686,6 +751,9 @@ class WorkoutSummaryView extends WatchUi.View {
     //! made a summary that had to be squinted at.
     private function _drawExercisesPage(dc as Graphics.Dc, top as Number, bottom as Number) as Void {
         var list = _workout.exercises;
+        if (list.size() == 0) {
+            return;
+        }
         var available = bottom - top;
 
         var font = _listFont(dc, available, list.size());
@@ -697,30 +765,10 @@ class WorkoutSummaryView extends WatchUi.View {
         var barGap = lineHeight / 6;
         var rowHeight = _rowHeight(dc, font);
 
-        var rows = available / rowHeight;
-        if (rows < 1) {
-            return;
-        }
-        // Leave the last row for "+N more" when the list cannot fit.
-        var shown = list.size();
-        var truncated = false;
-        if (shown > rows) {
-            shown = rows - 1;
-            truncated = true;
-        }
-
-        // Centre on the rows actually drawn, not on the rows that would fit:
-        // four exercises in a five-row space belong in the middle of it.
-        //
-        // The last row's trailing gap is spacing *between* rows, not part of
-        // what you see, so centring the raw block height left the list sitting
-        // high by half of it.
-        var used = (shown + (truncated ? 1 : 0)) * rowHeight;
+        // The block's real height. The last row's trailing gap is spacing
+        // *between* rows, not something you can see, so it is not part of it.
+        var used = list.size() * rowHeight;
         var visible = used - lineHeight / 3;
-        var y = top + (available - visible) / 2;
-        if (y < top) {
-            y = top;
-        }
 
         // One margin for the whole block, measured at its narrowest row.
         //
@@ -728,21 +776,74 @@ class WorkoutSummaryView extends WatchUi.View {
         // looks wrong: the circle narrows as the list descends, so every name
         // started a little further in than the one above it and the left edge
         // came out as a staircase. A list wants a straight margin.
-        var width = _listWidth(dc, y, used);
+        var blockTop = top + (available - visible) / 2;
+        if (blockTop < top) {
+            blockTop = top;
+        }
+
+        // Width is measured across the rows that are **fully** visible, not
+        // across the whole page.
+        //
+        // A round screen narrows fast at the bottom, so measuring the full page
+        // height takes the chord at its very last pixel and hands every row
+        // that width — which cut "Bicep Curl" to "Bicep .". The rows that reach
+        // those last pixels are the ones sliding in and out of the clip, and
+        // they are half-hidden at the time.
+        var band = visible < available
+            ? visible
+            : available - rowHeight;
+        var bandTop = visible < available ? blockTop : top + rowHeight / 2;
+        var width = _listWidth(dc, bandTop, band);
         var left = (dc.getWidth() - width) / 2;
 
-        for (var i = 0; i < shown; i++) {
-            var ex = list[i];
-            _drawRow(dc, y, font, left, width, barGap, barHeight, ex);
+        // Too tall for the page: crawl it instead of cutting it off.
+        //
+        // It used to drop the overflow and print "+3", which names the number
+        // of exercises the athlete cannot see without telling them which — the
+        // least useful sentence available. Every row goes past now, slowly, and
+        // the page is clipped so nothing crosses the rule above or the dots
+        // below.
+        var offset = _scrollOffset(visible, available);
+        var clipped = offset > 0 && (dc has :setClip);
+        if (clipped) {
+            dc.setClip(0, top, dc.getWidth(), available);
+        }
+
+        var y = offset > 0 ? top - offset : blockTop;
+        for (var i = 0; i < list.size(); i++) {
+            // Rows scrolled past the edges cost nothing but are not drawn.
+            if (y + rowHeight >= top && y <= bottom) {
+                _drawRow(dc, y, font, left, width, barGap, barHeight, list[i]);
+            }
             y += rowHeight;
         }
 
-        if (truncated) {
-            var rest = list.size() - shown;
-            dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
-            dc.drawText(dc.getWidth() / 2, y, font, "+" + rest.toString(),
-                Graphics.TEXT_JUSTIFY_CENTER);
+        if (clipped) {
+            dc.clearClip();
         }
+    }
+
+    //! How a recap list that does not fit moves, and how much of it is worth
+    //! seeing before the type gets smaller.
+    //!
+    //! Slower than scrolling text, and a longer rest at the top: you read a
+    //! list downwards, and the first row is where reading starts.
+    private const LIST_MS_PER_PIXEL = 42;
+    private const LIST_PAUSE_MS = 2400;
+    //! Below this many rows on screen at once, a list stops reading as a list.
+    private const LIST_MIN_ROWS = 3;
+
+    //! How far to lift a list too tall for its page, and keep the frames coming.
+    //!
+    //! Returns 0 when everything fits, which is the common case and costs
+    //! nothing: no timer starts and the page stays still.
+    private function _scrollOffset(total as Number, available as Number) as Number {
+        if (total <= available) {
+            return 0;
+        }
+        Marquee.claimFrame();
+        return Marquee.offsetPaced(System.getTimer(), total - available,
+            LIST_MS_PER_PIXEL, LIST_PAUSE_MS);
     }
 
     //! Height of one row — name, gap, progress bar, gap to the next.
@@ -755,23 +856,37 @@ class WorkoutSummaryView extends WatchUi.View {
         return lineHeight + lineHeight / 6 + barHeight + lineHeight / 3;
     }
 
-    //! The largest font that still shows every exercise.
+    //! The largest font that shows a useful number of rows at once.
     //!
-    //! Falls back to the smallest rather than to "as many as fit in a big
-    //! font": a summary that hides two exercises to make the rest larger has
-    //! answered the wrong question.
+    //! This used to demand that **every** row fit, on the reasoning that a
+    //! summary hiding two exercises has answered the wrong question. True — but
+    //! the price was paid by everyone: a seven-exercise session drove the whole
+    //! page down to the smallest font the watch has, on a screen with room to
+    //! spare, and then still could not fit and printed "+3".
+    //!
+    //! The list scrolls now, so nothing is hidden either way. What the font has
+    //! to buy is legibility at arm's length, and three rows on screen is enough
+    //! for a list to read as a list.
     private function _listFont(
         dc as Graphics.Dc,
         available as Number,
         count as Number
     ) as Graphics.FontDefinition {
+        var wanted = count < LIST_MIN_ROWS ? count : LIST_MIN_ROWS;
+        if (wanted < 1) {
+            wanted = 1;
+        }
+        // No FONT_MEDIUM here, unlike the week page. These rows carry a name
+        // as well as a count, and at MEDIUM every name on a 260px screen was
+        // clipped to a stub — "Lateral Raise" came out as "Latera.". A bigger
+        // font that costs you the word is not a bigger font.
         var ladder = [
             Graphics.FONT_SMALL,
             Graphics.FONT_TINY,
             Graphics.FONT_XTINY
         ] as Array<Graphics.FontDefinition>;
         for (var i = 0; i < ladder.size(); i++) {
-            if (count * _rowHeight(dc, ladder[i]) <= available) {
+            if (wanted * _rowHeight(dc, ladder[i]) <= available) {
                 return ladder[i];
             }
         }
@@ -823,7 +938,7 @@ class WorkoutSummaryView extends WatchUi.View {
         dc.setColor(exercise.state == EX_SKIPPED ? Theme.colorDim() : Theme.colorText(),
             Graphics.COLOR_TRANSPARENT);
         dc.drawText(left, y, font,
-            Theme.clipToWidth(dc, exercise.name, font, width - countWidth - gap),
+            Theme.clipToWidth(dc, exercise.shortName(), font, width - countWidth - gap),
             Graphics.TEXT_JUSTIFY_LEFT);
 
         var barTop = y + dc.getFontHeight(font) + barGap;

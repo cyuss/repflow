@@ -1688,6 +1688,111 @@ function testMarqueeOffsetStaysInRange(logger as Test.Logger) as Boolean {
     return true;
 }
 
+//! Volume has to land on a muscle, or the week's chart quietly loses it.
+//!
+//! The catalogue is a list of movements to build a workout *from*, not a
+//! dictionary of every way one can be written — it says "DB Shoulder Press"
+//! and "Dumbbell Curl" where Hevy says "Shoulder Press (Dumbbell)" and "Bicep
+//! Curl (Dumbbell)". Both fell through to OTHER, which is not drawn, so an
+//! athlete who trained shoulders got a week page with no shoulders on it.
+(:test)
+function testEveryRoutineMovementLandsOnAMuscle(logger as Test.Logger) as Boolean {
+    // The athlete's own routines, verbatim from Hevy.
+    Test.assertEqual(HevyMap.muscleFor("Shoulder Press (Dumbbell)"), Muscle.SHOULDERS);
+    Test.assertEqual(HevyMap.muscleFor("Bicep Curl (Dumbbell)"), Muscle.BICEPS);
+    Test.assertEqual(HevyMap.muscleFor("Lateral Raise (Dumbbell)"), Muscle.SHOULDERS);
+    Test.assertEqual(HevyMap.muscleFor("Triceps Extension (Cable)"), Muscle.TRICEPS);
+    Test.assertEqual(HevyMap.muscleFor("Goblet Squat"), Muscle.QUADS);
+    Test.assertEqual(HevyMap.muscleFor("Standing Calf Raise (Dumbbell)"), Muscle.CALVES);
+
+    // The orderings that carry the logic.
+    Test.assertEqual(HevyMap.byKeyword("seated leg curl (machine)"), Muscle.HAMSTRINGS);
+    Test.assertEqual(HevyMap.byKeyword("hammer curl"), Muscle.BICEPS);
+    Test.assertEqual(HevyMap.byKeyword("upright row"), Muscle.SHOULDERS);
+    Test.assertEqual(HevyMap.byKeyword("barbell row"), Muscle.BACK);
+    Test.assertEqual(HevyMap.byKeyword("triceps pushdown"), Muscle.TRICEPS);
+
+    // A wrong bar is a lie about what was trained; a missing one is only a gap.
+    Test.assertEqual(HevyMap.byKeyword("mystery machine thing"), Muscle.OTHER);
+    return true;
+}
+
+//! The equipment in brackets is the half of a name you already know.
+//!
+//! Hevy writes "Lateral Raise (Dumbbell)". In the recap's list of seven rows
+//! that bracket is repeated noise, and at a legible font size it pushes the
+//! actual movement off a 260px screen — "Lateral Raise" came out as "Latera.".
+(:test)
+function testAnExerciseNameDropsItsEquipmentBracket(logger as Test.Logger) as Boolean {
+    var ex = new Exercise("x", "Lateral Raise (Dumbbell)", 4, 10, 10.0, 90);
+    Test.assertEqual(ex.shortName(), "Lateral Raise");
+
+    ex.name = "Seated Leg Curl (Machine)";
+    Test.assertEqual(ex.shortName(), "Seated Leg Curl");
+
+    // Nothing to drop.
+    ex.name = "Deadlift";
+    Test.assertEqual(ex.shortName(), "Deadlift");
+
+    // A bracket that is not at the end is part of the name.
+    ex.name = "Squat (Front) variation";
+    Test.assertEqual(ex.shortName(), "Squat (Front) variation");
+
+    // Dropping it would leave nothing, so it stays.
+    ex.name = "(Machine)";
+    Test.assertEqual(ex.shortName(), "(Machine)");
+    return true;
+}
+
+//! A list scrolls at its own pace, and the pace is the readable one.
+//!
+//! The recap's exercise list used to print "+3" and drop three exercises — the
+//! least useful sentence available, since it names how many you cannot see
+//! without naming which. It crawls the whole list past instead, and the pace
+//! matters: a row that slides away mid-word is a row you wait a full cycle for.
+(:test)
+function testAListCrawlsSlowerThanTextScrolls(logger as Test.Logger) as Boolean {
+    var overflow = 90;
+
+    // Same shape as the text scroller: starts at rest, reaches the far end,
+    // comes back, never leaves the range.
+    var msPerPixel = 42;
+    var pause = 2400;
+    var travel = overflow * msPerPixel;
+    var period = (pause + travel) * 2;
+
+    var sawStart = false;
+    var sawEnd = false;
+    for (var t = 0; t < period; t += 50) {
+        var offset = Marquee.offsetPaced(t, overflow, msPerPixel, pause);
+        Test.assert(offset >= 0);
+        Test.assert(offset <= overflow);
+        if (offset == 0) { sawStart = true; }
+        if (offset == overflow) { sawEnd = true; }
+    }
+    Test.assert(sawStart);
+    Test.assert(sawEnd);
+
+    // Slower than text, or the rows go past faster than they can be read.
+    Test.assert(msPerPixel > Marquee.MS_PER_PIXEL);
+    // And it waits longer before setting off, because that is where reading
+    // starts.
+    Test.assert(pause > Marquee.PAUSE_MS);
+
+    // Halfway through the travel is halfway down the list, whatever the pace.
+    var mid = Marquee.offsetPaced(pause + travel / 2, overflow, msPerPixel, pause);
+    Test.assert(mid > overflow / 3);
+    Test.assert(mid < (overflow * 2) / 3);
+
+    // The text pace is this with its own numbers filled in.
+    Test.assertEqual(Marquee.offsetPaced(1234, 60, Marquee.MS_PER_PIXEL, Marquee.PAUSE_MS),
+        Marquee.offsetAt(1234, 60));
+
+    Test.assertEqual(Marquee.offsetPaced(0, 0, msPerPixel, pause), 0);
+    Test.assertEqual(Marquee.offsetPaced(99999, -5, msPerPixel, pause), 0);
+    return true;
+}
+
 //! Every catalogue name is either legible still, or scrolls.
 //!
 //! This is the test that would have caught the first version of the marquee,

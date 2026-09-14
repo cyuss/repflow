@@ -163,26 +163,51 @@ module Marquee {
     //! is the whole of this module worth getting wrong — can be walked through
     //! a full cycle by a test rather than sampled at one instant.
     public function offsetAt(millis as Number, overflow as Number) as Number {
+        return offsetPaced(millis, overflow, MS_PER_PIXEL, PAUSE_MS);
+    }
+
+    //! The same travel, at a pace the caller chooses.
+    //!
+    //! A line of text and a list of rows want different speeds. Text comes back
+    //! round and you catch the word you missed; a list you are reading *down*,
+    //! and a row that slides away mid-word is a row you have to wait a whole
+    //! cycle for. Slower, and a longer rest at the top where reading starts.
+    public function offsetPaced(
+        millis as Number,
+        overflow as Number,
+        msPerPixel as Number,
+        pauseMs as Number
+    ) as Number {
         if (overflow <= 0) {
             return 0;
         }
-        var travel = overflow * MS_PER_PIXEL;
-        var period = (PAUSE_MS + travel) * 2;
+        var travel = overflow * msPerPixel;
+        var period = (pauseMs + travel) * 2;
         var t = millis % period;
 
-        if (t < PAUSE_MS) {
+        if (t < pauseMs) {
             return 0;                                   // resting at the start
         }
-        t -= PAUSE_MS;
+        t -= pauseMs;
         if (t < travel) {
             return (t * overflow) / travel;             // travelling out
         }
         t -= travel;
-        if (t < PAUSE_MS) {
+        if (t < pauseMs) {
             return overflow;                            // resting at the end
         }
-        t -= PAUSE_MS;
+        t -= pauseMs;
         return overflow - (t * overflow) / travel;      // travelling back
+    }
+
+    //! Ask for animation frames without drawing any text through this module.
+    //!
+    //! The recap's lists scroll vertically using this module's clock and its
+    //! timer, but draw themselves — so they have to say they are still moving,
+    //! or `endFrame` stops the timer underneath them on the very next frame.
+    public function claimFrame() as Void {
+        _neededThisFrame = true;
+        _ensureRunning();
     }
 
     //! Called at the end of a view's onUpdate. Stops the timer when a whole

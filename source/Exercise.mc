@@ -148,6 +148,31 @@ class Exercise {
         return v;
     }
 
+    //! The movement, without the equipment its name carries in brackets.
+    //!
+    //! Hevy names a movement `Lateral Raise (Dumbbell)`, and the bracket is
+    //! nearly half the string while being the half you already know — the
+    //! dumbbell is in your hand. In a list of seven rows it is repeated noise
+    //! that pushes every real name off the edge of a round screen.
+    //!
+    //! Only a trailing bracket is removed, and only if something is left: a
+    //! movement actually called "(Machine)" keeps the name it has.
+    public function shortName() as String {
+        var name = self.name;
+        var open = name.find(" (");
+        if (open == null || (open as Number) <= 0) {
+            return name;
+        }
+        // substring is typed as String? — a length the runtime disagrees with
+        // gives null, and calling equals on that is the error this guards.
+        var tail = name.substring(name.length() - 1, name.length());
+        if (tail == null || !(tail as String).equals(")")) {
+            return name;
+        }
+        var cut = name.substring(0, open as Number);
+        return cut == null || cut.length() == 0 ? name : cut;
+    }
+
     public function toStorage() as Dictionary {
         var rawSets = [] as Array;
         for (var i = 0; i < sets.size(); i++) {
