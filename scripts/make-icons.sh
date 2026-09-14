@@ -31,9 +31,9 @@ done
 [ -s "$SIZES_FILE" ] || die "Could not read any launcher icon sizes."
 
 # Render one PNG per distinct size.
-rm -rf "$REPO_ROOT"/resources-icon-*
+rm -rf "$REPO_ROOT"/resources/icons/*
 for size in $(awk '{print $1}' "$SIZES_FILE" | sort -n -u); do
-  dir="$REPO_ROOT/resources-icon-$size/drawables"
+  dir="$REPO_ROOT/resources/icons/$size/drawables"
   mkdir -p "$dir"
   rsvg-convert -w "$size" -h "$size" "$MASTER" -o "$dir/launcher_icon.png"
   cat > "$dir/drawables.xml" <<XML
@@ -42,7 +42,7 @@ for size in $(awk '{print $1}' "$SIZES_FILE" | sort -n -u); do
     <bitmap id="LauncherIcon" filename="launcher_icon.png" />
 </drawables>
 XML
-  ok "resources-icon-$size"
+  ok "resources/icons/$size"
 done
 
 # Fallback for any device without an explicit override.
@@ -85,7 +85,7 @@ for size in sorted(by_size):
     out.append("")
     out.append("# %dx%d" % (size, size))
     for dev in sorted(by_size[size]):
-        out.append("%s.resourcePath = $(%s.resourcePath);resources-icon-%d" % (dev, dev, size))
+        out.append("%s.resourcePath = $(%s.resourcePath);resources/icons/%d" % (dev, dev, size))
 out.append("")
 open("monkey.jungle", "w").write("\n".join(out))
 print("monkey.jungle rewritten for %d devices across %d sizes"

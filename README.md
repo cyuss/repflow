@@ -1,234 +1,199 @@
+<div align="center">
+
 # RepFlow
 
 **Your workout. Your order.**
 
-RepFlow is a flexible strength-training app for Garmin watches that lets you
-change exercise order, temporarily skip occupied machines, resume them later,
-and track sets, reps and weight without breaking your workout.
+A Garmin Connect IQ watch app for people who lift in whatever order the gym allows.
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Connect IQ](https://img.shields.io/badge/Connect%20IQ-SDK%209.2.0-0092E4.svg)](https://developer.garmin.com/connect-iq/)
+[![Devices](https://img.shields.io/badge/devices-33-0092E4.svg)](docs/DEVICE_MATRIX.md)
+[![Tests](https://img.shields.io/badge/tests-109%20watch%20%2B%20300%20backend-brightgreen.svg)](#testing)
+
+</div>
 
 ---
 
-## Why RepFlow exists
+## The problem
 
-Structured workouts assume you will do the exercises in the order they were
-written. Real gyms disagree:
+Garmin's own strength mode makes you follow the workout in the order it was
+written. Real gyms do not work that way. The bench is taken, so you do rows
+first. The cable station has a queue, so you come back to it. Someone is curling
+in the squat rack.
 
-- the machine you need is taken;
-- you want to superset two movements;
-- you want to skip something and come back to it;
-- you want to change the weight mid-workout.
+Every strength app on the watch treats that as an exception. RepFlow treats it as
+the normal case.
 
-Every other option makes you choose between following the plan and tracking
-nothing. RepFlow's whole design follows from one rule:
+## The rule everything follows
 
 > **Select any exercise at any time.**
 
-There is no linear workout index. The engine navigates by stable exercise id,
-and moving between exercises never loses a single set.
+This sequence is ordinary, not a recovery path:
 
-## Screenshots
+```
+A set 1  →  B set 1  →  A set 2  →  C set 1  →  B set 2
+```
 
-| Workout picker | Exercise | Rest | Overview | Summary |
+There is no cursor. `WorkoutEngine` navigates by stable exercise id and nothing
+in the codebase increments an index. Defer an occupied machine, come back to it
+six minutes later, and the app has not lost a thing.
+
+## What it does
+
+| | |
+|---|---|
+| **Any order** | Pick, defer, resume, substitute or add an exercise mid-session |
+| **Records a real Garmin activity** | `SPORT_TRAINING` + `SUB_SPORT_STRENGTH_TRAINING` — heart rate, zones, calories, training effect |
+| **Hevy, both ways** | Import your routines to the watch; your finished session goes back automatically |
+| **Fills Garmin's native exercise table** | Sets, reps and loads into the table Connect IQ cannot write itself — see [below](#the-table-connect-iq-cannot-write) |
+| **RPE** | On the scale Hevy's API actually accepts, rated after the set, costing no extra press |
+| **Rest, two ways** | A countdown, or a clock that runs until you say stop |
+| **Recap** | Totals, physiology, time in zone, per-exercise breakdown, effort chart, records, the week's volume by muscle |
+
+## Screens
+
+<div align="center">
+
+| Set | Rest | Recap |
+|:---:|:---:|:---:|
+| <img src="store-assets/screenshots/fenix6pro-set-editor.png" width="200"> | <img src="store-assets/screenshots/fenix6pro-rest.png" width="200"> | <img src="store-assets/screenshots/fenix6pro-recap-work.png" width="200"> |
+
+</div>
+
+## Buttons
+
+They follow the watch's own activity screens rather than inventing a scheme.
+During an activity on a Garmin, **BACK is the LAP button** and LAP means "that
+piece is done".
+
+| Screen | BACK | START | UP / DOWN | MENU |
 |---|---|---|---|---|
-| _`store-assets/screenshots/01-workouts.png`_ | _`02-exercise.png`_ | _`03-rest.png`_ | _`04-overview.png`_ | _`05-summary.png`_ |
+| Exercise | log the set | open the set to adjust it first | data screens | exercise list, edit, end… |
+| Rest | rest is over | exercise list | data screens | exercise list, rest mode, ±15 s… |
+| Exercise list | back where you came from | choose | scroll | — |
 
-> Placeholders — capture from the simulator with **File → Save Screenshot**, or
-> from the watch, before submitting to the Store.
+## The table Connect IQ cannot write
 
-## Features
+Garmin Connect shows a strength activity with an exercise table, a work/rest
+split and a muscle map. All of it is drawn from FIT `set` messages, and
+**Connect IQ cannot write those** — verified three independent ways against SDK
+9.2.0, and asserted in the test suite so it cannot rot quietly.
 
-- **Pick any exercise, any time** — from a one-press workout overview.
-- **Skip for now** — an occupied machine becomes `PENDING`, not skipped and not
-  completed. It stays in the list, and resumes exactly where you left it.
-- **Alternate freely** — supersets and circuits work because two
-  partially-completed exercises can be interleaved without data loss.
-- **Smart value inheritance** — the next set is pre-filled with the weight and
-  reps you *actually* performed, not the template's. Change set 2 to 57.5 kg and
-  set 3 follows.
-- **One press per set** — START completes the set. That is the whole hot path.
-- **Rest timer** — counts down with a draining arc, shows what is next, vibrates
-  once at zero. Skip it, extend it, or walk away and do something else.
-- **Honest completion** — RepFlow will not call a workout done while exercises
-  are unfinished without asking you first.
-- **Real Garmin activity** — records a genuine strength training activity that
-  syncs to Garmin Connect, with a lap per set.
-- **Offline first** — no phone, no internet, no account. Ever.
-- **Survives interruption** — state is persisted after every set; kill the app
-  mid-workout and it resumes where you were.
+So a RepFlow activity arrives native and its table arrives empty.
 
-## Supported devices
-
-**Primary targets**
-
-- **Fenix 9 Pro 47 mm** (`fenix9pro47mm`) — 454x454 AMOLED
-- **Fenix 9 Pro 51 mm** (`fenix9pro51mm`) — 466x466 AMOLED
-- Fenix 9 Pro 43 mm, Fenix 9 Pro Solar 47/51 mm, Fenix 9 43/47 mm
-- Fenix 8 family (`fenix8pro47mm`, `fenix847mm`, `fenix843mm`, `fenix8solar47mm`, `fenix8solar51mm`)
-
-**Secondary target**
-
-- Fenix 6 Pro (`fenix6pro`) and the rest of the Fenix 6 family — 240x240, no
-  touch, the tightest layout and memory budget RepFlow supports
-
-Plus the Fenix 7 family, epix 2 family, Venu 3 / 3S and vivoactive 5 / 6 —
-**34 devices in total**, all verified to compile.
-
-Run `make devices` to see exactly what your machine can build right now, and
-`scripts/device-matrix.sh` for per-device resolution, memory and input details.
-
-## Architecture
-
-```
-Views  ──▶  AppController  ──▶  WorkoutEngine (pure domain)
-                 │                    │
-                 ├──▶ RestTimer (pure)│
-                 ├──▶ GarminRecorder ─┴──▶ ActivityRecording / FIT
-                 └──▶ SessionRepository ──▶ Application.Storage
-```
-
-Dependencies point downward only. The workout engine imports `Toybox.Lang` and
-nothing else — no UI, no storage, no recording — which is what makes it fully
-unit-testable. `GarminRecorder` is the only file that touches
-`ActivityRecording`; `SessionRepository` is the only one that touches `Storage`.
-
-Full detail: **`docs/ARCHITECTURE.md`**.
-
-## Quick start
+`backend/` closes that from the other side. It reads the activity Garmin already
+stores, pulls the sets back out of the developer fields RepFlow wrote into the
+FIT, and writes them into the same activity as native exercise sets — no second
+activity, and the heart rate and calories the watch measured stay untouched.
 
 ```sh
-git clone <this repo> && cd RepFlow
-make bootstrap        # JDK, Connect IQ SDK, SDK Manager, VS Code ext, signing key
-make doctor           # verify the environment
-make test             # run the workout engine test suite
-make sim              # build and launch in the Connect IQ Simulator
+make sync-garmin     # fill Garmin Connect's exercise table
+make sync-hevy       # post the session to Hevy (the watch usually did it already)
 ```
 
-### One manual step
+It runs on your machine when you ask it to. Nothing is scheduled and nothing
+listens. The full investigation, including what does not work and why, is in
+[`docs/garmin-strength-integration-poc.md`](docs/garmin-strength-integration-poc.md).
 
-Garmin ships **device definitions** only through the Connect IQ SDK Manager,
-which requires signing in with a Garmin account and accepting the SDK licence.
-Nothing can compile without them.
+## Getting started
 
-1. Open the Connect IQ SDK Manager (`make bootstrap` installs it).
-2. Sign in, accept the licence.
-3. **Devices** tab → download the devices you target
-   (at minimum `fenix9pro47mm`, `fenix9pro51mm`, `fenix6pro`).
-4. `make doctor`.
-
-Everything else is automated. See **`docs/ENVIRONMENT.md`**.
-
-## Build
+**You need** the [Connect IQ SDK](https://developer.garmin.com/connect-iq/sdk/)
+and a Garmin account to download device definitions. The SDK Manager needs a
+signed-in account; there is no way around that.
 
 ```sh
-make devices                       # list buildable device ids
-make build                         # default device
-make build DEVICE=fenix847mm       # a specific device
-make build-all                     # every supported, installed device
-RELEASE=1 scripts/build.sh fenix6pro
+git clone <your fork>
+cd RepFlow
+
+make bootstrap       # SDK, tooling and a developer signing key
+make doctor          # check the environment
+make test            # 109 watch tests + 300 backend tests
+make sim             # run it in the Connect IQ simulator
 ```
 
-`just` recipes mirror every `make` target: `just build fenix847mm`.
-
-## Simulator
-
-```sh
-make sim DEVICE=fenix6pro
-```
-
-Builds, launches the simulator if it is not running, and pushes the binary.
-
-In VS Code: **Monkey C: Verify Installation**, then
-**Run → Run Without Debugging** and pick a device.
-
-## Tests
-
-```sh
-make test
-make test DEVICE=fenix847mm
-```
-
-Garmin's Run No Evil framework, executed in the simulator. The suite covers
-arbitrary navigation, skip/pending/resume, alternating exercises, value
-inheritance, rest timer state, summary maths and persistence round-trips.
-
-See **`docs/TESTING.md`**.
-
-## Physical device testing
+To put it on a watch, connect it over USB and:
 
 ```sh
 make sideload DEVICE=fenix6pro
 ```
 
-Builds a signed release PRG and copies it to a USB-connected watch's
-`GARMIN/APPS/`. It never deletes anything on the watch, and prints manual
-instructions if the watch is in MTP mode.
+`make devices` lists the device ids your SDK has definitions for.
 
-Then work through **`docs/SMOKE_TEST.md`** — the mandatory release gate.
-Full workflow: **`docs/DEVICE_TESTING.md`**.
+## Hevy
 
-## Release
+Optional. Without it RepFlow is a complete workout tracker; with it, your
+routines and your history move between the two.
 
-```sh
-make package
+Put your API key (Hevy app → Settings → Developer) into the app's settings from
+Garmin Connect on your phone, then on the watch: workout list → **MENU** →
+**Import from Hevy**.
+
+> **A key is read *and* write over your entire training history and cannot be
+> scoped.** Never commit one. `make doctor` checks that none has been, and
+> `make package` refuses to build a Store bundle while one is present.
+
+## Architecture
+
+```
+Views ──▶ AppController ──▶ WorkoutEngine        (pure: imports only Toybox.Lang)
+               ├──▶ RestTimer                    (pure, tick-driven)
+               ├──▶ GarminRecorder ──▶ ActivityRecording      (the only file that does)
+               ├──▶ SessionRepository ──▶ Application.Storage (the only file that does)
+               └──▶ HevySync ──▶ HevyApi ──▶ Hevy REST
 ```
 
-Runs doctor, the full test suite, a release build for every supported device,
-then produces the Connect IQ Store `.iq` bundle with `monkeyc --package-app`.
+- `WorkoutEngine` is the **single writer** of exercise state. Its class comment
+  lists every legal transition.
+- Screens are drawn in code, not from XML layouts, so one path covers 240×240
+  through 466×466.
+- Navigation is flat: `switchToView` everywhere, never a push/pop stack.
 
-Submission steps: **`docs/CONNECT_IQ_DEPLOYMENT.md`**.
-Gate list: **`docs/RELEASE_CHECKLIST.md`**.
+More in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## Known Garmin limitations
+## Testing
 
-Verified against the installed SDK, not assumed:
+```sh
+make test            # everything
+make test-watch      # Monkey C, in the simulator
+make test-backend    # Python, no account needed
+```
 
-- **No native per-set FIT messages.** Connect IQ's `ActivityRecording.Session`
-  cannot write Garmin's `set` messages. RepFlow records a genuine strength
-  activity, marks a lap per set, and writes developer FIT fields for total sets,
-  reps and volume — but Garmin Connect's built-in per-set breakdown stays empty.
-- **No pause/resume on a recording session.** `stop()` + `start()` is the
-  supported equivalent.
-- **A recording cannot be reattached after an app restart.** RepFlow's own
-  workout state is fully restored; the Garmin recording restarts, so an
-  interrupted workout produces two activities.
-- **Garmin Connect workouts cannot be read or reordered** from Connect IQ. This
-  is precisely why RepFlow owns its own engine.
+The watch suite runs in the Connect IQ simulator under Run No Evil. The backend
+suite is ordinary pytest: the payload builder, the exercise mapping and the FIT
+reader are pure functions, and the FIT fixtures are encoded with **Garmin's own**
+Python SDK so the reader is checked against Garmin's definition of the format
+rather than against its own assumptions.
 
-Detail and workarounds: **`docs/API_LIMITATIONS.md`**.
+`backend/tests/test_watch_contract.py` is the one to read first: it parses the
+Monkey C source and the resource XML and fails if the two languages ever stop
+agreeing about the developer FIT fields.
 
-## Roadmap
+## Contributing
 
-| Version | Focus |
-|---|---|
-| **V0.1** | **Flexible workout engine, arbitrary navigation, skip/resume, rest timer, strength recording** ← current |
-| V0.2 | Persistence improvements, history, last-session values, personal records |
-| V0.3 | Supersets, circuits, warm-up sets, drop sets, RPE/RIR |
-| V0.4 | Optional RepFlow API, workout synchronisation |
-| V0.5 | Lightweight web/PWA workout editor |
-| V0.6 | iOS/Android companion app, if justified |
-| V1 | A mature Hevy-like strength experience for Garmin |
-
-Possible later: Garmin Training API, Hevy import, cloud sync, progression
-recommendations. None of it is built or stubbed today.
-
-## Documentation
-
-| Doc | Contents |
-|---|---|
-| `docs/PRODUCT.md` | The problem, the principle, the flows |
-| `docs/ARCHITECTURE.md` | Layers, files, state machine, design decisions |
-| `docs/ENVIRONMENT.md` | SDK, tooling, the one manual step |
-| `docs/DEVELOPMENT.md` | Commands, button map, conventions |
-| `docs/TESTING.md` | What is tested and why |
-| `docs/SMOKE_TEST.md` | The mandatory manual release gate |
-| `docs/DEVICE_TESTING.md` | Sideloading and on-watch verification |
-| `docs/DEVICE_MATRIX.md` | Per-device capabilities and results |
-| `docs/SIGNING.md` | The signing key and the app UUID |
-| `docs/API_LIMITATIONS.md` | Verified Garmin API constraints |
-| `docs/CONNECT_IQ_DEPLOYMENT.md` | Store export and submission |
-| `docs/RELEASE_CHECKLIST.md` | Release gate list |
-| `docs/IMPLEMENTATION_PLAN.md` | Phased build plan and status |
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) first — particularly the no-fake-API
+rule, which is the one thing this project will not bend on: never invent a
+class, method, constant or device id. Verify it against the installed SDK, and
+record what you found in [`docs/API_LIMITATIONS.md`](docs/API_LIMITATIONS.md).
 
 ## Licence
 
-Not yet chosen. Add one before publishing.
+[GNU General Public License v3.0](LICENSE).
+
+You may use, study, modify and redistribute this. If you distribute a modified
+version, you must publish its source under the same licence. That is the point:
+improvements come back, and nobody turns this into something closed.
+
+## Acknowledgements
+
+- Garmin's [Connect IQ SDK](https://developer.garmin.com/connect-iq/) and its
+  published FIT profile.
+- [cyberjunky/python-garminconnect](https://github.com/cyberjunky/python-garminconnect)
+  (MIT), from which the Garmin exercise catalogue shipped in `backend/` is
+  generated — see `backend/scripts/generate_catalogue.py`.
+- [hevy2garmin](https://github.com/intergalacticwiseguy/hevy2garmin), which
+  demonstrated that a native strength FIT file can be produced outside the
+  watch, and is the reason `docs/garmin-strength-integration-poc.md` reaches the
+  conclusion it does.
+
+RepFlow is not affiliated with Garmin or with Hevy.

@@ -292,7 +292,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Documentation
 
-- `README.md`, `CLAUDE.md`, and `docs/` covering product, architecture,
+- `README.md`, `CONTRIBUTING.md`, and `docs/` covering product, architecture,
   environment, development, testing, smoke test, device testing, device matrix,
   signing, verified API limitations, Store deployment and the release checklist
 - `store-assets/` templates for the Connect IQ Store listing

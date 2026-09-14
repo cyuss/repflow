@@ -1,20 +1,17 @@
-# CLAUDE.md — working on RepFlow
+# Contributing to RepFlow
 
-Orientation for future Claude Code sessions.
+What you need to know before changing anything here.
 
-## Start every session with
+## Before your first change
 
 ```sh
-pwd
-cat CLAUDE.md          # this file
-git status
-head -40 CHANGELOG.md
-make doctor
-make test
-git log --oneline -15
+make doctor          # is the environment right?
+make test            # does it pass before you touch it?
 ```
 
-Then continue from the current milestone (below).
+If `doctor` reports a missing SDK or missing device definitions, read
+[`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md). Device definitions require a
+signed-in Garmin account in the SDK Manager and there is no way to automate it.
 
 ## Product in one line
 
@@ -22,7 +19,7 @@ Then continue from the current milestone (below).
 flexible strength training: select any exercise at any time, defer an occupied
 machine and resume it later, without losing workout state.
 
-Read `docs/PRODUCT.md` before changing behaviour.
+Read [`docs/PRODUCT.md`](docs/PRODUCT.md) before changing behaviour.
 
 ## The rule everything follows
 
@@ -55,7 +52,7 @@ Views ──▶ AppController ──▶ WorkoutEngine (pure: imports only Toybox
   `WatchUi.Confirmation` pops itself and fights this — that is why
   `EndWorkoutFlow` uses a `Menu2` instead.
 
-Full detail: `docs/ARCHITECTURE.md`.
+Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Key files
 
@@ -72,6 +69,7 @@ Full detail: `docs/ARCHITECTURE.md`.
 | `backend/` | Optional: fills Garmin Connect's native exercise table after the fact |
 | `backend/tests/test_watch_contract.py` | Fails when Monkey C and Python disagree about the FIT fields |
 | `manifest.xml` | App UUID and supported products — handle with care |
+| `CHANGELOG.md` | What changed and why, newest first |
 
 ## Garmin constraints — no-fake-API rule
 
@@ -82,7 +80,8 @@ Full detail: `docs/ARCHITECTURE.md`.
 3. Check Garmin's official docs online
 4. Build a tiny proof-of-concept if still unsure
 
-Then record what you found in `docs/API_LIMITATIONS.md`.
+Then record what you found in
+[`docs/API_LIMITATIONS.md`](docs/API_LIMITATIONS.md).
 
 Verified limitations you must not paper over:
 
@@ -137,6 +136,15 @@ Fenix 9 at all, even though `fenix9pro47mm` and `fenix9pro51mm` build fine).
 - `docs/SMOKE_TEST.md` is the mandatory manual gate. Steps 8, 12 and 14
   (skip → pending → resume with state intact) are the product; if they fail, the
   release is blocked.
+
+## Commits
+
+Write the message for someone reading it in a year with no memory of today.
+Say what changed, and say **why** — the reason is the part that cannot be
+recovered from the diff. If you fixed something, say what it did wrong and how
+you knew. If you removed a test, say why its subject no longer exists.
+
+A commit that says "fix layout" has thrown away the only information it had.
 
 ## Current milestone
 

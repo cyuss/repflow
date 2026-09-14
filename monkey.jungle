@@ -20,46 +20,46 @@ base.resourcePath = resources
 # list in manifest.xml.
 
 # 40x40
-fenix6.resourcePath = $(fenix6.resourcePath);resources-icon-40
-fenix6pro.resourcePath = $(fenix6pro.resourcePath);resources-icon-40
-fenix6s.resourcePath = $(fenix6s.resourcePath);resources-icon-40
-fenix6spro.resourcePath = $(fenix6spro.resourcePath);resources-icon-40
-fenix6xpro.resourcePath = $(fenix6xpro.resourcePath);resources-icon-40
-fenix7.resourcePath = $(fenix7.resourcePath);resources-icon-40
-fenix7pro.resourcePath = $(fenix7pro.resourcePath);resources-icon-40
-fenix7pronowifi.resourcePath = $(fenix7pronowifi.resourcePath);resources-icon-40
-fenix7s.resourcePath = $(fenix7s.resourcePath);resources-icon-40
-fenix7spro.resourcePath = $(fenix7spro.resourcePath);resources-icon-40
-fenix7x.resourcePath = $(fenix7x.resourcePath);resources-icon-40
-fenix7xpro.resourcePath = $(fenix7xpro.resourcePath);resources-icon-40
-fenix7xpronowifi.resourcePath = $(fenix7xpronowifi.resourcePath);resources-icon-40
-fenix8solar47mm.resourcePath = $(fenix8solar47mm.resourcePath);resources-icon-40
-fenix8solar51mm.resourcePath = $(fenix8solar51mm.resourcePath);resources-icon-40
-fenix9prosolar47mm.resourcePath = $(fenix9prosolar47mm.resourcePath);resources-icon-40
-fenix9prosolar51mm.resourcePath = $(fenix9prosolar51mm.resourcePath);resources-icon-40
+fenix6.resourcePath = $(fenix6.resourcePath);resources/icons/40
+fenix6pro.resourcePath = $(fenix6pro.resourcePath);resources/icons/40
+fenix6s.resourcePath = $(fenix6s.resourcePath);resources/icons/40
+fenix6spro.resourcePath = $(fenix6spro.resourcePath);resources/icons/40
+fenix6xpro.resourcePath = $(fenix6xpro.resourcePath);resources/icons/40
+fenix7.resourcePath = $(fenix7.resourcePath);resources/icons/40
+fenix7pro.resourcePath = $(fenix7pro.resourcePath);resources/icons/40
+fenix7pronowifi.resourcePath = $(fenix7pronowifi.resourcePath);resources/icons/40
+fenix7s.resourcePath = $(fenix7s.resourcePath);resources/icons/40
+fenix7spro.resourcePath = $(fenix7spro.resourcePath);resources/icons/40
+fenix7x.resourcePath = $(fenix7x.resourcePath);resources/icons/40
+fenix7xpro.resourcePath = $(fenix7xpro.resourcePath);resources/icons/40
+fenix7xpronowifi.resourcePath = $(fenix7xpronowifi.resourcePath);resources/icons/40
+fenix8solar47mm.resourcePath = $(fenix8solar47mm.resourcePath);resources/icons/40
+fenix8solar51mm.resourcePath = $(fenix8solar51mm.resourcePath);resources/icons/40
+fenix9prosolar47mm.resourcePath = $(fenix9prosolar47mm.resourcePath);resources/icons/40
+fenix9prosolar51mm.resourcePath = $(fenix9prosolar51mm.resourcePath);resources/icons/40
 
 # 54x54
-vivoactive6.resourcePath = $(vivoactive6.resourcePath);resources-icon-54
+vivoactive6.resourcePath = $(vivoactive6.resourcePath);resources/icons/54
 
 # 56x56
-vivoactive5.resourcePath = $(vivoactive5.resourcePath);resources-icon-56
+vivoactive5.resourcePath = $(vivoactive5.resourcePath);resources/icons/56
 
 # 60x60
-epix2.resourcePath = $(epix2.resourcePath);resources-icon-60
-epix2pro42mm.resourcePath = $(epix2pro42mm.resourcePath);resources-icon-60
-epix2pro47mm.resourcePath = $(epix2pro47mm.resourcePath);resources-icon-60
-epix2pro51mm.resourcePath = $(epix2pro51mm.resourcePath);resources-icon-60
-fenix843mm.resourcePath = $(fenix843mm.resourcePath);resources-icon-60
-fenix943mm.resourcePath = $(fenix943mm.resourcePath);resources-icon-60
-fenix9pro43mm.resourcePath = $(fenix9pro43mm.resourcePath);resources-icon-60
+epix2.resourcePath = $(epix2.resourcePath);resources/icons/60
+epix2pro42mm.resourcePath = $(epix2pro42mm.resourcePath);resources/icons/60
+epix2pro47mm.resourcePath = $(epix2pro47mm.resourcePath);resources/icons/60
+epix2pro51mm.resourcePath = $(epix2pro51mm.resourcePath);resources/icons/60
+fenix843mm.resourcePath = $(fenix843mm.resourcePath);resources/icons/60
+fenix943mm.resourcePath = $(fenix943mm.resourcePath);resources/icons/60
+fenix9pro43mm.resourcePath = $(fenix9pro43mm.resourcePath);resources/icons/60
 
 # 65x65
-fenix847mm.resourcePath = $(fenix847mm.resourcePath);resources-icon-65
-fenix8pro47mm.resourcePath = $(fenix8pro47mm.resourcePath);resources-icon-65
-fenix947mm.resourcePath = $(fenix947mm.resourcePath);resources-icon-65
-fenix9pro47mm.resourcePath = $(fenix9pro47mm.resourcePath);resources-icon-65
-fenix9pro51mm.resourcePath = $(fenix9pro51mm.resourcePath);resources-icon-65
+fenix847mm.resourcePath = $(fenix847mm.resourcePath);resources/icons/65
+fenix8pro47mm.resourcePath = $(fenix8pro47mm.resourcePath);resources/icons/65
+fenix947mm.resourcePath = $(fenix947mm.resourcePath);resources/icons/65
+fenix9pro47mm.resourcePath = $(fenix9pro47mm.resourcePath);resources/icons/65
+fenix9pro51mm.resourcePath = $(fenix9pro51mm.resourcePath);resources/icons/65
 
 # 70x70
-venu3.resourcePath = $(venu3.resourcePath);resources-icon-70
-venu3s.resourcePath = $(venu3s.resourcePath);resources-icon-70
+venu3.resourcePath = $(venu3.resourcePath);resources/icons/70
+venu3s.resourcePath = $(venu3s.resourcePath);resources/icons/70
