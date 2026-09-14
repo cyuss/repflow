@@ -90,6 +90,38 @@ else
   warn "VS Code not found — needed only for 'Monkey C: Export Project'"
 fi
 
+# --- Secrets ----------------------------------------------------------
+#
+# The one thing in this repository that would be unrecoverable if committed.
+# A Hevy key is read and write over a whole training history, it cannot be
+# scoped, and git remembers.
+#
+# Checked precisely rather than broadly. A scan for anything UUID-shaped fires
+# on the Hevy exercise ids used as test fixtures and on the app's own UUID, and
+# a check that cries wolf is a check nobody reads. There is exactly one place a
+# key can end up in a build — the default value of the hevyApiKey property — so
+# that is what is checked, in the committed copy rather than the working one,
+# because scripts/build.sh edits the working copy on purpose.
+echo
+if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  COMMITTED_KEY="$(git -C "$REPO_ROOT" show HEAD:resources/properties.xml 2>/dev/null \
+      | sed -n 's/.*<property id="hevyApiKey"[^>]*>\([^<]*\)<.*/\1/p' || true)"
+  if [ -n "$COMMITTED_KEY" ]; then
+    fail "A Hevy API key is committed in resources/properties.xml"; note_problem
+    info "Every clone and every build carries it. See secrets/README.md."
+  else
+    ok "No API key committed"
+  fi
+
+  if [ -s "$REPO_ROOT/secrets/hevy-key.txt" ]; then
+    if git -C "$REPO_ROOT" check-ignore -q secrets/hevy-key.txt; then
+      warn "Personal build: a Hevy key will be baked in (not publishable)"
+    else
+      fail "secrets/hevy-key.txt is NOT ignored by git"; note_problem
+    fi
+  fi
+fi
+
 echo
 if [ "$PROBLEMS" -eq 0 ]; then
   printf '%sEnvironment ready.%s\n' "$C_GREEN" "$C_OFF"

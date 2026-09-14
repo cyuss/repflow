@@ -12,6 +12,16 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
 activate_sdk
 
+# A personal build must never become a published one. A Hevy key baked in is
+# read *and* write over the whole of one person's training history, it cannot be
+# scoped, and every installer of the resulting bundle would hold it.
+if [ -n "${HEVY_API_KEY:-}" ] || [ -s "$REPO_ROOT/secrets/hevy-key.txt" ]; then
+    die "A Hevy key is present (secrets/hevy-key.txt or HEVY_API_KEY).
+       scripts/build.sh bakes it into every build, and a published build would
+       hand it to everyone who installs the app.
+       Move the key aside before packaging for the Store."
+fi
+
 RELEASE_DIR="$BUILD_DIR/release"
 # The newest *released* version heading in the CHANGELOG, ignoring [Unreleased].
 # grep -v exits 1 when it filters everything out, which `set -e` would treat as

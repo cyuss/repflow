@@ -58,7 +58,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   done. It costs no presses: START still logs from any field. Recorded per set,
   never inherited, carried to Hevy and into the FIT as a developer field.
 
+- A Hevy API key left in `secrets/hevy-key.txt` (or `HEVY_API_KEY`) is baked
+  into a build as the default setting, so a sideloaded watch talks to Hevy
+  without typing 36 characters on a phone. The key never enters a tracked file,
+  `make package` refuses while one is present, and `make doctor` checks that
+  none has been committed.
+
 ### Fixed
+
+- `Leg Extension (Machine)` was filed under `HIP_RAISE` — a glute movement, on
+  the wrong half of the muscle map, silently. Equipment suffixes now fall back
+  to the curated entry for the bare movement when the full name misses, without
+  collapsing entries that differ *by* their equipment.
 
 - Discarding a workout no longer leaves the word "Discard" painted across the
   recap. Switching views from inside a `Menu2` selection callback leaves the

@@ -125,6 +125,7 @@ RAW: dict[str, tuple[str, str | None]] = {
     "Hip Thrust": ("HIP_RAISE", "BARBELL_HIP_THRUST_WITH_BENCH"),
     "Glute Bridge": ("HIP_RAISE", None),
     "Hip Abduction": ("HIP_STABILITY", None),
+    "Hip Adduction": ("HIP_STABILITY", None),
 
     # ---- Calves ---------------------------------------------------------
     "Standing Calf Raise": ("CALF_RAISE", "STANDING_CALF_RAISE"),
@@ -169,9 +170,39 @@ def _build() -> dict[tuple[str, ...], tuple[str, str | None]]:
 _INDEX = _build()
 
 
+#: Words that name a piece of equipment rather than a movement.
+#:
+#: Hevy suffixes many movements with theirs — "Leg Extension (Machine)" — and a
+#: curated entry written without the suffix misses, because the entries are
+#: indexed by their words. The fallback below drops these and tries again.
+EQUIPMENT_WORDS = frozenset({
+    "machine", "cable", "dumbbell", "barbell", "smith", "kettlebell",
+    "band", "bodyweight", "plate", "ez_bar", "ezbar", "sled",
+})
+
+
 def lookup(name: str) -> tuple[str, str | None] | None:
-    """The curated answer for `name`, or None to fall through to matching."""
-    return _INDEX.get(tuple(sorted(set(_tokens(name)))))
+    """The curated answer for `name`, or None to fall through to matching.
+
+    Tried twice: once on the name as given, and once with the equipment words
+    removed. Order matters and is the whole safety of it — "Bicep Curl
+    (Barbell)" and "Bicep Curl (Dumbbell)" are different entries with different
+    answers, and they match on the first pass, so the second never sees them.
+    The second pass only catches names whose equipment the table does not
+    distinguish, which is exactly where it should apply.
+
+    Without it "Leg Extension (Machine)" missed its entry and the matcher filed
+    it under HIP_RAISE — a glute movement, drawn on the wrong half of the muscle
+    map, and silent. Found against the athlete's real routines, not imagined.
+    """
+    words = set(_tokens(name))
+    exact = _INDEX.get(tuple(sorted(words)))
+    if exact is not None:
+        return exact
+    bare = words - EQUIPMENT_WORDS
+    if bare and bare != words:
+        return _INDEX.get(tuple(sorted(bare)))
+    return None
 
 
 def resolve(name: str) -> tuple[str, str | None] | None:

@@ -31,3 +31,7 @@ scripts/.env
 backend/.venv/
 backend/*.egg-info/
 backend/**/__pycache__/
+
+# Local secrets — a Hevy API key is read+write over a whole training history
+secrets/*
+!secrets/README.md

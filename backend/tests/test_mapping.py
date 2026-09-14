@@ -187,3 +187,45 @@ class TestChoosingWhichActivity:
             {"activityId": 2, "activityType": {"typeKey": "strength_training"}}
         )
         assert max(dated.sort_key, undated.sort_key) == dated.sort_key
+
+
+class TestNamesHevyActuallyUses:
+    """Titles taken from real Hevy routines, not from imagination.
+
+    Every one of these was already believed to be handled. One was not:
+    "Leg Extension (Machine)" missed its curated entry because the equipment
+    suffix changes the words an entry is indexed by, and the matcher filed it
+    under HIP_RAISE — a glute movement, drawn on the wrong half of the muscle
+    map, and silent about it.
+    """
+
+    REAL = [
+        "Shoulder Press (Dumbbell)", "Lateral Raise (Dumbbell)",
+        "Arnold Press (Dumbbell)", "Bicep Curl (Barbell)", "Hammer Curl (Cable)",
+        "Triceps Extension (Dumbbell)", "Triceps Rope Pushdown",
+        "Bench Press (Barbell)", "Incline Bench Press (Dumbbell)",
+        "Chest Fly (Machine)", "Chest Press (Machine)", "Bicep Curl (Dumbbell)",
+        "Hammer Curl (Dumbbell)", "Concentration Curl", "Lat Pulldown (Cable)",
+        "Seated Row (Machine)", "Dumbbell Row", "Iso-Lateral Low Row",
+        "Triceps Pushdown", "Triceps Extension (Cable)", "Goblet Squat",
+        "Leg Extension (Machine)", "Seated Leg Curl (Machine)",
+        "Hip Abduction (Machine)", "Hip Adduction (Machine)",
+        "Standing Calf Raise (Dumbbell)",
+    ]
+
+    @pytest.mark.parametrize("name", REAL)
+    def test_every_one_is_curated_not_guessed(self, name: str) -> None:
+        # Matching is for names nobody anticipated. These are anticipated now.
+        assert lookup(name) is not None, f"{name!r} falls through to the matcher"
+
+    def test_a_machine_suffix_does_not_change_the_muscle(self) -> None:
+        assert resolve("Leg Extension (Machine)") == resolve("Leg Extension")
+        # And specifically not the glute movement the matcher chose.
+        assert resolve("Leg Extension (Machine)")[0] != "HIP_RAISE"
+
+    def test_equipment_that_the_table_distinguishes_still_wins(self) -> None:
+        # The fallback drops equipment words only when the full name misses, so
+        # entries that differ *by* their equipment are never collapsed.
+        assert resolve("Bicep Curl (Barbell)") == ("CURL", "BARBELL_BICEPS_CURL")
+        assert resolve("Bicep Curl (Dumbbell)") == ("CURL", "DUMBBELL_BICEPS_CURL")
+        assert resolve("Hammer Curl (Cable)") != resolve("Hammer Curl (Dumbbell)")
