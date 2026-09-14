@@ -814,7 +814,20 @@ class WorkoutSummaryView extends WatchUi.View {
         for (var i = 0; i < list.size(); i++) {
             // Rows scrolled past the edges cost nothing but are not drawn.
             if (y + rowHeight >= top && y <= bottom) {
-                _drawRow(dc, y, font, left, width, barGap, barHeight, list[i]);
+                // Re-established per row: a scrolling name clips to its own
+                // window and clears the clip afterwards, which would take this
+                // one with it and let the next row's bar spill off the page.
+                if (clipped) {
+                    dc.setClip(0, top, dc.getWidth(), available);
+                }
+                // A name only scrolls on a row that is wholly on the page.
+                //
+                // The scroller clips to the text's own window, which is taller
+                // than what is left of a row sliding in at the top — so the
+                // name drew straight over the rule and the title above it. A
+                // half-visible row is passing through; it can wait its turn.
+                var whole = y >= top && y + rowHeight <= bottom;
+                _drawRow(dc, y, font, left, width, barGap, barHeight, list[i], whole);
             }
             y += rowHeight;
         }
@@ -926,7 +939,8 @@ class WorkoutSummaryView extends WatchUi.View {
         width as Number,
         barGap as Number,
         barHeight as Number,
-        exercise as Exercise
+        exercise as Exercise,
+        mayScroll as Boolean
     ) as Void {
         var done = exercise.completedSetCount();
         var target = exercise.targetSets;
@@ -939,12 +953,26 @@ class WorkoutSummaryView extends WatchUi.View {
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
         dc.drawText(left + width, y, font, count, Graphics.TEXT_JUSTIFY_RIGHT);
 
-        // A skipped exercise is a fact about the session, not a headline.
-        dc.setColor(exercise.state == EX_SKIPPED ? Theme.colorDim() : Theme.colorText(),
-            Graphics.COLOR_TRANSPARENT);
-        dc.drawText(left, y, font,
-            Theme.clipToWidth(dc, exercise.shortName(), font, width - countWidth - gap),
-            Graphics.TEXT_JUSTIFY_LEFT);
+        // A name too long for the row scrolls rather than losing its end.
+        //
+        // It used to be cut with a full stop — "Triceps Extension" became
+        // "Triceps Ext." — which is the one outcome nobody wants: the type is
+        // no bigger and the word is gone. Shrinking the font to avoid it is the
+        // same bargain in the other direction.
+        //
+        // A skipped exercise is dimmed: a fact about the session, not a
+        // headline.
+        var nameWidth = width - countWidth - gap;
+        var nameColor = exercise.state == EX_SKIPPED ? Theme.colorDim() : Theme.colorText();
+        if (mayScroll) {
+            Marquee.drawAt(dc, left, y, exercise.shortName(),
+                [font] as Array<Graphics.FontDefinition>, nameColor, nameWidth);
+        } else {
+            dc.setColor(nameColor, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(left, y, font,
+                Theme.clipToWidth(dc, exercise.shortName(), font, nameWidth),
+                Graphics.TEXT_JUSTIFY_LEFT);
+        }
 
         var barTop = y + dc.getFontHeight(font) + barGap;
         dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
