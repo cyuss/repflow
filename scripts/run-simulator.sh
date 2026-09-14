@@ -36,12 +36,19 @@ PRG="$BUILD_DIR/RepFlow-$DEVICE.prg"
 # The simulator caches app storage in memory and writes it back when the app
 # starts, so deleting the files is not enough on its own — it has to be
 # restarted as well.
+# A reset that also takes the workouts away is rarely what you wanted: the
+# screen you are about to look at needs a watch with workouts on it. So the
+# remembered seed (scripts/sim-seed.sh) goes straight back in, unless you asked
+# for the genuinely empty watch a first-ever install would show.
 if [ -n "${REPFLOW_RESET:-}" ]; then
   info "Resetting the app's stored session..."
   pkill -f "ConnectIQ.app/Contents/MacOS" >/dev/null 2>&1 || true
   pkill -x simulator >/dev/null 2>&1 || true
   sleep 3
   clear_sim_app_data
+  if [ -z "${REPFLOW_NO_SEED:-}" ]; then
+    "$REPO_ROOT/scripts/sim-seed.sh" restore
+  fi
 fi
 
 # 2. Launch the simulator if it is not already up

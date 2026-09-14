@@ -20,11 +20,23 @@ module HevyApi {
 
     const BASE = "https://api.hevyapp.com/v1";
 
-    //! Hevy caps /v1/routines at ten per page. Verified in their OpenAPI spec:
-    //! "Number of items on the requested page (Max 10)".
-    const PAGE_SIZE = 10;
-    //! Safety net, so a broken page_count cannot spin forever.
-    const MAX_PAGES = 6;
+    //! Routines per request.
+    //!
+    //! Hevy allows ten — "Number of items on the requested page (Max 10)" in
+    //! their OpenAPI spec — and ten is too many. A routine carries every
+    //! exercise, every set and every note in it, so ten of them is a large
+    //! reply, and Connect IQ refuses a reply the watch cannot hold: the import
+    //! failed on a fenix 6 Pro with **-402 NETWORK_RESPONSE_TOO_LARGE**, before
+    //! a single byte reached the app. Three fits with room to spare.
+    //!
+    //! The cost is more round trips, which on Bluetooth is the cheaper half of
+    //! the trade: an import that takes a second longer beats one that cannot
+    //! finish. Raise this only with a device in front of you.
+    const PAGE_SIZE = 3;
+    //! Safety net, so a broken page_count cannot spin forever. Smaller pages
+    //! need more of them: this has to stay above MAX_CUSTOM / PAGE_SIZE or the
+    //! last routines an athlete owns would never be asked for.
+    const MAX_PAGES = 8;
     //! Recent workouts fetched for "what did I lift last time". Deliberately
     //! small: a big page is a slow Bluetooth transfer and can exceed the
     //! response size a watch can hold.
@@ -118,13 +130,27 @@ module HevyApi {
     // Errors
     // ------------------------------------------------------------------
 
+    //! Connect IQ's "the reply did not fit" codes.
+    //!
+    //! NETWORK_RESPONSE_TOO_LARGE and NETWORK_RESPONSE_OUT_OF_MEMORY say the
+    //! request reached Hevy and Hevy answered — the watch could not hold the
+    //! answer. Naming them separately matters because the two negative codes
+    //! that look most alike to a user mean opposite things: -104 is "your phone
+    //! is in the locker", -402 is "ask for less at a time".
+    const TOO_LARGE = -402;
+    const OUT_OF_MEMORY = -403;
+
     //! What went wrong, in words the athlete can act on.
     //!
     //! The sign of the code is the first thing to read: **negative codes are
-    //! Connect IQ transport errors** — the phone is away, Bluetooth is off, the
-    //! request timed out — and **positive ones are HTTP statuses from Hevy**.
-    //! Telling them apart is the difference between "move closer to your phone"
-    //! and "your key is wrong".
+    //! Connect IQ transport errors** and **positive ones are HTTP statuses from
+    //! Hevy**. Telling them apart is the difference between "move closer to
+    //! your phone" and "your key is wrong".
+    //!
+    //! Negative is not one thing, though. Everything below used to be reported
+    //! as "Phone not reachable", which sent an athlete looking for their phone
+    //! when the phone was in their hand and the real problem was a reply too
+    //! big for the watch — see PAGE_SIZE.
     public function errorText(code as Number) as String {
         if (code == 401 || code == 403) {
             return WatchUi.loadResource(Rez.Strings.HevyErrKey) as String;
@@ -134,6 +160,9 @@ module HevyApi {
         }
         if (code >= 500) {
             return WatchUi.loadResource(Rez.Strings.HevyErrServer) as String;
+        }
+        if (code == TOO_LARGE || code == OUT_OF_MEMORY) {
+            return WatchUi.loadResource(Rez.Strings.HevyErrTooBig) as String;
         }
         if (code <= 0) {
             return WatchUi.loadResource(Rez.Strings.HevyErrPhone) as String;

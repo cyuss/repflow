@@ -11,3 +11,9 @@ whole of that person's training history, it cannot be scoped, and anyone who
 installs the resulting `.prg` has it. Never publish a build made with a key in
 place: `make package` refuses to, and `scripts/doctor.sh` checks that no key has
 found its way into a tracked file.
+
+`sim-seed/` holds a copy of what RepFlow has stored in the Connect IQ
+simulator, so that clearing the simulator does not mean importing from Hevy
+again before every look at a screen. See `scripts/sim-seed.sh`. It is an
+athlete's routines, loads and session history, which is the other reason it
+stays here rather than in the repository.

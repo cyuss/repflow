@@ -127,6 +127,7 @@
     <string id="HevyErrRate">Too many requests</string>
     <string id="HevyErrServer">Hevy is unavailable</string>
     <string id="HevyErrPhone">Phone not reachable</string>
+    <string id="HevyErrTooBig">Reply too big</string>
     <string id="HevyErrGeneric">Failed</string>
     <string id="HevyImport">Import from Hevy</string>
     <string id="HevyImporting">Importing...</string>

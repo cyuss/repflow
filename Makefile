@@ -20,6 +20,7 @@ export TYPECHECK
 
 .PHONY: help doctor bootstrap key devices devices-all devices-missing \
         build build-all test test-watch test-backend sim sim-fresh sim-attach \
+        sim-empty sim-seed sim-seed-forget \
         shot sideload clean package release-check backend-setup \
         sync-garmin sync-garmin-show sync-hevy sync-hevy-show
 
@@ -88,8 +89,17 @@ backend-setup: ## Create the backend virtualenv and install it
 sim: ## Pick a device and launch RepFlow in the simulator
 	@REPFLOW_DETACH=1 scripts/run-simulator.sh $(SIM_DEVICE)
 
-sim-fresh: ## Same, but clear the app's stored session first
+sim-fresh: ## Same, but clear the session — keeping the seeded workouts
 	@REPFLOW_DETACH=1 REPFLOW_RESET=1 scripts/run-simulator.sh $(SIM_DEVICE)
+
+sim-empty: ## Same, but with nothing stored at all — a first-ever install
+	@REPFLOW_DETACH=1 REPFLOW_RESET=1 REPFLOW_NO_SEED=1 scripts/run-simulator.sh $(SIM_DEVICE)
+
+sim-seed: ## Remember the simulator's workouts, so sim-fresh puts them back
+	@scripts/sim-seed.sh save
+
+sim-seed-forget: ## Forget them again
+	@scripts/sim-seed.sh forget
 
 sim-attach: ## Launch and stay attached, streaming the app's println output
 	@scripts/run-simulator.sh $(SIM_DEVICE)

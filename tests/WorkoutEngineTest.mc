@@ -2088,6 +2088,44 @@ function testHevyPayloadFromSession(logger as Test.Logger) as Boolean {
     return true;
 }
 
+//! A reply too big for the watch is not a missing phone.
+//!
+//! Every negative response code used to come out as "Phone not reachable",
+//! which sent an athlete hunting for a phone that was in their hand: the real
+//! failure was -402, Hevy answering with more than the watch could hold. The
+//! two messages have to stay different, and a positive HTTP status has to stay
+//! different from both.
+(:test)
+function testTransportErrorsAreNotAllTheSameError(logger as Test.Logger) as Boolean {
+    var phone = HevyApi.errorText(-104);      // BLE_CONNECTION_UNAVAILABLE
+    var tooBig = HevyApi.errorText(HevyApi.TOO_LARGE);
+    var noMemory = HevyApi.errorText(HevyApi.OUT_OF_MEMORY);
+    var badKey = HevyApi.errorText(401);
+
+    Test.assert(!phone.equals(tooBig));
+    Test.assertEqual(tooBig, noMemory);
+    Test.assert(!badKey.equals(phone));
+    Test.assert(!badKey.equals(tooBig));
+
+    // A timeout is still the phone's kind of problem, not the watch's.
+    Test.assertEqual(HevyApi.errorText(-300), phone);
+    return true;
+}
+
+//! Every routine an athlete owns has to be asked for.
+//!
+//! Small pages are what keeps a reply inside the watch's limit, and small pages
+//! only work if enough of them are fetched: MAX_PAGES below the number of
+//! workouts the watch can hold would silently drop the last routines.
+(:test)
+function testPagingCanReachEveryStorableWorkout(logger as Test.Logger) as Boolean {
+    Test.assert(HevyApi.PAGE_SIZE > 0);
+    Test.assert(HevyApi.PAGE_SIZE * HevyApi.MAX_PAGES >= WorkoutRepository.MAX_CUSTOM);
+    // Hevy's own ceiling, from their OpenAPI spec.
+    Test.assert(HevyApi.PAGE_SIZE <= 10);
+    return true;
+}
+
 //! ISO 8601, which Hevy requires and Monkey C has no formatter for.
 (:test)
 function testIso8601(logger as Test.Logger) as Boolean {

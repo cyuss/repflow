@@ -2,24 +2,27 @@
 
 ## Commands
 
-Every command works through `make` or `just`.
+Every command works through `make`.
 
-| Task | make | just |
-|---|---|---|
-| Check the environment | `make doctor` | `just doctor` |
-| Install SDK & tooling | `make bootstrap` | `just bootstrap` |
-| Create signing key | `make key` | `just key` |
-| List buildable devices | `make devices` | `just devices` |
-| Build | `make build` | `just build` |
-| Build every device | `make build-all` | `just build-all` |
-| Run tests | `make test` | `just test` |
-| Run in simulator | `make sim` (asks which device) | `just sim` |
-| Run from a clean session | `make sim-fresh` | `just sim-fresh` |
-| Run and stream app output | `make sim-attach` | `just sim-attach` |
-| Screenshot the simulator | `make shot` | `just shot` |
-| Sideload to a watch | `make sideload` | `just sideload` |
-| Full release build | `make package` | `just package` |
-| Clean | `make clean` | `just clean` |
+| Task | Command |
+|---|---|
+| Check the environment | `make doctor` |
+| Install SDK & tooling | `make bootstrap` |
+| Create signing key | `make key` |
+| List buildable devices | `make devices` |
+| Build | `make build` |
+| Build every device | `make build-all` |
+| Run tests | `make test` |
+| Run in simulator | `make sim` (asks which device) |
+| Run from a clean session | `make sim-fresh` |
+| Keep the simulator's workouts | `make sim-seed` |
+| Run and stream app output | `make sim-attach` |
+| Screenshot the simulator | `make shot` |
+| Sideload to a watch | `make sideload` |
+| Full release build | `make package` |
+| Clean | `make clean` |
+
+`make` with no target lists every one of them with a one-line description.
 
 ### Choosing a device
 
@@ -27,7 +30,6 @@ Every command works through `make` or `just`.
 make devices                          # ids that can be built right now
 make build DEVICE=fenix847mm
 make sim   DEVICE=fenix9pro47mm
-just build fenix847mm
 ```
 
 Device ids always come from the installed device definitions.
@@ -94,6 +96,29 @@ cached in the simulator's memory and written back when the app starts, so
 deleting the files alone does nothing. Without it the app resumes whatever
 session was left over, which is confusing when you are trying to look at the
 first screen.
+
+### Keeping workouts in the simulator
+
+Most screens need a watch that has workouts on it, and getting them there means
+importing from Hevy — a key, a phone, half a minute — every single time the
+storage is cleared. It is cleared more often than you would like: `make
+sim-fresh` wipes it by design, and **`make test-watch` writes its own fixtures
+into the same storage** (the simulator names a sideloaded app's data after the
+app, and the test build is the same app), so a test run leaves the simulator
+resuming a session called "Exercise A".
+
+So import once, then:
+
+```sh
+make sim-seed        # remember what the simulator holds
+make sim-fresh       # clear the session — and put those workouts back
+make sim-empty       # no workouts at all: what a first-ever install shows
+```
+
+The copy is the simulator's own storage files, written by the app through
+`Application.Storage`; nothing here writes that format by hand. It lands in
+`secrets/sim-seed/`, which is not committed — it is an athlete's routines,
+loads and session history.
 
 Useful simulator menus:
 

@@ -342,3 +342,35 @@ zones, time in zone, calories, Body Battery before and after — and does not
 show an invented Training Effect. A fabricated coaching number would be worse
 than none, because the athlete cannot tell it apart from the watch's own until
 they compare the two screens.
+
+---
+
+## 12. A web response has a size limit, and it is smaller than an API's idea of a page
+
+`Communications.makeWebRequest` rejects a reply the device cannot hold. The app
+never sees the body, never sees a truncated version of it, and gets no partial
+result to fall back on — only the response code **-402
+`NETWORK_RESPONSE_TOO_LARGE`** (and its neighbour -403
+`NETWORK_RESPONSE_OUT_OF_MEMORY`).
+
+**How it showed up.** Hevy's `/v1/routines` allows ten routines per page, and
+RepFlow asked for ten. A routine carries every exercise, every set and every
+note, so ten of them is a large document. On a fenix 6 Pro the import failed
+before a byte reached the app. Measured in the simulator, on the athlete's own
+account.
+
+The trap is what it looked like: RepFlow reported **"Phone not reachable"**,
+because the error mapping treated every negative code as a transport failure.
+The phone was fine. Negative codes are not one thing — -104 means the phone is
+away, -402 means the phone did its job and the watch could not hold the answer —
+and the two need different words, or the athlete goes looking for a problem that
+is not there.
+
+**What RepFlow does:**
+
+- Asks for three routines per page (`HevyApi.PAGE_SIZE`), with
+  `MAX_PAGES` raised to match, so the whole library still arrives.
+- Reports -402 and -403 as their own message, separate from the phone.
+
+**The general rule:** a remote API's maximum page size is not a watch's maximum
+response size, and nothing warns you where the second one is. Page small.
