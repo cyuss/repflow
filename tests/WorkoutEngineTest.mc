@@ -1232,14 +1232,15 @@ function testWorkoutNamingFromContents(logger as Test.Logger) as Boolean {
     return true;
 }
 
-//! Built-in exercise ids come from the catalogue.
+//! An imported exercise resolves to a movement the catalogue knows.
 //!
-//! This is what lets "Lat Pulldown" in the shipped Back session and "Lat
-//! Pulldown" added by hand three weeks later be the same movement to history
-//! and to records. A built-in that invented its own id would silently split an
-//! athlete's progression in two.
+//! This used to check the three workouts RepFlow shipped. It ships none now —
+//! they were one athlete's Hevy routines typed in by hand, frozen at the moment
+//! somebody typed them — so the guarantee moved to where workouts actually come
+//! from. An exercise whose movement the catalogue does not know sends its
+//! history and its records somewhere nothing else looks.
 (:test)
-function testBuiltInWorkoutsUseCatalogueIds(logger as Test.Logger) as Boolean {
+function testImportedExercisesUseCatalogueIds(logger as Test.Logger) as Boolean {
     var known = {} as Dictionary;
     var groups = Muscle.browseOrder();
     for (var g = 0; g < groups.size(); g++) {
@@ -1249,22 +1250,38 @@ function testBuiltInWorkoutsUseCatalogueIds(logger as Test.Logger) as Boolean {
         }
     }
 
-    var workouts = [WorkoutRepository.backAndTriceps(),
-                    WorkoutRepository.chestAndBiceps(),
-                    WorkoutRepository.legs()] as Array<Workout>;
-    for (var w = 0; w < workouts.size(); w++) {
-        var list = workouts[w].exercises;
-        Test.assert(list.size() > 0);
-        for (var i = 0; i < list.size(); i++) {
-            var ex = list[i];
-            var movement = ExerciseCatalogue.movementId(ex.id);
-            Test.assert(known.hasKey(movement));
-            // And the muscle tag has to agree with the catalogue's.
-            Test.assertEqual(ex.muscle, known.get(movement) as Number);
-        }
+    var workout = HevyMap.routineToWorkout({
+        "id" => "r-1",
+        "title" => "Dos + Triceps",
+        "exercises" => [
+            {
+                "title" => "Lat Pulldown (Cable)",
+                "exercise_template_id" => "6A6C31A5",
+                "sets" => [{ "reps" => 10, "weight_kg" => 60.0 }]
+            } as Object,
+            {
+                "title" => "Triceps Rope Pushdown",
+                "exercise_template_id" => "94B7239B",
+                "sets" => [{ "reps" => 12, "weight_kg" => 25.0 }]
+            } as Object
+        ] as Array
+    } as Dictionary);
+    Test.assert(workout != null);
+
+    var list = (workout as Workout).exercises;
+    Test.assertEqual(list.size(), 2);
+    for (var i = 0; i < list.size(); i++) {
+        var ex = list[i];
+        // Hevy's own template id, kept: without one the exercise is a dead end,
+        // because Hevy files a set against exercise_template_id and has no
+        // free-text alternative.
+        Test.assert(ex.hevyId != null);
+        // And a real muscle group, so the weekly breakdown finds it.
+        Test.assert(Muscle.isValid(ex.muscle));
     }
     return true;
 }
+
 
 //! Estimated one-rep max, and what it is for.
 //!
@@ -1794,54 +1811,34 @@ function testBothThemesAreLegible(logger as Test.Logger) as Boolean {
     return true;
 }
 
-//! The three routines this athlete actually trains, as transcribed.
+//! Nothing is shipped, and that is not a broken state.
 //!
-//! They are data, and data typed from a screenshot is data with typos in it.
-//! This checks the shape rather than the values: every exercise resolves to a
-//! movement the catalogue knows, every muscle tag agrees with the catalogue's,
-//! and no workout repeats an id — which would make two exercises answer to one
-//! name and break "select any exercise at any time".
+//! RepFlow used to carry three workouts transcribed by hand from one athlete's
+//! Hevy routines — a strange thing for an app to contain, and stale the first
+//! time those routines changed. Workouts now come from Hevy or from the editor,
+//! which means the first screen a new install shows has to work with an empty
+//! list rather than assume a full one.
 (:test)
-function testShippedRoutinesAreCoherent(logger as Test.Logger) as Boolean {
-    var known = {} as Dictionary;
-    var groups = Muscle.browseOrder();
-    for (var g = 0; g < groups.size(); g++) {
-        var rows = ExerciseCatalogue.forMuscle(groups[g]);
-        for (var i = 0; i < rows.size(); i++) {
-            known.put((rows[i] as Array)[ExerciseCatalogue.F_ID] as String, groups[g]);
-        }
+function testAnEmptyWorkoutListIsAValidState(logger as Test.Logger) as Boolean {
+    var all = WorkoutRepository.all();
+    var view = new WorkoutListView();
+
+    // The picker's carousel is the workouts plus a "New workout" page, so with
+    // nothing stored it opens straight on the one screen that can do anything.
+    if (all.size() == 0) {
+        Test.assert(view.onNewPage());
+        Test.assert(view.selected() == null);
     }
 
-    var workouts = WorkoutRepository.all();
-    Test.assert(workouts.size() >= 3);
-
-    for (var w = 0; w < workouts.size(); w++) {
-        var workout = workouts[w];
-        Test.assert(workout.name.length() > 0);
-        var list = workout.exercises;
-        Test.assert(list.size() > 0);
-
-        var seen = {} as Dictionary;
-        for (var i = 0; i < list.size(); i++) {
-            var ex = list[i];
-            var movement = ExerciseCatalogue.movementId(ex.id);
-
-            Test.assert(known.hasKey(movement));
-            Test.assertEqual(ex.muscle, known.get(movement) as Number);
-            Test.assert(!seen.hasKey(ex.id));
-            seen.put(ex.id, true);
-
-            Test.assert(ex.name.length() > 0);
-            Test.assert(ex.targetSets > 0 && ex.targetSets <= 10);
-            Test.assert(ex.targetReps > 0 && ex.targetReps <= 30);
-            Test.assert(ex.restDuration >= 30 && ex.restDuration <= 300);
-            // A routine may legitimately set no target load at all.
-            var load = ex.defaultWeight;
-            Test.assert(load == null || (load as Float) >= 0.0);
-        }
+    var dc = TestSupport.screenDc();
+    if (dc != null) {
+        // It has to draw, not merely compute. A first screen that throws is
+        // worse than one with nothing on it.
+        view.onUpdate(dc);
     }
     return true;
 }
+
 
 //! Last session's load fills in what the routine left blank.
 //!
@@ -2801,41 +2798,47 @@ function testEndWorkoutChoiceIsDeferredThenActedOnce(logger as Test.Logger) as B
     return true;
 }
 
-//! Every shipped workout can actually reach Hevy.
+//! An imported workout reaches Hevy whole.
 //!
 //! Hevy files a set against `exercise_template_id` and has no free-text name,
 //! so an exercise without one is dropped from the payload — and a workout whose
-//! exercises all lack one reaches Hevy as nothing at all. The three workouts
-//! RepFlow ships were in exactly that state: performing one logged it to Garmin
-//! and silently not to Hevy, which is the worst shape a sync can take, because
-//! the athlete only finds out later.
+//! exercises all lack one reaches Hevy as nothing at all. That is the worst
+//! shape a sync can take, because the athlete only finds out days later.
+//!
+//! The workouts RepFlow shipped were in exactly that state until they were
+//! removed. What replaced them is this: whatever comes back from Hevy has to go
+//! back to Hevy complete.
 (:test)
-function testShippedWorkoutsCanReachHevy(logger as Test.Logger) as Boolean {
-    var workouts = [WorkoutRepository.backAndTriceps(),
-                    WorkoutRepository.chestAndBiceps(),
-                    WorkoutRepository.legs()] as Array<Workout>;
+function testImportedWorkoutsReachHevyWhole(logger as Test.Logger) as Boolean {
+    var workout = HevyMap.routineToWorkout({
+        "id" => "r-1",
+        "title" => "Pecs + Biceps",
+        "exercises" => [
+            {
+                "title" => "Bench Press (Barbell)",
+                "exercise_template_id" => "79D0BB3A",
+                "sets" => [{ "reps" => 12, "weight_kg" => 20.0 }]
+            } as Object,
+            {
+                "title" => "Bicep Curl (Dumbbell)",
+                "exercise_template_id" => "37FCC2BB",
+                "sets" => [{ "reps" => 10, "weight_kg" => 9.0 }]
+            } as Object
+        ] as Array
+    } as Dictionary);
+    Test.assert(workout != null);
 
-    for (var w = 0; w < workouts.size(); w++) {
-        var workout = workouts[w];
-        var list = workout.exercises;
-        for (var i = 0; i < list.size(); i++) {
-            var ex = list[i];
-            Test.assert(ex.hevyId != null);
-            // Hevy's template ids are short hex, not names. A name slipped in
-            // here would be accepted by the compiler and rejected by Hevy.
-            Test.assert((ex.hevyId as String).length() >= 6);
-        }
-
-        // Perform one set of everything, and the payload must carry every
-        // exercise — not a subset, and not null.
-        for (var i = 0; i < list.size(); i++) {
-            list[i].recordSet(list[i].plannedReps(), 20.0, null, TestSupport.T0 + i);
-        }
-        var payload = HevyMap.sessionToPayload(workout, TestSupport.T0,
-            TestSupport.T0 + 3600, true);
-        Test.assert(payload != null);
-        var sent = ((payload as Dictionary)["workout"] as Dictionary)["exercises"] as Array;
-        Test.assertEqual(sent.size(), list.size());
+    var list = (workout as Workout).exercises;
+    for (var i = 0; i < list.size(); i++) {
+        list[i].recordSet(list[i].plannedReps(), 20.0, null, TestSupport.T0 + i);
     }
+
+    var payload = HevyMap.sessionToPayload(workout as Workout, TestSupport.T0,
+        TestSupport.T0 + 3600, true);
+    Test.assert(payload != null);
+    var sent = ((payload as Dictionary)["workout"] as Dictionary)["exercises"] as Array;
+    // Every exercise, not a subset.
+    Test.assertEqual(sent.size(), list.size());
     return true;
 }
+

@@ -88,6 +88,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Exercise list rows take the largest font their height allows instead of the
   caption font. Width is no longer a reason to shrink one: a long name scrolls.
 
+### Removed
+
+- The three workouts RepFlow shipped. They were one athlete's Hevy routines
+  typed in by hand, frozen at the moment somebody typed them, and stale the
+  first time those routines changed. Workouts now come from Hevy or from the
+  editor; an empty list opens the picker on "New workout", which is the right
+  first screen for someone who has neither imported nor built one.
+
 ### Changed
 
 - Importing Hevy routines says how many the watch had no room for, instead of
