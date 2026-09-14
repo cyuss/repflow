@@ -2051,7 +2051,7 @@ function testHevyPayloadFromSession(logger as Test.Logger) as Boolean {
     engine.completeCurrentSet(10, 20.0, null, TestSupport.T0 + 600);  // no Hevy id
 
     var payload = HevyMap.sessionToPayload(workout, TestSupport.T0,
-        TestSupport.T0 + 3600, true);
+        TestSupport.T0 + 3600, true, null);
     Test.assert(payload != null);
     var body = (payload as Dictionary)["workout"] as Dictionary;
 
@@ -2084,7 +2084,7 @@ function testHevyPayloadFromSession(logger as Test.Logger) as Boolean {
     // A session where nothing was performed has nothing to post.
     var emptyWorkout = TestSupport.abcWorkout();
     Test.assert(HevyMap.sessionToPayload(emptyWorkout, TestSupport.T0,
-        TestSupport.T0 + 60, false) == null);
+        TestSupport.T0 + 60, false, null) == null);
     return true;
 }
 
@@ -2139,7 +2139,7 @@ function testPocStrengthSession(logger as Test.Logger) as Boolean {
     // POC C — the same session as the body of a Hevy POST, which is also the
     // shape a backend would turn into FIT SetMessages.
     var payload = HevyMap.sessionToPayload(workout, TestSupport.T0,
-        TestSupport.T0 + 1800, true);
+        TestSupport.T0 + 1800, true, null);
     Test.assert(payload != null);
     var exercises = ((payload as Dictionary)["workout"] as Dictionary)["exercises"] as Array;
     Test.assertEqual(exercises.size(), 2);
@@ -2838,7 +2838,7 @@ function testImportedWorkoutsReachHevyWhole(logger as Test.Logger) as Boolean {
     }
 
     var payload = HevyMap.sessionToPayload(workout as Workout, TestSupport.T0,
-        TestSupport.T0 + 3600, true);
+        TestSupport.T0 + 3600, true, null);
     Test.assert(payload != null);
     var sent = ((payload as Dictionary)["workout"] as Dictionary)["exercises"] as Array;
     // Every exercise, not a subset.
@@ -3010,5 +3010,35 @@ function testRestSurvivesALookAtTheList(logger as Test.Logger) as Boolean {
     // And nothing has been announced, so coming back does not find a rest that
     // quietly ended while it was out of sight.
     Test.assert(!controller.restOverSignalled());
+    return true;
+}
+
+//! Garmin's physiology reaches Hevy the only way Hevy allows: as text.
+//!
+//! Hevy's API carries weight, reps, distance, duration, RPE and a custom metric
+//! per set, and on the workout a title, a description and the times. There is
+//! nothing physiological anywhere in it — "heart", "bpm" and "calorie" do not
+//! appear in the published schema. So the numbers ride in the description,
+//! which is not a chart but is better than dropping them.
+(:test)
+function testHeartRateReachesHevyAsDescription(logger as Test.Logger) as Boolean {
+    var full = HevyMap.describe(new RecapMetrics(328, 100, 140, 71, 24));
+    Test.assert(full != null);
+    logger.debug("description: " + (full as String));
+    Test.assert((full as String).find("100") != null);
+    Test.assert((full as String).find("140") != null);
+    Test.assert((full as String).find("328") != null);
+
+    // Nothing measured, nothing written: a session with no strap paired gets no
+    // description rather than an empty one.
+    Test.assert(HevyMap.describe(new RecapMetrics(null, null, null, null, null)) == null);
+    Test.assert(HevyMap.describe(null) == null);
+
+    // A calorie count of zero is not a measurement Garmin stands behind.
+    Test.assert(HevyMap.describe(new RecapMetrics(0, null, null, null, null)) == null);
+
+    // Heart rate alone still says something.
+    var hrOnly = HevyMap.describe(new RecapMetrics(null, 118, null, null, null));
+    Test.assert(hrOnly != null && (hrOnly as String).find("118") != null);
     return true;
 }

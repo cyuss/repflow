@@ -27,7 +27,7 @@ from typing import Any
 
 from garminconnect import Garmin
 
-from .fitread import read_sets, unzip
+from .fitread import SessionMetrics, read_session, read_sets, unzip
 from .model import LoggedSet
 
 #: Where the Garmin-issued session tokens are cached. Not a password: these
@@ -159,6 +159,14 @@ def logged_sets(client: Garmin, activity_id: int) -> list[LoggedSet]:
         str(activity_id), dl_fmt=Garmin.ActivityDownloadFormat.ORIGINAL
     )
     return read_sets(unzip(raw))
+
+
+def session_metrics(client: Garmin, activity_id: int) -> SessionMetrics:
+    """What Garmin measured across the session, from the same FIT file."""
+    raw = client.download_activity(
+        str(activity_id), dl_fmt=Garmin.ActivityDownloadFormat.ORIGINAL
+    )
+    return read_session(unzip(raw))
 
 
 def existing_sets(client: Garmin, activity_id: int) -> list[dict[str, Any]]:

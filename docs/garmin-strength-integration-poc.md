@@ -120,12 +120,28 @@ fields.
   starts a fresh one.
 - `Session` has **no pause/resume**: only `stop()` then `start()`.
 
-### Unverified
+### Answered on hardware — 14 Sep 2026
 
-Whether the session contributes to **Training Load / Training Effect / Training
-Readiness**. Those are computed by firmware from a recorded activity, and a
-Connect IQ recording is one — but this is firmware behaviour and has not been
-observed on hardware. RepFlow's materials no longer claim it either way.
+**A Connect IQ recording does produce a Training Effect.** The session message
+of a real RepFlow activity, read back from Garmin's own servers:
+
+```
+total_calories            328
+avg_heart_rate            100
+max_heart_rate            140
+total_training_effect     0.7
+total_anaerobic_training_effect   0.0
+enhanced_avg_respiration_rate     21.84
+```
+
+So the firmware treats it as it treats any recorded activity: heart rate,
+calories, respiration and an aerobic training effect are all computed and
+written. That settles the second of this document's two open questions, and it
+settles it the way the first one was — by looking at a real file rather than by
+reasoning about what ought to happen.
+
+The remaining open question is the first: whether a **string** developer field
+renders in Garmin Connect's laps table.
 
 ---
 

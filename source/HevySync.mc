@@ -199,9 +199,15 @@ module HevySync {
     //! **Stored before the first attempt, cleared only on success.** Training
     //! with the phone in a locker is the normal case, not the edge case, and
     //! losing an hour of work to it would be unforgivable.
-    public function sendSession(workout as Workout, startedAt as Number, finishedAt as Number) as Void {
+    public function sendSession(
+        workout as Workout,
+        startedAt as Number,
+        finishedAt as Number,
+        metrics as RecapMetrics?
+    ) as Void {
         var isPrivate = Settings.readBoolean("privateWorkouts", true);
-        var payload = HevyMap.sessionToPayload(workout, startedAt, finishedAt, isPrivate);
+        var payload = HevyMap.sessionToPayload(workout, startedAt, finishedAt,
+            isPrivate, metrics);
         if (payload == null) {
             return;         // nothing performed; nothing to log
         }

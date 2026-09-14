@@ -876,6 +876,7 @@ class AppController {
         //
         // Neither of these feeds the recap, so neither has to be waited for.
         _closing = save ? CLOSE_SAVE : CLOSE_DISCARD;
+        _closingMetrics = metrics;
         _closingWorkout = workout;
         _closingStartedAt = startedAt;
         _closingFinishedAt = finishedAt;
@@ -889,6 +890,8 @@ class AppController {
 
     private var _closing as Number = CLOSE_NONE;
     private var _closingWorkout as Workout?;
+    //! What Garmin measured, for Hevy's description. Captured with the recap.
+    private var _closingMetrics as RecapMetrics?;
     private var _closingStartedAt as Number = 0;
     private var _closingFinishedAt as Number = 0;
     private var _closer as Timer.Timer?;
@@ -932,7 +935,7 @@ class AppController {
         var workout = _closingWorkout;
         if (workout != null) {
             HevySync.sendSession(workout as Workout, _closingStartedAt,
-                _closingFinishedAt);
+                _closingFinishedAt, _closingMetrics);
         }
         _closingWorkout = null;
     }

@@ -179,11 +179,52 @@ module HevyMap {
     //! Hevy's `rpe` is an enumeration, not a range, and one value off the ladder
     //! is answered with a 400 that loses the **whole** session, not the set. See
     //! Rpe.
+    //! What Garmin measured, as a line of text for Hevy's description.
+    //!
+    //! Hevy carries no heart rate. Its API takes weight, reps, distance,
+    //! duration, RPE and a custom metric per set, and on the workout a title, a
+    //! description and the times — there is nothing physiological anywhere in
+    //! it. The description is the only place these numbers can go, and putting
+    //! them there beats dropping them.
+    //!
+    //! Null when the watch measured nothing, so a session with no strap paired
+    //! gets no description rather than an empty one.
+    public function describe(metrics as RecapMetrics?) as String? {
+        if (metrics == null) {
+            return null;
+        }
+        var parts = [] as Array<String>;
+        var avg = (metrics as RecapMetrics).averageHeartRate;
+        var peak = (metrics as RecapMetrics).maxHeartRate;
+        var kcal = (metrics as RecapMetrics).calories;
+
+        if (avg != null || peak != null) {
+            var beats = avg == null
+                ? (peak as Number).toString()
+                : (peak == null
+                    ? (avg as Number).toString()
+                    : (avg as Number).toString() + " / " + (peak as Number).toString());
+            parts.add("HR " + beats + " bpm");
+        }
+        if (kcal != null && (kcal as Number) > 0) {
+            parts.add((kcal as Number).toString() + " kcal");
+        }
+        if (parts.size() == 0) {
+            return null;
+        }
+        var out = parts[0];
+        for (var i = 1; i < parts.size(); i++) {
+            out += " - " + parts[i];
+        }
+        return out + " - RepFlow on Garmin";
+    }
+
     public function sessionToPayload(
         workout as Workout,
         startedAt as Number,
         finishedAt as Number,
-        isPrivate as Boolean
+        isPrivate as Boolean,
+        metrics as RecapMetrics?
     ) as Dictionary? {
         var exercises = [] as Array;
         var list = workout.exercises;
@@ -224,7 +265,7 @@ module HevyMap {
         return {
             "workout" => {
                 "title" => workout.name,
-                "description" => null,
+                "description" => describe(metrics),
                 "start_time" => HevyApi.iso8601(startedAt),
                 "end_time" => HevyApi.iso8601(finishedAt),
                 "is_private" => isPrivate,

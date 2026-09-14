@@ -31,6 +31,7 @@ from .hevy import (
 )
 from .tui import choose, confirm, interactive
 from .garmin import (
+    session_metrics,
     GarminError,
     connect,
     existing_sets,
@@ -217,7 +218,11 @@ def _cmd_hevy(args: argparse.Namespace) -> int:
     print(f"  {len(catalogue)} templates, custom exercises included")
 
     title = activity.name if activity is not None else f"RepFlow {activity_id}"
-    body, unmatched = build_workout(title, sets, catalogue, is_private=args.private)
+    # Heart rate and calories have nowhere structured to go in Hevy, so they
+    # ride in the description. See hevy.describe.
+    metrics = session_metrics(client, int(activity_id))
+    body, unmatched = build_workout(title, sets, catalogue,
+                                    is_private=args.private, metrics=metrics)
     print(f"  would post \"{title}\": {summarise_hevy(body)}\n")
     _print_hevy_mapping(sets, catalogue)
     if unmatched:

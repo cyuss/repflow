@@ -160,11 +160,43 @@ def _iso(moment: datetime) -> str:
     return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def describe(metrics: object) -> str | None:
+    """The session's physiology, as a line of text.
+
+    Hevy carries no heart rate. Its API takes weight, reps, distance, duration,
+    RPE and a custom metric per set, and on the workout a title, a description
+    and the times — there is nothing physiological anywhere in it. Checked
+    against the published schema: "heart", "bpm" and "calorie" do not appear.
+    The description is the only place these numbers can go, and putting them
+    there is better than dropping them on the floor.
+
+    Returns None when the watch measured nothing, so a workout with no strap
+    paired gets no description rather than an empty one.
+    """
+    parts: list[str] = []
+    avg = getattr(metrics, "avg_heart_rate", None)
+    peak = getattr(metrics, "max_heart_rate", None)
+    calories = getattr(metrics, "calories", None)
+    effect = getattr(metrics, "training_effect", None)
+
+    if avg or peak:
+        beats = " / ".join(str(v) for v in (avg, peak) if v)
+        parts.append(f"HR {beats} bpm")
+    if calories:
+        parts.append(f"{calories} kcal")
+    if effect:
+        parts.append(f"Training effect {effect:.1f}")
+    if not parts:
+        return None
+    return " · ".join(parts) + " — recorded by RepFlow on Garmin"
+
+
 def build_workout(
     title: str,
     sets: Iterable[LoggedSet],
     catalogue: Iterable[Template],
     is_private: bool = False,
+    metrics: object | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     """Build the POST /v1/workouts body, and report what could not be matched.
 
@@ -223,7 +255,7 @@ def build_workout(
     body = {
         "workout": {
             "title": title,
-            "description": None,
+            "description": None if metrics is None else describe(metrics),
             "start_time": _iso(ordered[0].start_time),
             "end_time": _iso(ordered[-1].start_time),
             "is_private": is_private,

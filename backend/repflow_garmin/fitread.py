@@ -20,6 +20,8 @@ from datetime import datetime, timezone
 
 import fitdecode
 
+from dataclasses import dataclass
+
 from .model import LoggedSet
 
 #: The developer field names RepFlow writes on each lap. Names, not numbers:
@@ -36,6 +38,24 @@ FIELD_RPE = "rpe"
 
 class NotARepFlowActivity(Exception):
     """The FIT file has no RepFlow laps in it."""
+
+
+@dataclass(frozen=True)
+class SessionMetrics:
+    """What Garmin measured across the whole session.
+
+    Hevy has nowhere to put any of it — its API carries weight, reps, distance,
+    duration, RPE and a custom metric, and nothing physiological at all — so
+    these end up in the workout's description, which is the only free-text field
+    the endpoint accepts. Not a chart, but the numbers land where the athlete
+    reads the session rather than nowhere.
+    """
+
+    avg_heart_rate: int | None = None
+    max_heart_rate: int | None = None
+    calories: int | None = None
+    training_effect: float | None = None
+    elapsed_s: float | None = None
 
 
 def unzip(raw: bytes) -> bytes:
@@ -117,11 +137,35 @@ def read_sets(fit_bytes: bytes) -> list[LoggedSet]:
     return sets
 
 
+def read_session(fit_bytes: bytes) -> SessionMetrics:
+    """The FIT session message, which is where Garmin puts the whole-session
+    figures. Absent fields stay absent — a watch with no strap paired reports no
+    heart rate, and that is not a zero."""
+    for message in _messages(fit_bytes, "session"):
+        return SessionMetrics(
+            avg_heart_rate=_as_int(message.get("avg_heart_rate")),
+            max_heart_rate=_as_int(message.get("max_heart_rate")),
+            calories=_as_int(message.get("total_calories")),
+            training_effect=_number(message.get("total_training_effect")),
+            elapsed_s=_number(message.get("total_elapsed_time")),
+        )
+    return SessionMetrics()
+
+
+def _as_int(value: object) -> int | None:
+    number = _number(value)
+    return None if number is None else int(number)
+
+
 def _laps(fit_bytes: bytes) -> Iterator[dict[str, object]]:
+    return _messages(fit_bytes, "lap")
+
+
+def _messages(fit_bytes: bytes, name: str) -> Iterator[dict[str, object]]:
     with fitdecode.FitReader(io.BytesIO(fit_bytes)) as reader:
         for frame in reader:
             if not isinstance(frame, fitdecode.FitDataMessage):
                 continue
-            if frame.name != "lap":
+            if frame.name != name:
                 continue
             yield {field.name: field.value for field in frame.fields}
