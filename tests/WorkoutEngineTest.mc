@@ -3511,3 +3511,110 @@ function testTheEffortBarSpansTheLadder(logger as Test.Logger) as Boolean {
     Test.assert(MuscleEffort.position(99.0) == 1.0);
     return true;
 }
+
+//! The exercise clock resumes, it does not restart.
+//!
+//! An exercise is rarely one unbroken stretch: two sets, the rack is taken, you
+//! go and do something else, you come back. The clock used to be set to now()
+//! every time an exercise was selected, so coming back showed 0:00 and the
+//! question the clock exists to answer — how long did this exercise take me —
+//! had no answer at all for any exercise performed the way a real gym forces.
+//!
+//! What is banked is only the visits that have finished. The one under way is
+//! held by the controller and added for display, so a crash cannot double-count
+//! a stretch that was already written down.
+(:test)
+function testTheExerciseClockResumesAcrossVisits(logger as Test.Logger) as Boolean {
+    var controller = AppController.instance();
+    controller.startWorkout(TestSupport.abcWorkout());
+
+    var engine = controller.engine() as WorkoutEngine;
+    var a = engine.getWorkout().findExercise("A") as Exercise;
+    var b = engine.getWorkout().findExercise("B") as Exercise;
+
+    // Nothing has been spent yet.
+    controller.selectExercise("A");
+    Test.assertEqual(a.elapsedSec, 0);
+
+    // Pretend A took a while, then leave it for B. The time lands on A.
+    a.elapsedSec = 300;
+    controller.selectExercise("B");
+    Test.assert(a.elapsedSec >= 300);
+    Test.assertEqual(b.elapsedSec, 0);
+    var bankedOnA = a.elapsedSec;
+
+    // Time spent on B is B's, and does not touch A.
+    b.elapsedSec = 120;
+    controller.selectExercise("A");
+    Test.assert(b.elapsedSec >= 120);
+    Test.assertEqual(a.elapsedSec, bankedOnA);
+
+    // And back on A the clock reads what A has already cost, not zero — which
+    // is the whole point.
+    Test.assert(controller.exerciseSeconds() >= bankedOnA);
+    return true;
+}
+
+//! Undoing a set does not undo the minutes.
+//!
+//! Taking back a set is a correction to what was recorded, not a claim that the
+//! time never passed. The undo path used to reset the clock outright.
+(:test)
+function testUndoKeepsTheTimeAlreadySpent(logger as Test.Logger) as Boolean {
+    var controller = AppController.instance();
+    controller.startWorkout(TestSupport.abcWorkout());
+    controller.selectExercise("A");
+
+    var engine = controller.engine() as WorkoutEngine;
+    var a = engine.getWorkout().findExercise("A") as Exercise;
+    controller.completeSet();
+    a.elapsedSec = 240;
+
+    controller.undoLastSet();
+    Test.assert(a.elapsedSec >= 240);
+    Test.assert(controller.exerciseSeconds() >= 240);
+    return true;
+}
+
+//! The accumulated clock survives the app being closed and reopened.
+(:test)
+function testTheExerciseClockSurvivesStorage(logger as Test.Logger) as Boolean {
+    var exercise = new Exercise("x", "Row", 3, 10, 40.0, 90);
+    exercise.elapsedSec = 754;
+    var restored = Exercise.fromStorage(exercise.toStorage());
+    Test.assertEqual(restored.elapsedSec, 754);
+
+    // An exercise written before the clock existed reads back as zero rather
+    // than crashing or inventing a duration.
+    var old = exercise.toStorage();
+    old.remove("e");
+    Test.assertEqual(Exercise.fromStorage(old).elapsedSec, 0);
+    return true;
+}
+
+//! Moving the cursor onto a row starts that row's name from its beginning.
+//!
+//! Only the focused row of a list scrolls, and the clock is shared by
+//! everything on screen — so without a change of subject the newly focused name
+//! inherits whatever phase the row above had reached. Once the row above had
+//! finished its trips, that phase was "parked", and arriving on a long name
+//! showed you its end with the first half already gone.
+(:test)
+function testFocusingANewRowRestartsItsName(logger as Test.Logger) as Boolean {
+    Marquee.stop();
+    Marquee.focus("row-a");
+    // Let the clock get somewhere.
+    var startedAt = Marquee.clock();
+    Test.assert(startedAt < 50);
+
+    // Staying on the same row must NOT restart it — a list repaints constantly,
+    // and a name that resets on every frame never travels at all.
+    Marquee.focus("row-a");
+    Test.assert(Marquee.clock() >= startedAt);
+
+    // Moving to another row does restart it, at the start of the new phrase.
+    Marquee.focus("row-b");
+    Test.assert(Marquee.clock() < 50);
+    Marquee.stop();
+    return true;
+}

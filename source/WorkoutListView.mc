@@ -83,6 +83,8 @@ class WorkoutListView extends WatchUi.View {
         // column down the right edge, and a name sliding under them reads as a
         // fault. Symmetric, because the line is centred: whatever clearance the
         // right end needs, the left end gets too.
+        // Turning the carousel is a new name to read. See Marquee.focus.
+        Marquee.focus(workout.id);
         var afterName = Marquee.draw(dc, blockTop, workout.name,
             Theme.fontsTitle(), Theme.colorText(), _nameWidth(dc, blockTop));
         Theme.drawFitted(dc, afterName + gap, countText,

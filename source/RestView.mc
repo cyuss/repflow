@@ -189,6 +189,7 @@ class RestView extends WatchUi.View {
         // Measured at the line's baseline and against the ring, not the glass:
         // this is the lowest text on the page and the chord closes fastest here.
         var nameFont = Theme.fontsBody()[0];
+        Marquee.focus(exercise.id);
         y = Marquee.draw(dc, y, exercise.name, Theme.fontsBody(), Theme.colorText(),
             Theme.usableWidthWithin(dc, y + (dc.getFontHeight(nameFont) * 3) / 4,
                 _ringInset(dc)));

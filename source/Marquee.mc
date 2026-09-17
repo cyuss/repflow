@@ -52,6 +52,8 @@ module Marquee {
     var _timer as Timer.Timer? = null;
     var _running as Boolean = false;
     var _neededThisFrame as Boolean = false;
+    //! What the moving text currently names. See `focus`.
+    var _focusKey as String = "";
     //! `System.getTimer()` when this scroll began.
     //!
     //! The phase used to be taken from the absolute clock — `getTimer() %
@@ -265,6 +267,26 @@ module Marquee {
         }
         t -= pauseMs;
         return overflow - (t * overflow) / travel;      // travelling back
+    }
+
+    //! Say what the moving text belongs to, so a change of subject restarts it.
+    //!
+    //! Only one row of a list scrolls — the focused one — and the clock is
+    //! shared by everything on screen. Without this, moving the cursor down
+    //! onto a long name hands that name whatever phase the previous row had
+    //! reached: usually the middle of its travel, and once the previous row had
+    //! finished, a name parked with its first half already scrolled away. You
+    //! would arrive on a row and be shown the end of it.
+    //!
+    //! A phrase is read from its start. Naming the subject is what lets the
+    //! travel begin again when the subject changes, without the list needing a
+    //! hook for the cursor moving — which a CustomMenu does not offer.
+    public function focus(key as String) as Void {
+        if (_focusKey.equals(key)) {
+            return;
+        }
+        _focusKey = key;
+        stop();
     }
 
     //! Ask for animation frames without drawing any text through this module.

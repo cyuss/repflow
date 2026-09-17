@@ -153,6 +153,7 @@ class ExerciseView extends WatchUi.View {
             Theme.colorAccent());
 
         var top = Theme.drawHeartRateGauge(dc, h / 14);
+        Marquee.focus(exercise.id);
         top = Marquee.draw(dc, top + h / 60, exercise.name,
             [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
             Theme.colorText(), Theme.usableWidth(dc, top + h / 60));

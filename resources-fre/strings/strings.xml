@@ -10,7 +10,6 @@
     <string id="FieldWeight">POIDS</string>
     <string id="FieldReps">REPS</string>
     <string id="FieldRpe">RPE</string>
-    <string id="AvgRpe">RPE MOY</string>
     <string id="RecordWeight">CHARGE</string>
     <string id="Record1RM">1RM EST</string>
     <string id="RecordVolume">VOLUME</string>

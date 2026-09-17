@@ -23,7 +23,7 @@ import Toybox.WatchUi;
 //! rather than a fabricated zero when the device does not provide them.
 class WorkoutSummaryView extends WatchUi.View {
 
-    public static const PAGE_COUNT = 8;
+    public static const PAGE_COUNT = 7;
 
     private var _summary as SessionSummary;
     private var _workout as Workout;
@@ -123,12 +123,10 @@ class WorkoutSummaryView extends WatchUi.View {
         } else if (_page == 3) {
             _drawExercisesPage(dc, top, bottom);
         } else if (_page == 4) {
-            _drawEffortPage(dc, top, bottom);
-        } else if (_page == 5) {
             _drawMuscleEffortPage(dc, top, bottom);
-        } else if (_page == 6) {
+        } else if (_page == 5) {
             _drawRecordsPage(dc, top, bottom);
-        } else if (_page == 7) {
+        } else if (_page == 6) {
             _drawWeekPage(dc, top, bottom);
         } else {
             _drawWorkPage(dc, top, bottom);
@@ -252,59 +250,6 @@ class WorkoutSummaryView extends WatchUi.View {
             Theme.colorHr());
     }
 
-    //! How hard the session felt, set by set.
-    //!
-    //!            8.2
-    //!           AVG RPE
-    //!        ▁▃▅▆▇▆▅█
-    //!        first        last
-    //!
-    //! One bar per rated set, in the order they were performed, at the height
-    //! of its rating and in its colour. A list of numbers would say what each
-    //! set cost; the shape says whether the session held together — a ramp
-    //! means you built into it, a wall of nines from the second set means you
-    //! opened too heavy, and neither is visible any other way.
-    //!
-    //! Unrated sets are drawn as a mark on the baseline rather than skipped, so
-    //! the chart keeps the session's real length and a gap reads as "not rated"
-    //! instead of "did not happen".
-    private function _drawEffortPage(dc as Graphics.Dc, top as Number, bottom as Number) as Void {
-        var rated = [] as Array;      // Float? per performed set, in order
-        var sum = 0.0;
-        var count = 0;
-        var list = _workout.exercises;
-        for (var i = 0; i < list.size(); i++) {
-            var sets = list[i].sets;
-            for (var j = 0; j < sets.size(); j++) {
-                var set = sets[j];
-                if (!set.completed) {
-                    continue;
-                }
-                rated.add(set.rpe);
-                if (set.rpe != null) {
-                    sum += set.rpe as Float;
-                    count++;
-                }
-            }
-        }
-
-        var caption = WatchUi.loadResource(Rez.Strings.FieldRpe) as String;
-        if (count == 0) {
-            // Nothing was rated. Saying "--" is true; drawing an empty chart
-            // would look like a rendering fault.
-            FieldGrid.drawSingle(dc, top, bottom - top, LiveMetrics.NO_VALUE, caption,
-                Theme.colorFaint());
-            return;
-        }
-
-        var average = sum / count;
-        var edge = FieldGrid.edgeHeight(top, bottom);
-        FieldGrid.drawSingle(dc, top, edge, Rpe.format(_nearestRung(average)),
-            WatchUi.loadResource(Rez.Strings.AvgRpe) as String, Rpe.color(_nearestRung(average)));
-        FieldGrid.drawRule(dc, top + edge);
-        _drawEffortChart(dc, top + edge, bottom, rated, _nearestRung(average));
-    }
-
     //! How hard each muscle group was worked, this session.
     //!
     //!          RPE PAR MUSCLE
@@ -313,10 +258,11 @@ class WorkoutSummaryView extends WatchUi.View {
     //!     Triceps            7
     //!     ▅▅▅▅▅▅▅
     //!
-    //! The page before this one says how hard the *session* felt, set by set.
-    //! This one says where that effort went, and the two together are the
-    //! question an athlete actually asks the morning after: not "was it hard"
-    //! but "which part of me did it land on".
+    //! Not "was it hard" but "which part of me did it land on" — which is the
+    //! question an athlete actually asks the morning after. A session-wide
+    //! average answered neither: one number over every set of a push day says
+    //! nothing about whether it was the shoulders or the triceps that took it,
+    //! and it is the same number whichever way the work was split.
     //!
     //! It reads as the companion to the weekly volume page on purpose — same
     //! rows, same bars, same group colours for the name — because they are the
@@ -451,86 +397,6 @@ class WorkoutSummaryView extends WatchUi.View {
         }
         return best;
     }
-
-    private function _drawEffortChart(
-        dc as Graphics.Dc,
-        top as Number,
-        bottom as Number,
-        rated as Array,
-        average as Float
-    ) as Void {
-        var count = rated.size();
-        if (count <= 0) {
-            return;
-        }
-        var height = bottom - top;
-        var inset = height / 8;
-        var chartTop = top + inset;
-        var baseline = bottom - inset;
-        var span = baseline - chartTop;
-        if (span <= 4) {
-            return;
-        }
-
-        // The page-dot gutter off both sides, as every chart on these pages
-        // does, so the block stays centred.
-        var gutter = dc.getWidth() / 14;
-        var width = Theme.bandWidth(dc, chartTop, span) - gutter;
-        var left = (dc.getWidth() - width) / 2;
-        var pitch = width / count;
-        var barWidth = (pitch * 62) / 100;
-        if (barWidth < 2) {
-            barWidth = 2;
-        }
-
-        // The bottom of the scale is RPE 6, not zero. A chart that started at
-        // zero would spend three quarters of its height on effort nobody logs,
-        // and every session would look identically hard.
-        var rungs = Rpe.size();
-        for (var i = 0; i < count; i++) {
-            var x = left + i * pitch + (pitch - barWidth) / 2;
-            var value = rated[i] as Float?;
-            var rung = Rpe.indexOf(value);
-            if (rung < 0) {
-                // Unrated: a mark on the baseline, so the set still occupies
-                // its place in the session.
-                dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
-                Theme.fillBar(dc, x, baseline - 2, barWidth, 2);
-                continue;
-            }
-            var barHeight = (span * (rung + 1)) / rungs;
-            barHeight = (barHeight * Animator.value()).toNumber();
-            if (barHeight < 2) {
-                barHeight = 2;
-            }
-            dc.setColor(Rpe.colorAt(rung), Graphics.COLOR_TRANSPARENT);
-            Theme.fillBar(dc, x, baseline - barHeight, barWidth, barHeight);
-        }
-
-        dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
-        dc.fillRectangle(left, baseline, width, 1);
-
-        // A line at the session's own average, which is the number printed
-        // above. Without it the bars are a shape with nothing to be a shape
-        // *against*: you can see they rise and fall, not which of them were the
-        // hard ones. With it, everything above the line is a set that cost more
-        // than the session's average and everything below it cost less.
-        var mean = Rpe.indexOf(average);
-        if (mean >= 0) {
-            var meanY = baseline - (span * (mean + 1)) / rungs;
-            dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
-            // Dashed, so it reads as a reference and not as another bar.
-            var dash = width / 26;
-            if (dash < 2) {
-                dash = 2;
-            }
-            for (var x = left; x < left + width; x += dash * 2) {
-                var run = (x + dash > left + width) ? (left + width - x) : dash;
-                dc.fillRectangle(x, meanY, run, 1);
-            }
-        }
-    }
-
     //! What was beaten today, and by how much.
     //!
     //!        2 RECORDS

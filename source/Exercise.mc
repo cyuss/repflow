@@ -33,6 +33,19 @@ class Exercise {
     //! movement it would have if it had been logged in the phone app, rather
     //! than on a near-match found by name.
     public var hevyId as String?;
+    //! Seconds already spent on this movement, across every visit to it.
+    //!
+    //! An exercise is not one unbroken stretch of time. You do two sets, the
+    //! rack is taken, you go and do something else, you come back — and the
+    //! question "how long did this exercise take me" still has one answer. The
+    //! controller adds each visit here as it leaves, so the clock on screen
+    //! resumes rather than restarting, and the total survives an app restart
+    //! because it is written with the set.
+    //!
+    //! It does **not** include the visit currently under way; the controller
+    //! holds that and adds it for display. Anything else and a crash would
+    //! double-count whatever had already been flushed.
+    public var elapsedSec as Number;
 
     public function initialize(
         id as String,
@@ -53,6 +66,7 @@ class Exercise {
         me.forcedComplete = false;
         me.muscle = Muscle.OTHER;
         me.hevyId = null;
+        me.elapsedSec = 0;
     }
 
     public function completedSetCount() as Number {
@@ -189,6 +203,7 @@ class Exercise {
             "st" => state as Number,
             "fc" => forcedComplete,
             "m" => muscle,
+            "e" => elapsedSec,
             "s" => rawSets
         };
     }
@@ -224,6 +239,11 @@ class Exercise {
             : Muscle.OTHER;
         var h = data["h"];
         ex.hevyId = (h instanceof String) ? h as String : null;
+        // Absent in anything written before the exercise clock accumulated.
+        // Zero is the honest default: we do not know how long the movement had
+        // taken, and inventing a number would be worse than starting the count.
+        var e = data["e"];
+        ex.elapsedSec = (e instanceof Number) && (e as Number) > 0 ? e as Number : 0;
         var rawSets = data["s"] as Array;
         for (var i = 0; i < rawSets.size(); i++) {
             ex.sets.add(WorkoutSet.fromStorage(rawSets[i] as Array));

@@ -257,9 +257,33 @@ class AppController {
         return _exercisePage;
     }
 
-    //! Seconds spent on the exercise currently selected.
+    //! Seconds spent on the exercise currently selected, across every visit.
+    //!
+    //! An exercise is rarely one unbroken stretch. Two sets, the rack is taken,
+    //! you go and do something else, you come back — and "how long did this
+    //! exercise take" still has one answer. What is banked on the exercise is
+    //! added to the visit under way, so coming back resumes the clock instead
+    //! of restarting it.
     public function exerciseSeconds() as Number {
-        return _since(_exerciseStartedAt);
+        var engine = _engine;
+        var current = engine == null ? null : engine.currentExercise();
+        var banked = current == null ? 0 : current.elapsedSec;
+        return banked + _since(_exerciseStartedAt);
+    }
+
+    //! Bank the visit under way onto the exercise it belongs to, and begin a
+    //! new one.
+    //!
+    //! Called **before** the engine is told to move, so the time lands on the
+    //! exercise being left rather than the one being opened. Calling it when
+    //! nothing changed is harmless: the same total comes back out.
+    private function _bankExerciseTime() as Void {
+        var engine = _engine;
+        var current = engine == null ? null : engine.currentExercise();
+        if (current != null && _exerciseStartedAt != 0) {
+            current.elapsedSec += _since(_exerciseStartedAt);
+        }
+        _exerciseStartedAt = now();
     }
 
     //! Seconds spent on the set now under way, or 0 between sets.
@@ -389,6 +413,9 @@ class AppController {
         if (engine == null) {
             return false;
         }
+        // Banked before the engine moves, so the time lands on the exercise
+        // being left rather than on the one being opened.
+        _bankExerciseTime();
         if (!engine.selectExercise(exerciseId)) {
             return false;
         }
@@ -530,7 +557,9 @@ class AppController {
         if (ex != null) {
             syncPendingValues(ex);
         }
-        _exerciseStartedAt = now();
+        // Banked, not discarded: taking back a set does not mean the minutes
+        // spent on the exercise never happened.
+        _bankExerciseTime();
         _setBeganAt = now();
         _exercisePage = Tuning.PAGE_SET;
         _startTicker();
@@ -804,6 +833,9 @@ class AppController {
             return;
         }
         stopTicker();
+        // The visit under way when the athlete stopped is part of the exercise
+        // it was spent on.
+        _bankExerciseTime();
         var finishedAt = now();
         var summary = engine.finishWorkout(finishedAt);
         _recorder.updateTotals(summary);
@@ -926,6 +958,10 @@ class AppController {
     //! already starting a fresh one.
     public function onAppStop() as Void {
         stopTicker();
+        // Bank before persisting: the visit under way is only in memory, and a
+        // workout resumed tomorrow should not have lost the twenty minutes it
+        // was in the middle of.
+        _bankExerciseTime();
         _persist();
 
         // An answer already given wins. If the athlete pressed Save or Discard

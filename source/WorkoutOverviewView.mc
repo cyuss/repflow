@@ -269,6 +269,10 @@ class ExerciseMenuItem extends WatchUi.CustomMenuItem {
         // of reading every row to work out where each one starts.
         var textLeft = RowLayout.textLeft(dc);
         if (focused) {
+            // The cursor landing here is a new phrase to read, so the travel
+            // begins again at its start rather than inheriting whatever phase
+            // the row above had reached.
+            Marquee.focus(_exercise.id);
             Marquee.drawAt(dc, textLeft, top, _exercise.name,
                 [nameFont] as Array<Graphics.FontDefinition>, nameColor, textWidth);
         } else {
