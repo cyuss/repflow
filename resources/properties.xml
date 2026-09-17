@@ -15,7 +15,6 @@
         <property id="weightStepTenths"  type="number">10</property>
         <property id="units"             type="number">0</property>
         <property id="haptics"           type="boolean">true</property>
-        <property id="repCounter"        type="boolean">false</property>
         <property id="animations"        type="number">0</property>
         <property id="theme"             type="number">0</property>
         <property id="hevyApiKey"        type="string"></property>
@@ -33,7 +32,6 @@
         <string id="SetUnitsMetric">Kilograms</string>
         <string id="SetUnitsStatute">Pounds</string>
         <string id="SetHaptics">Vibration</string>
-        <string id="SetRepCounter">Count reps automatically</string>
         <string id="SetAnimations">Animation</string>
         <string id="SetAnimAuto">Follow the watch</string>
         <string id="SetAnimOff">Off</string>
@@ -73,9 +71,6 @@
             <settingConfig type="boolean" />
         </setting>
 
-        <setting propertyKey="@Properties.repCounter" title="@Strings.SetRepCounter">
-            <settingConfig type="boolean" />
-        </setting>
 
         <setting propertyKey="@Properties.animations" title="@Strings.SetAnimations">
             <settingConfig type="list">

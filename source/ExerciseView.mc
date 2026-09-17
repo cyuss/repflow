@@ -58,8 +58,6 @@ class ExerciseView extends WatchUi.View {
         AppController.instance().setLiveView(Tuning.LIVE_EXERCISE);
     }
 
-    //! Counting repetitions means the accelerometer at 25 Hz, so it runs only
-    //! while this screen is actually in front of the athlete.
     public function onShow() as Void {
         AppController.instance().setLiveView(Tuning.LIVE_EXERCISE);
         // The ring sweeps out to where the exercise actually is. Nothing moves
@@ -68,8 +66,7 @@ class ExerciseView extends WatchUi.View {
     }
 
     public function onHide() as Void {
-        // Retracts the repaint and, with it, the accelerometer: a menu opened
-        // over this screen is a screen nobody is looking at.
+        // A menu opened over this screen is a screen nobody is looking at.
         AppController.instance().clearLiveView(Tuning.LIVE_EXERCISE);
         Animator.stop();
         Marquee.stop();
@@ -246,17 +243,8 @@ class ExerciseView extends WatchUi.View {
             height = available;
             inset = 0;
         }
-        // When the wrist is counting, the reps cell shows what it has counted
-        // rather than what was planned — because that is the number START is
-        // about to put in front of the athlete. It is shown in the warm colour
-        // so it is visibly a measurement rather than the plan.
-        var counted = controller.countedReps();
         var repsText = controller.pendingReps().toString();
         var repsColor = Theme.colorAccent();
-        if (counted != null && (counted as Number) > 0) {
-            repsText = (counted as Number).toString();
-            repsColor = Theme.colorWarm();
-        }
 
         FieldGrid.drawPair(dc, top + inset, height,
             Theme.formatPlannedWeight(controller.pendingWeight()),
@@ -294,12 +282,14 @@ class ExerciseDelegate extends WatchUi.BehaviorDelegate {
     //! Garmin activity. Weight and reps are edited from the MENU.
     public function onPreviousPage() as Boolean {
         AppController.instance().turnExercisePage(-1);
+        Marquee.stop();
         WatchUi.requestUpdate();
         return true;
     }
 
     public function onNextPage() as Boolean {
         AppController.instance().turnExercisePage(1);
+        Marquee.stop();
         WatchUi.requestUpdate();
         return true;
     }
@@ -329,8 +319,6 @@ class ExerciseDelegate extends WatchUi.BehaviorDelegate {
         if (exercise == null) {
             return true;
         }
-        // Whatever the wrist counted becomes the value the editor opens on.
-        controller.applyCountedReps();
         SetEditor.confirm(exercise);
         return true;
     }

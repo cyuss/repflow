@@ -62,7 +62,7 @@ logging, and editing before the rest. The other five are what this list is for.
 | 2.9 | **Mark to-failure / drop set / rest-pause** | Changes what the number means | Model + FIT field | S | later |
 | 2.10 | **Supersets and circuits** — A1 ↔ A2 alternating automatically | Halves the time cost of accessory work | Engine grouping; navigation already id-based, so no cursor to fight | M | later |
 | 2.11 | **Per-set targets** (pyramid: 12 / 10 / 8) | A single target rep count is a simplification most programmes do not make | Model change | M | later |
-| 2.12 | **Automatic rep counting from the accelerometer** | Garmin's native strength activity does it, so athletes will expect it | `Sensor.registerSensorDataListener` with accelerometer data — **verified present**. But Garmin's own rep counter is **not exposed**; this would be a signal-processing project of our own, accurate for some movements and not others | L | later — build it honestly or not at all |
+| 2.12 | **Automatic rep counting from the accelerometer** | Garmin's native strength activity does it, so athletes will expect it | Built, shipped behind an off-by-default setting, and **removed again**. `Sensor.registerSensorDataListener` at 25 Hz is the single most expensive thing this app could ask a watch for, and what it bought was a rhythm detector that was right for a bench press and wrong for a cable movement — a number the athlete had to check every set, which costs more than counting did. Garmin's own counter is not exposed, so there is no cheap version of this | L | **rejected** — the battery is worth more than the guess |
 | 2.13 | Undo the last set | — | — | — | **shipped** |
 
 ## 3 — Rest

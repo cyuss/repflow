@@ -271,12 +271,14 @@ class RestDelegate extends WatchUi.BehaviorDelegate {
     //! UP / DOWN page, the same way they do on the exercise screen.
     public function onPreviousPage() as Boolean {
         AppController.instance().turnRestPage(-1);
+        Marquee.stop();
         WatchUi.requestUpdate();
         return true;
     }
 
     public function onNextPage() as Boolean {
         AppController.instance().turnRestPage(1);
+        Marquee.stop();
         WatchUi.requestUpdate();
         return true;
     }

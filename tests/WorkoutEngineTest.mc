@@ -1026,7 +1026,6 @@ function testDeviceCapabilitiesAreSafeToRead(logger as Test.Logger) as Boolean {
     Test.assert(Units.step() > 0.0);
     Test.assert(Units.label().length() > 0);
     Settings.haptics();
-    Settings.repCounter();
 
     // Kilograms in, kilograms out, whichever unit is being displayed.
     var kg = 57.5;
@@ -1287,7 +1286,6 @@ function testImportedExercisesUseCatalogueIds(logger as Test.Logger) as Boolean 
     return true;
 }
 
-
 //! Estimated one-rep max, and what it is for.
 //!
 //! Epley makes a set of ten comparable with a set of three, which is the only
@@ -1474,83 +1472,6 @@ function testRecoveryOnlyCountsTheFirstMinute(logger as Test.Logger) as Boolean 
     rec.sample(120);
     Test.assert(rec.drop() == 50);
     Test.assert(rec.best() == 10);
-    return true;
-}
-
-//! Synthetic waveforms for the rep counter.
-//!
-//! Waving a watch is not a test. These feed the counter the shape a lifted
-//! weight actually makes at the wrist — one smooth oscillation per repetition —
-//! and check that it finds them, and more importantly that it does not find
-//! repetitions that are not there.
-(:test)
-function testRepCounterCountsCleanReps(logger as Test.Logger) as Boolean {
-    var counter = new RepCounter();
-    // Ten reps at two seconds each: 50 samples per rep at 25 Hz.
-    TestSupport.feedOscillation(counter, 10, 50, 400);
-    // Rhythm detection cannot be exact — the first rep primes the detector —
-    // so the contract is "within one", not "exactly ten".
-    var n = counter.count();
-    Test.assert(n >= 9 && n <= 10);
-    return true;
-}
-
-//! A still wrist counts nothing. This is the failure that would lose trust.
-(:test)
-function testRepCounterIgnoresStillness(logger as Test.Logger) as Boolean {
-    var counter = new RepCounter();
-    // Gravity only, with a little sensor noise on top.
-    for (var i = 0; i < 500; i++) {
-        var jitter = (i % 7) - 3;          // +/-3 milli-g
-        counter.feed([jitter] as Array<Number>, [1000 + jitter] as Array<Number>,
-            [0] as Array<Number>);
-    }
-    Test.assertEqual(counter.count(), 0);
-    Test.assert(counter.samplesSeen() == 500);
-    return true;
-}
-
-//! Slow, small movement — walking to the rack — is not a set.
-(:test)
-function testRepCounterIgnoresSmallMovement(logger as Test.Logger) as Boolean {
-    var counter = new RepCounter();
-    TestSupport.feedOscillation(counter, 20, 50, 40);   // well under the floor
-    Test.assertEqual(counter.count(), 0);
-    return true;
-}
-
-//! One rep cannot be counted twice by bouncing.
-//!
-//! A bar rebounding off the chest makes a second, smaller peak inside the same
-//! repetition. The refractory period is what stops it scoring.
-(:test)
-function testRepCounterRefractoryPeriod(logger as Test.Logger) as Boolean {
-    var counter = new RepCounter();
-    // Reps far faster than any human can perform: 4 samples each, ~6 per second.
-    TestSupport.feedOscillation(counter, 30, 4, 600);
-    // Whatever it finds must respect the minimum period, so it cannot be
-    // anywhere near thirty.
-    Test.assert(counter.count() <= 12);
-    return true;
-}
-
-//! Reset clears everything, because a new set starts at zero.
-(:test)
-function testRepCounterReset(logger as Test.Logger) as Boolean {
-    var counter = new RepCounter();
-    TestSupport.feedOscillation(counter, 8, 50, 400);
-    Test.assert(counter.count() > 0);
-
-    counter.reset();
-    Test.assertEqual(counter.count(), 0);
-    Test.assertEqual(counter.samplesSeen(), 0);
-
-    // Missing axes are survivable: the sensor can hand back null.
-    Test.assertEqual(counter.feed(null, null, null), 0);
-    Test.assertEqual(counter.feed([1] as Array<Number>, null, null), 0);
-    // And mismatched lengths use the shortest rather than reading off the end.
-    counter.feed([1, 2, 3] as Array<Number>, [1] as Array<Number>, [1, 2] as Array<Number>);
-    Test.assertEqual(counter.samplesSeen(), 1);
     return true;
 }
 
@@ -1948,7 +1869,6 @@ function testAnEmptyWorkoutListIsAValidState(logger as Test.Logger) as Boolean {
     }
     return true;
 }
-
 
 //! Last session's load fills in what the routine left blank.
 //!
@@ -2379,7 +2299,6 @@ function _captionsFit(
     return ok;
 }
 
-
 //! The overview's rows draw, focused and not, with names of every length.
 //!
 //! This is the screen the product is: "select any exercise at any time" is a
@@ -2651,7 +2570,6 @@ function testExerciseBandFitsThree(logger as Test.Logger) as Boolean {
         WatchUi.loadResource(Rez.Strings.FieldTimer as ResourceId) as String,
         WatchUi.loadResource(Rez.Strings.FieldSets as ResourceId) as String
     ] as Array<String>;
-
 
     logger.debug("band " + width.toString() + "px, three would fit: " +
         (Theme.miniFieldsFit(dc, width, 3, values, captions) ? "yes" : "no"));
@@ -2989,7 +2907,6 @@ function testImportedWorkoutsReachHevyWhole(logger as Test.Logger) as Boolean {
     Test.assertEqual(sent.size(), list.size());
     return true;
 }
-
 
 //! Garmin's own numbers have to be captured before the recording is closed.
 //!
@@ -3368,39 +3285,119 @@ function testTheTickStopsPaintingWhatNobodyIsLooking(logger as Test.Logger) as B
     return true;
 }
 
-//! Leaving the exercise screen must stop the accelerometer.
+
+//! Every scroll starts at the beginning of the phrase.
 //!
-//! Counting repetitions registers a 25 Hz sensor listener, and the one thing
-//! that must never happen is for it to outlive the screen that asked for it.
-//! The decision used to be made from the page number alone — and opening a
-//! menu over the exercise screen does not change the page, so the listener
-//! stayed registered for as long as the menu was open, then for as long as the
-//! set editor was open, then for the exercise list after that.
+//! The phase used to come from the absolute millisecond clock — `getTimer() %
+//! period` — so a name arriving on screen picked up wherever the watch's
+//! counter happened to be. Most of the time that was mid-travel; often enough
+//! it was the far end, and you looked down at an exercise to find the *back* of
+//! its name, then waited a full cycle for the front to come round.
 //!
-//! The listener itself is unavailable in the test environment, so what is
-//! asserted is the decision: with the screen gone, counting is off. That is the
-//! part that was wrong.
+//! What is asserted is that the clock the travel is measured against is zero at
+//! the moment a scroll begins, and that zero is the start of the text.
 (:test)
-function testTheAccelerometerDoesNotOutliveTheScreen(logger as Test.Logger) as Boolean {
-    var controller = AppController.instance();
-    controller.startWorkout(TestSupport.abcWorkout());
-    controller.selectExercise("A");
-    controller.setLiveView(Tuning.LIVE_EXERCISE);
+function testAScrollStartsAtTheStartOfTheText(logger as Test.Logger) as Boolean {
+    Marquee.stop();
+    // Nothing has begun, so the clock is at its origin — and the origin is the
+    // beginning of the phrase, resting.
+    Test.assert(Marquee.clock() < 50);
+    Test.assertEqual(Marquee.offsetAt(0, 200), 0);
 
-    // Whatever the setting says, the screen going away settles it.
-    controller.clearLiveView(Tuning.LIVE_EXERCISE);
-    Test.assert(!controller.isCountingReps());
+    // It stays there for the whole opening pause. A scroll that sets off the
+    // instant it appears is one you start reading halfway down.
+    Test.assertEqual(Marquee.offsetAt(Marquee.PAUSE_MS - 1, 200), 0);
+    Test.assert(Marquee.offsetAt(Marquee.PAUSE_MS + 200, 200) > 0);
 
-    // A rest is not a set either, wherever the page happens to be pointing.
-    controller.setLiveView(Tuning.LIVE_REST);
-    Test.assert(!controller.isCountingReps());
+    // And a view change puts it back, rather than carrying the old phase into
+    // the new name.
+    Marquee.stop();
+    Test.assert(Marquee.clock() < 50);
+    return true;
+}
 
-    // Nor is a data page of the exercise screen.
-    controller.setLiveView(Tuning.LIVE_EXERCISE);
-    controller.turnExercisePage(1);
-    Test.assert(!controller.isCountingReps());
+//! The travel ends after two round trips, back where it started.
+//!
+//! Ten frames a second for the length of a set and the rest after it was the
+//! app's most expensive habit. Two round trips is the number because the second
+//! is for the word you missed; after that the name has been read, and a line
+//! still moving beside a number is a line stealing the eye.
+//!
+//! The important property is that the parking is *seamless*: the cycle count
+//! has to land exactly where the travel rests at the start, or the text jumps
+//! at the moment it stops.
+(:test)
+function testTheTravelEndsWhereItBegan(logger as Test.Logger) as Boolean {
+    var overflow = 120;
+    var pace = Marquee.MS_PER_PIXEL;
+    var pause = Marquee.PAUSE_MS;
+    var period = (pause + overflow * pace) * 2;
 
-    controller.clearLiveView(Tuning.LIVE_EXERCISE);
-    Test.assert(!controller.isCountingReps());
+    var end = Marquee.cycleEnd(overflow, pace, pause);
+    Test.assertEqual(end, period * Marquee.CYCLES);
+
+    // The last frame of the travel and the parked frame after it agree, so
+    // nothing moves at the moment it stops.
+    Test.assertEqual(Marquee.offsetPaced(end, overflow, pace, pause), 0);
+
+    // Both round trips really happen: the far end is reached twice.
+    var ends = 0;
+    var wasAtEnd = false;
+    for (var t = 0; t < end; t += 40) {
+        var atEnd = Marquee.offsetPaced(t, overflow, pace, pause) == overflow;
+        if (atEnd && !wasAtEnd) {
+            ends++;
+        }
+        wasAtEnd = atEnd;
+    }
+    Test.assertEqual(ends, Marquee.CYCLES);
+
+    // Nothing to scroll is over before it starts.
+    Test.assertEqual(Marquee.cycleEnd(0, pace, pause), 0);
+    return true;
+}
+
+//! A name that has finished travelling stops asking for frames — and stays
+//! stopped.
+//!
+//! The trap is the app's own 1 Hz tick: it repaints the exercise screen every
+//! second for the whole workout, and on each of those repaints the parked text
+//! is drawn again. If drawing it were enough to start the travel over, the name
+//! would scroll for ever in two-second bursts and the 10 fps timer would never
+//! die. So the frame with nothing moving stops the timer while *keeping* where
+//! the travel had got to, and only a change of screen or page clears it.
+(:test)
+function testParkedTextIsNotRestartedByARepaint(logger as Test.Logger) as Boolean {
+    var dc = TestSupport.screenDc();
+    if (dc == null) {
+        return true;
+    }
+    var size = TestSupport.screenSize();
+    var fonts = [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>;
+    var long = "Single-Leg Romanian Deadlift With A Very Long Name Indeed";
+    var width = Theme.usableWidth(dc, size / 4);
+
+    Marquee.stop();
+    Marquee.draw(dc, size / 4, long, fonts, Theme.colorText(), width);
+    Marquee.endFrame();
+    Test.assert(Marquee.isRunning());
+    var began = Marquee.clock();
+
+    // A frame in which nothing overflowed. The timer stops — that much was
+    // already true — but the travel must keep its place, or the next repaint
+    // starts the whole cycle again.
+    Marquee.draw(dc, size / 4, "Squat", fonts, Theme.colorText(), width);
+    Marquee.endFrame();
+    Test.assert(!Marquee.isRunning());
+    Test.assert(Marquee.clock() >= began);
+
+    // Changing screen or page is the one thing that does start it over, and
+    // starting over means the beginning of the new text.
+    Marquee.stop();
+    Test.assert(Marquee.clock() < 50);
+    Marquee.draw(dc, size / 4, long, fonts, Theme.colorText(), width);
+    Test.assert(Marquee.isRunning());
+    Marquee.endFrame();
+    Marquee.stop();
     return true;
 }

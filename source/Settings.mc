@@ -25,7 +25,6 @@ module Settings {
     var _step as Number? = null;
     var _units as Number? = null;
     var _haptics as Boolean? = null;
-    var _repCounter as Boolean? = null;
     var _animations as Number? = null;
     var _theme as Number? = null;
     var _restMode as Number? = null;
@@ -36,7 +35,6 @@ module Settings {
         _step = null;
         _units = null;
         _haptics = null;
-        _repCounter = null;
         _animations = null;
         _theme = null;
         _restMode = null;
@@ -111,17 +109,6 @@ module Settings {
         if (v == null) {
             v = readBoolean("haptics", true);
             _haptics = v;
-        }
-        return v;
-    }
-
-    //! Counting reps means running the accelerometer at 25 Hz, which costs
-    //! battery, so it is off until the athlete asks for it.
-    public function repCounter() as Boolean {
-        var v = _repCounter;
-        if (v == null) {
-            v = readBoolean("repCounter", false);
-            _repCounter = v;
         }
         return v;
     }

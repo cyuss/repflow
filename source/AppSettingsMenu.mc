@@ -25,7 +25,6 @@ module AppSettingsMenu {
     const ITEM_REST_MODE = "restmode";
     const ITEM_STEP = "step";
     const ITEM_HAPTICS = "haptics";
-    const ITEM_REPS = "reps";
     const ITEM_ANIM = "anim";
 
     //! Build the menu.
@@ -59,9 +58,6 @@ module AppSettingsMenu {
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.SetHaptics) as String,
             onOff(Settings.haptics()), ITEM_HAPTICS, {}));
-        menu.addItem(new WatchUi.MenuItem(
-            WatchUi.loadResource(Rez.Strings.SetRepCounter) as String,
-            onOff(Settings.repCounter()), ITEM_REPS, {}));
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.SetAnimations) as String,
             animLabel(), ITEM_ANIM, {}));
@@ -167,12 +163,6 @@ class AppSettingsDelegate extends WatchUi.Menu2InputDelegate {
             Settings.writeBoolean("haptics", !Settings.haptics());
             Settings.invalidate();
             _update(item, AppSettingsMenu.onOff(Settings.haptics()));
-            return;
-        }
-        if (id.equals(AppSettingsMenu.ITEM_REPS)) {
-            Settings.writeBoolean("repCounter", !Settings.repCounter());
-            Settings.invalidate();
-            _update(item, AppSettingsMenu.onOff(Settings.repCounter()));
             return;
         }
         if (id.equals(AppSettingsMenu.ITEM_ANIM)) {

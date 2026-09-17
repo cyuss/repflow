@@ -74,7 +74,6 @@
     <string id="SetUnitsMetric">Kilogrammes</string>
     <string id="SetUnitsStatute">Livres</string>
     <string id="SetHaptics">Vibration</string>
-    <string id="SetRepCounter">Compter les repetitions</string>
     <string id="SetAnimations">Animation</string>
     <string id="SetAnimAuto">Suivre la montre</string>
     <string id="SetAnimOff">Desactivee</string>

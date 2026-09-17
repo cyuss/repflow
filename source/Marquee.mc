@@ -39,10 +39,29 @@ module Marquee {
     //! Milliseconds per pixel of travel — about 45 px a second.
     const MS_PER_PIXEL = 22;
 
+    //! Round trips before the text parks itself back at the start.
+    //!
+    //! Two is the number because the second one is for the word you missed.
+    //! After that the name has been read, and a line that keeps moving under a
+    //! bar is a line that draws the eye away from the number beside it — and
+    //! ten frames a second, for the length of a set and the rest after it, is
+    //! the app's most expensive habit by a distance.
+    const CYCLES = 2;
+
     var _frames as MarqueeFrames = new MarqueeFrames();
     var _timer as Timer.Timer? = null;
     var _running as Boolean = false;
     var _neededThisFrame as Boolean = false;
+    //! `System.getTimer()` when this scroll began.
+    //!
+    //! The phase used to be taken from the absolute clock — `getTimer() %
+    //! period` — which meant a name arriving on screen picked up wherever the
+    //! watch's millisecond counter happened to be. Most of the time that was
+    //! somewhere in the middle of the travel, and often it was the far end: you
+    //! looked down at an exercise and read the *back* of its name, then waited
+    //! for it to come round to the beginning. Every scroll now starts at zero,
+    //! which is the start of the phrase, resting.
+    var _startedAt as Number = 0;
 
     //! A heading that should use the space it has: the ladder is walked for the
     //! largest font that fits, exactly as `Theme.drawFitted` does, and the text
@@ -137,9 +156,7 @@ module Marquee {
             return top + height;
         }
 
-        var offset = _offset(width - maxWidth);
-        _neededThisFrame = true;
-        _ensureRunning();
+        var offset = _travel(width - maxWidth, MS_PER_PIXEL, PAUSE_MS);
 
         // Without clipping the overhang would paint over whatever sits beside
         // it, so a device that cannot clip gets the still, truncated text it
@@ -154,9 +171,59 @@ module Marquee {
         return top + height;
     }
 
-    //! How far along the travel we are, pausing at both ends.
-    function _offset(overflow as Number) as Number {
-        return offsetAt(System.getTimer(), overflow);
+    //! Milliseconds since this scroll began, and the frame claim that goes with
+    //! it. Everything that moves asks through here, so everything on screen
+    //! shares one epoch and they all set off together.
+    public function clock() as Number {
+        if (_startedAt == 0) {
+            _startedAt = System.getTimer();
+        }
+        var elapsed = System.getTimer() - _startedAt;
+        // The millisecond counter wrapped. Start the cycle again rather than
+        // returning a negative phase.
+        if (elapsed < 0) {
+            _startedAt = System.getTimer();
+            elapsed = 0;
+        }
+        return elapsed;
+    }
+
+    //! Where the text sits this frame, and whether it still needs frames.
+    //!
+    //! Parking is decided here rather than by the caller: once every cycle has
+    //! run, the offset is zero — the start of the phrase — and no frame is
+    //! claimed, so `endFrame` lets the timer die on the next pass.
+    function _travel(
+        overflow as Number,
+        msPerPixel as Number,
+        pauseMs as Number
+    ) as Number {
+        if (overflow <= 0) {
+            return 0;
+        }
+        // Each scrolling thing decides for itself, off the shared clock. A
+        // single "we are done" latch would let the shortest name on a recap
+        // page finish its two trips and freeze the list still scrolling under
+        // it.
+        var elapsed = clock();
+        if (elapsed >= cycleEnd(overflow, msPerPixel, pauseMs)) {
+            return 0;
+        }
+        _neededThisFrame = true;
+        _ensureRunning();
+        return offsetPaced(elapsed, overflow, msPerPixel, pauseMs);
+    }
+
+    //! When the travel is over: CYCLES complete round trips.
+    public function cycleEnd(
+        overflow as Number,
+        msPerPixel as Number,
+        pauseMs as Number
+    ) as Number {
+        if (overflow <= 0) {
+            return 0;
+        }
+        return (pauseMs + overflow * msPerPixel) * 2 * CYCLES;
     }
 
     //! The same, with the clock passed in. Separate so the arithmetic — which
@@ -210,16 +277,37 @@ module Marquee {
         _ensureRunning();
     }
 
+    //! The travel for something this module is not drawing.
+    //!
+    //! The recap's lists scroll vertically on this module's clock but paint
+    //! themselves. They go through here so they get the same two things every
+    //! scrolling thing in the app gets: a phase that starts at the beginning of
+    //! what is being read, and an end.
+    public function travelPaced(
+        overflow as Number,
+        msPerPixel as Number,
+        pauseMs as Number
+    ) as Number {
+        return _travel(overflow, msPerPixel, pauseMs);
+    }
+
     //! Called at the end of a view's onUpdate. Stops the timer when a whole
     //! frame went by with nothing overflowing.
     public function endFrame() as Void {
         if (!_neededThisFrame) {
-            stop();
+            _pause();
         }
         _neededThisFrame = false;
     }
 
-    public function stop() as Void {
+    //! Stop asking for frames, keeping where the travel had got to.
+    //!
+    //! This is what a frame with nothing moving does, and it must not touch
+    //! `_startedAt`: the exercise screen is still repainted once a second by
+    //! the app's own tick, and on each of those a finished name would otherwise
+    //! be found at a fresh epoch, start over, and scroll for ever in
+    //! two-second bursts.
+    function _pause() as Void {
         if (!_running) {
             return;
         }
@@ -230,6 +318,14 @@ module Marquee {
         }
     }
 
+    //! Forget the travel entirely, so the next thing drawn starts from the
+    //! beginning of its own phrase. Called when the screen or the page changes
+    //! — a new name is a new thing to read, not the continuation of one.
+    public function stop() as Void {
+        _pause();
+        _startedAt = 0;
+    }
+
     public function isRunning() as Boolean {
         return _running;
     }
@@ -237,6 +333,9 @@ module Marquee {
     function _ensureRunning() as Void {
         if (_running) {
             return;
+        }
+        if (_startedAt == 0) {
+            _startedAt = System.getTimer();
         }
         var timer = _timer;
         if (timer == null) {

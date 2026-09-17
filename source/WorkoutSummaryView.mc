@@ -72,6 +72,10 @@ class WorkoutSummaryView extends WatchUi.View {
         // Each page draws itself once, finished. Re-animating on every swipe
         // would put motion between the athlete and a number they are reading.
         Animator.stop();
+        // A new page is a new thing to read, so whatever was scrolling starts
+        // again from the beginning of its own text rather than carrying the
+        // previous page's phase across.
+        Marquee.stop();
         _page = (_page + delta + PAGE_COUNT) % PAGE_COUNT;
         WatchUi.requestUpdate();
     }
@@ -861,8 +865,7 @@ class WorkoutSummaryView extends WatchUi.View {
         if (total <= available) {
             return 0;
         }
-        Marquee.claimFrame();
-        return Marquee.offsetPaced(System.getTimer(), total - available,
+        return Marquee.travelPaced(total - available,
             LIST_MS_PER_PIXEL, LIST_PAUSE_MS);
     }
 
