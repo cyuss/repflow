@@ -114,6 +114,7 @@
     <string id="RecordOne">record</string>
     <string id="RecordMany">records</string>
     <string id="ThisWeek">THIS WEEK</string>
+    <string id="RpeByMuscle">RPE by muscle</string>
     <string id="LastTime">Last</string>
     <string id="FieldRecovery">REC HR</string>
     <string id="FieldBattery">BODY BATT</string>

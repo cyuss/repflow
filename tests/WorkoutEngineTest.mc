@@ -847,8 +847,22 @@ function testSummaryPagesDraw(logger as Test.Logger) as Boolean {
         return true;
     }
     var engine = TestSupport.newEngine();
+    // Rated sets in two different groups, so the effort chart and the per-muscle
+    // page draw their rows rather than falling through to "nothing was rated" —
+    // which is the branch that would otherwise be the only one ever painted.
+    var workout = engine.getWorkout();
+    var exA = workout.findExercise("A") as Exercise;
+    var exB = workout.findExercise("B") as Exercise;
+    var exC = workout.findExercise("C") as Exercise;
+    exA.muscle = Muscle.CHEST;
+    exB.muscle = Muscle.TRICEPS;
+    exC.muscle = Muscle.BACK;
     engine.selectExercise("A");
-    engine.completeCurrentSet(10, 50.0, null, TestSupport.T0);
+    engine.completeCurrentSet(10, 50.0, 8.0, TestSupport.T0);
+    engine.completeCurrentSet(9, 50.0, 9.5, TestSupport.T0 + 120);
+    engine.selectExercise("C");
+    // Performed and deliberately unrated: it must not put C on the page.
+    engine.completeCurrentSet(8, 60.0, null, TestSupport.T0 + 300);
     engine.selectExercise("B");
     engine.skipExercise("B");
     var summary = engine.finishWorkout(TestSupport.T0 + 1800);
@@ -3399,5 +3413,101 @@ function testParkedTextIsNotRestartedByARepaint(logger as Test.Logger) as Boolea
     Test.assert(Marquee.isRunning());
     Marquee.endFrame();
     Marquee.stop();
+    return true;
+}
+
+//! Average RPE per muscle group: where the session's effort actually landed.
+//!
+//! The arithmetic is a mean, which is easy; what is worth asserting is what the
+//! mean is taken over. An unrated set is not a middling effort and must not
+//! drag an average down, a set that was never performed is not a set, and an
+//! exercise with no group must report under OTHER rather than be quietly spread
+//! across the groups that do have one.
+(:test)
+function testAverageRpeIsPerMuscleGroup(logger as Test.Logger) as Boolean {
+    var chest = new Exercise("c", "Bench Press", 3, 8, 60.0, 120);
+    chest.muscle = Muscle.CHEST;
+    chest.recordSet(8, 60.0, 8.0, 100);
+    chest.recordSet(8, 60.0, 9.0, 200);
+
+    var triceps = new Exercise("t", "Triceps Extension", 2, 12, 20.0, 60);
+    triceps.muscle = Muscle.TRICEPS;
+    triceps.recordSet(12, 20.0, 7.0, 300);
+    // Unrated. It happened, it counts for volume, and it is not an RPE of
+    // anything — so it must not pull the triceps average below 7.
+    triceps.recordSet(12, 20.0, null, 400);
+
+    var workout = new Workout("w", "Push", [chest, triceps] as Array<Exercise>);
+    var averages = MuscleEffort.averages(workout);
+    var counts = MuscleEffort.ratedSets(workout);
+
+    Test.assert((averages[Muscle.CHEST] as Float) == 8.5);
+    Test.assertEqual(counts[Muscle.CHEST], 2);
+    Test.assert((averages[Muscle.TRICEPS] as Float) == 7.0);
+    Test.assertEqual(counts[Muscle.TRICEPS], 1);
+
+    // A group that was not trained has no average — not a zero, which would
+    // draw a bar and read as "rated, and very easy".
+    Test.assert(averages[Muscle.BACK] == null);
+    Test.assertEqual(counts[Muscle.BACK], 0);
+    Test.assertEqual(MuscleEffort.ratedGroups(averages), 2);
+    return true;
+}
+
+//! An exercise nobody classified reports under OTHER, and a rating on a set
+//! that was never completed is not a rating.
+(:test)
+function testUnclassifiedEffortIsNotSpreadAround(logger as Test.Logger) as Boolean {
+    var odd = new Exercise("o", "Something New", 2, 10, null, 60);
+    // Left at the default, which is what an exercise imported before the
+    // catalogue knew it looks like.
+    Test.assertEqual(odd.muscle, Muscle.OTHER);
+    odd.recordSet(10, null, 9.5, 100);
+
+    var workout = new Workout("w", "Mixed", [odd] as Array<Exercise>);
+    var averages = MuscleEffort.averages(workout);
+    Test.assert((averages[Muscle.OTHER] as Float) == 9.5);
+    Test.assertEqual(MuscleEffort.ratedGroups(averages), 1);
+
+    // Nothing leaked into a real group.
+    var order = Muscle.browseOrder();
+    for (var i = 0; i < order.size(); i++) {
+        Test.assert(averages[order[i]] == null);
+    }
+
+    // A workout in which nothing was rated has nothing to average.
+    var bare = TestSupport.abcWorkout();
+    Test.assertEqual(MuscleEffort.ratedGroups(MuscleEffort.averages(bare)), 0);
+    return true;
+}
+
+//! The bar spans the scale the athlete uses, not zero to ten.
+//!
+//! An RPE of 6 drawn at 60% of the bar would say the set was most of the way to
+//! failure, which is the opposite of what 6 means. The bottom of the ladder is
+//! the bottom of the bar.
+(:test)
+function testTheEffortBarSpansTheLadder(logger as Test.Logger) as Boolean {
+    var low = Rpe.SCALE[0];
+    var high = Rpe.SCALE[Rpe.SCALE.size() - 1];
+
+    Test.assert(MuscleEffort.position(low) == 0.0);
+    Test.assert(MuscleEffort.position(high) == 1.0);
+
+    var mid = MuscleEffort.position(8.0);
+    Test.assert(mid > 0.4 && mid < 0.6);
+
+    // Monotone across the whole ladder: harder is never a shorter bar.
+    var previous = -1.0;
+    for (var i = 0; i < Rpe.SCALE.size(); i++) {
+        var at = MuscleEffort.position(Rpe.SCALE[i]);
+        Test.assert(at > previous);
+        previous = at;
+    }
+
+    // Nothing rated, nothing drawn — and nothing off the end of the bar.
+    Test.assert(MuscleEffort.position(null) == 0.0);
+    Test.assert(MuscleEffort.position(2.0) == 0.0);
+    Test.assert(MuscleEffort.position(99.0) == 1.0);
     return true;
 }

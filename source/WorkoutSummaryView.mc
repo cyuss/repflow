@@ -23,7 +23,7 @@ import Toybox.WatchUi;
 //! rather than a fabricated zero when the device does not provide them.
 class WorkoutSummaryView extends WatchUi.View {
 
-    public static const PAGE_COUNT = 7;
+    public static const PAGE_COUNT = 8;
 
     private var _summary as SessionSummary;
     private var _workout as Workout;
@@ -125,8 +125,10 @@ class WorkoutSummaryView extends WatchUi.View {
         } else if (_page == 4) {
             _drawEffortPage(dc, top, bottom);
         } else if (_page == 5) {
-            _drawRecordsPage(dc, top, bottom);
+            _drawMuscleEffortPage(dc, top, bottom);
         } else if (_page == 6) {
+            _drawRecordsPage(dc, top, bottom);
+        } else if (_page == 7) {
             _drawWeekPage(dc, top, bottom);
         } else {
             _drawWorkPage(dc, top, bottom);
@@ -301,6 +303,133 @@ class WorkoutSummaryView extends WatchUi.View {
             WatchUi.loadResource(Rez.Strings.AvgRpe) as String, Rpe.color(_nearestRung(average)));
         FieldGrid.drawRule(dc, top + edge);
         _drawEffortChart(dc, top + edge, bottom, rated, _nearestRung(average));
+    }
+
+    //! How hard each muscle group was worked, this session.
+    //!
+    //!          RPE PAR MUSCLE
+    //!     Pectoraux          8.5
+    //!     ▆▆▆▆▆▆▆▆▆▆▆▆▆▆
+    //!     Triceps            7
+    //!     ▅▅▅▅▅▅▅
+    //!
+    //! The page before this one says how hard the *session* felt, set by set.
+    //! This one says where that effort went, and the two together are the
+    //! question an athlete actually asks the morning after: not "was it hard"
+    //! but "which part of me did it land on".
+    //!
+    //! It reads as the companion to the weekly volume page on purpose — same
+    //! rows, same bars, same group colours for the name — because they are the
+    //! two halves of one answer. Volume is how much; this is how hard.
+    //!
+    //! **This session, not the week.** The caption says so, and it says so for
+    //! the reason the week page had to learn: a row labelled Back under a leg
+    //! session reads as the app having decided you trained your back, and the
+    //! only defence is to name the span out loud.
+    //!
+    //! The bar is the rating's place on the ladder the athlete uses, 6 to 10 —
+    //! not a fraction of ten. A 6 drawn at 60% of the bar would say the set was
+    //! most of the way to failure, which is the opposite of what 6 means.
+    private function _drawMuscleEffortPage(
+        dc as Graphics.Dc,
+        top as Number,
+        bottom as Number
+    ) as Void {
+        var averages = MuscleEffort.averages(_workout);
+        var rated = MuscleEffort.ratedGroups(averages);
+
+        var caption = WatchUi.loadResource(Rez.Strings.RpeByMuscle) as String;
+        if (rated == 0) {
+            // Nothing was rated all session. A dash is true; an empty chart
+            // would look like a rendering fault.
+            FieldGrid.drawSingle(dc, top, bottom - top, LiveMetrics.NO_VALUE,
+                caption, Theme.colorFaint());
+            return;
+        }
+
+        var capFont = Graphics.FONT_XTINY;
+        dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
+        dc.drawText(dc.getWidth() / 2, top, capFont, caption, Graphics.TEXT_JUSTIFY_CENTER);
+        top += dc.getFontHeight(capFont);
+
+        var available = bottom - top;
+        var font = _weekFont(dc, available, rated);
+        var lineHeight = dc.getFontHeight(font);
+        var barHeight = lineHeight / 6;
+        if (barHeight < 3) {
+            barHeight = 3;
+        }
+        var barGap = lineHeight / 6;
+        var rowHeight = _rowHeight(dc, font);
+
+        var used = rowHeight * rated;
+        var visible = used - lineHeight / 3;
+        var blockTop = top + (available - visible) / 2;
+        if (blockTop < top) {
+            blockTop = top;
+        }
+
+        var band = visible < available ? visible : available - rowHeight;
+        var bandTop = visible < available ? blockTop : top + rowHeight / 2;
+        var width = _listWidth(dc, bandTop, band);
+        var left = (dc.getWidth() - width) / 2;
+
+        var offset = _scrollOffset(visible, available);
+        var clipped = offset > 0 && (dc has :setClip);
+        if (clipped) {
+            dc.setClip(0, top, dc.getWidth(), available);
+        }
+        var y = offset > 0 ? top - offset : blockTop;
+
+        var order = Muscle.browseOrder();
+        // OTHER is not in the browse order — it is not a group you pick from a
+        // menu — but effort really did land there, and dropping it would let a
+        // page of averages quietly omit sets the athlete performed and rated.
+        order.add(Muscle.OTHER);
+
+        for (var i = 0; i < order.size(); i++) {
+            var group = order[i];
+            var average = averages[group];
+            if (average == null) {
+                continue;
+            }
+            if (y + rowHeight < top || y > bottom) {
+                y += rowHeight;
+                continue;
+            }
+            var rung = _nearestRung(average as Float);
+            var value = Rpe.format(rung);
+            var valueWidth = dc.getTextWidthInPixels(value, font);
+            var gap = width / 16;
+
+            // The number takes the effort's colour, the way every other rating
+            // in the app does; the name takes the group's, so the row lines up
+            // with the same group on the weekly page.
+            dc.setColor(Rpe.color(rung), Graphics.COLOR_TRANSPARENT);
+            dc.drawText(left + width, y, font, value, Graphics.TEXT_JUSTIFY_RIGHT);
+
+            dc.setColor(Theme.colorText(), Graphics.COLOR_TRANSPARENT);
+            dc.drawText(left, y, font,
+                Theme.clipToWidth(dc, Muscle.name(group), font, width - valueWidth - gap),
+                Graphics.TEXT_JUSTIFY_LEFT);
+
+            var barTop = y + lineHeight + barGap;
+            dc.setColor(Theme.colorFaint(), Graphics.COLOR_TRANSPARENT);
+            dc.fillRectangle(left, barTop, width, barHeight);
+
+            var filled = (width * MuscleEffort.position(average) * Animator.value()).toNumber();
+            if (filled < 3) {
+                filled = 3;
+            }
+            dc.setColor(Rpe.color(rung), Graphics.COLOR_TRANSPARENT);
+            dc.fillRectangle(left, barTop, filled, barHeight);
+
+            y += rowHeight;
+        }
+
+        if (clipped) {
+            dc.clearClip();
+        }
     }
 
     //! The rung nearest a computed average, so it can be drawn and coloured.

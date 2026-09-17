@@ -9,7 +9,7 @@
 [![33 devices](https://img.shields.io/badge/devices-33-00AAFF?style=flat-square)](docs/DEVICE_MATRIX.md)
 [![Hevy](https://img.shields.io/badge/Hevy-two--way-8A63F2?style=flat-square)](#hevy)
 
-[![Tests](https://img.shields.io/badge/tests-117%20watch%20%2B%20300%20backend-00AA55?style=flat-square)](#testing)
+[![Tests](https://img.shields.io/badge/tests-120%20watch%20%2B%20300%20backend-00AA55?style=flat-square)](#testing)
 [![Licence](https://img.shields.io/badge/licence-GPL--3.0-0A7BBE?style=flat-square)](LICENSE)
 [![No invented APIs](https://img.shields.io/badge/APIs-verified%20against%20the%20SDK-FFAA00?style=flat-square)](docs/API_LIMITATIONS.md)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-00AA55?style=flat-square)](CONTRIBUTING.md)
@@ -108,7 +108,7 @@ that does not work and why.
 | **Garmin's native exercise table** | Sets, reps and loads into the table Connect IQ cannot write itself |
 | **Effort (RPE)** | On the scale Hevy's API actually accepts, rated after the set, costing no extra press |
 | **Rest, two ways** | A countdown, or a clock that runs until you say stop |
-| **Recap** | Totals, physiology, time in zone, per-exercise breakdown, effort chart, records, the week's volume by muscle |
+| **Recap** | Totals, physiology, time in zone, per-exercise breakdown, effort chart, average RPE per muscle group, records, the week's volume by muscle |
 
 ## Screens
 
@@ -153,7 +153,7 @@ cd RepFlow
 
 make bootstrap       # SDK, tooling and a developer signing key
 make doctor          # check the environment
-make test            # 117 watch tests + 300 backend tests
+make test            # 120 watch tests + 300 backend tests
 make sim             # run it in the Connect IQ simulator
 ```
 
