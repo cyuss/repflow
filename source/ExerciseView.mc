@@ -48,21 +48,29 @@ class ExerciseView extends WatchUi.View {
     //!
     //! Which data screen is showing is held on the controller rather than here,
     //! so it survives rest screens and menu round-trips.
+    //! The claim is made here rather than only in onShow, and the difference
+    //! matters: constructing the view is the one thing that provably happens
+    //! before the outgoing view's onHide, so the screen can never be left with
+    //! nothing repainting it. onShow then re-states it for a return from a
+    //! menu, where no view was constructed at all.
     public function initialize() {
         View.initialize();
+        AppController.instance().setLiveView(Tuning.LIVE_EXERCISE);
     }
 
     //! Counting repetitions means the accelerometer at 25 Hz, so it runs only
     //! while this screen is actually in front of the athlete.
     public function onShow() as Void {
-        AppController.instance().updateRepCounting();
+        AppController.instance().setLiveView(Tuning.LIVE_EXERCISE);
         // The ring sweeps out to where the exercise actually is. Nothing moves
         // on the devices that cannot spare the frames — see Animator.
         Animator.start(280);
     }
 
     public function onHide() as Void {
-        AppController.instance().updateRepCounting();
+        // Retracts the repaint and, with it, the accelerometer: a menu opened
+        // over this screen is a screen nobody is looking at.
+        AppController.instance().clearLiveView(Tuning.LIVE_EXERCISE);
         Animator.stop();
         Marquee.stop();
     }

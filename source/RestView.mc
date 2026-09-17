@@ -41,11 +41,18 @@ import Toybox.WatchUi;
 //!   BACK       workout overview — go do a different exercise instead
 class RestView extends WatchUi.View {
 
+    //! Claimed on construction, not only on onShow — see ExerciseView.
     public function initialize() {
         View.initialize();
+        AppController.instance().setLiveView(Tuning.LIVE_REST);
+    }
+
+    public function onShow() as Void {
+        AppController.instance().setLiveView(Tuning.LIVE_REST);
     }
 
     public function onHide() as Void {
+        AppController.instance().clearLiveView(Tuning.LIVE_REST);
         Marquee.stop();
     }
 

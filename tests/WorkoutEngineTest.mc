@@ -3312,3 +3312,95 @@ function testHeartRateReachesHevyAsDescription(logger as Test.Logger) as Boolean
     Test.assert(hrOnly != null && (hrOnly as String).find("118") != null);
     return true;
 }
+
+//! The 1 Hz tick must not repaint a screen that is not there.
+//!
+//! The tick has two jobs and only one of them is the display: it samples heart
+//! rate zones and runs the rest countdown, which have to keep going behind a
+//! menu, and it repaints. A workout spends real minutes in the exercise list,
+//! the set editor and the action menus — screens drawn once and then only on a
+//! button press — and it used to spend every one of those seconds on a full
+//! redraw of a picture nothing was changing.
+//!
+//! What is asserted here is the gate, not the redraw: the countdown still has
+//! to advance and still has to announce itself with nothing on screen.
+(:test)
+function testTheTickStopsPaintingWhatNobodyIsLooking(logger as Test.Logger) as Boolean {
+    var controller = AppController.instance();
+    controller.startWorkout(TestSupport.abcWorkout());
+    controller.selectExercise("A");
+
+    // Constructing the screen is what claims the repaint, because that is the
+    // one moment guaranteed to come before the outgoing view's onHide.
+    controller.setLiveView(Tuning.LIVE_NONE);
+    new ExerciseView();
+    Test.assertEqual(controller.liveView(), Tuning.LIVE_EXERCISE);
+
+    // And constructing the rest screen takes the claim over, whichever order
+    // the two lifecycle callbacks happen to run in.
+    new RestView();
+    Test.assertEqual(controller.liveView(), Tuning.LIVE_REST);
+    controller.setLiveView(Tuning.LIVE_EXERCISE);
+
+    // A menu opens over it.
+    controller.clearLiveView(Tuning.LIVE_EXERCISE);
+    Test.assertEqual(controller.liveView(), Tuning.LIVE_NONE);
+
+    // A view can only retract its own claim. Connect IQ does not promise that
+    // the outgoing onHide runs before the incoming onShow, and on the order
+    // that does not, an unconditional clear would switch the new screen's
+    // repainting off the moment it appeared.
+    controller.setLiveView(Tuning.LIVE_REST);
+    controller.clearLiveView(Tuning.LIVE_EXERCISE);
+    Test.assertEqual(controller.liveView(), Tuning.LIVE_REST);
+
+    // And the half of the tick that is not the screen keeps running with
+    // nothing on screen at all. startRest builds the rest screen, which claims
+    // the repaint — so the claim is dropped afterwards, the way opening a menu
+    // over the countdown drops it.
+    controller.startRest(5);
+    controller.clearLiveView(Tuning.LIVE_REST);
+    for (var i = 0; i < 5; i++) {
+        controller.onTick();
+    }
+    Test.assertEqual(controller.liveView(), Tuning.LIVE_NONE);
+    Test.assert(controller.restOverSignalled());
+    return true;
+}
+
+//! Leaving the exercise screen must stop the accelerometer.
+//!
+//! Counting repetitions registers a 25 Hz sensor listener, and the one thing
+//! that must never happen is for it to outlive the screen that asked for it.
+//! The decision used to be made from the page number alone — and opening a
+//! menu over the exercise screen does not change the page, so the listener
+//! stayed registered for as long as the menu was open, then for as long as the
+//! set editor was open, then for the exercise list after that.
+//!
+//! The listener itself is unavailable in the test environment, so what is
+//! asserted is the decision: with the screen gone, counting is off. That is the
+//! part that was wrong.
+(:test)
+function testTheAccelerometerDoesNotOutliveTheScreen(logger as Test.Logger) as Boolean {
+    var controller = AppController.instance();
+    controller.startWorkout(TestSupport.abcWorkout());
+    controller.selectExercise("A");
+    controller.setLiveView(Tuning.LIVE_EXERCISE);
+
+    // Whatever the setting says, the screen going away settles it.
+    controller.clearLiveView(Tuning.LIVE_EXERCISE);
+    Test.assert(!controller.isCountingReps());
+
+    // A rest is not a set either, wherever the page happens to be pointing.
+    controller.setLiveView(Tuning.LIVE_REST);
+    Test.assert(!controller.isCountingReps());
+
+    // Nor is a data page of the exercise screen.
+    controller.setLiveView(Tuning.LIVE_EXERCISE);
+    controller.turnExercisePage(1);
+    Test.assert(!controller.isCountingReps());
+
+    controller.clearLiveView(Tuning.LIVE_EXERCISE);
+    Test.assert(!controller.isCountingReps());
+    return true;
+}

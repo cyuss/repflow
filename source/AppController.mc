@@ -21,6 +21,22 @@ class AppController {
     private var _recorder as GarminRecorder;
     private var _rest as RestTimer;
     private var _ticker as Timer.Timer?;
+    //! Which self-updating screen is in front, if either.
+    //!
+    //! The 1 Hz tick has two jobs and only one of them is the screen: it
+    //! samples heart rate zones and drives the rest countdown, which must keep
+    //! running behind a menu, and it repaints — which must not. Two of RepFlow's
+    //! screens change by themselves, the exercise screen and the rest screen.
+    //! Everything else a workout passes through — the exercise list, the set
+    //! editor, the action menus, the workout editor — is drawn once and then
+    //! only when a button is pressed, so repainting it every second for an hour
+    //! is a full redraw a second spent on a picture that did not change.
+    //!
+    //! It is also what tells the rep counter the exercise screen is actually
+    //! visible, which the page number alone cannot say: opening a menu over the
+    //! exercise screen leaves the page where it was, and the accelerometer used
+    //! to keep sampling at 25 Hz for as long as the menu stayed open.
+    private var _liveView as Number;
     //! Time in heart rate zone, counted off the same 1 Hz tick. Garmin shows
     //! this at the end of its own activities and gives no API to read it back.
     private var _zones as ZoneTracker;
@@ -117,6 +133,7 @@ class AppController {
         _restedSec = 0;
         _restSignalled = false;
         _ticker = null;
+        _liveView = Tuning.LIVE_NONE;
         _zones = new ZoneTracker();
         _recovery = new RecoveryTracker();
         _reps = new RepCounter();
@@ -189,6 +206,48 @@ class AppController {
         _reps.reset();
     }
 
+    //! Whether the accelerometer is registered right now.
+    //!
+    //! Exposed because "the listener was left running" is invisible from the
+    //! outside until the battery is gone, and a leak nothing can assert is a
+    //! leak that comes back.
+    public function isCountingReps() as Boolean {
+        return _counting;
+    }
+
+    //! Which screen the tick believes it is repainting. See `_liveView`.
+    public function liveView() as Number {
+        return _liveView;
+    }
+
+    //! Say which screen is in front. Called from onShow.
+    //!
+    //! Repainting resumes at once rather than at the next tick: a screen coming
+    //! back from a menu with a second-old countdown on it is a screen that
+    //! looks stuck.
+    public function setLiveView(which as Number) as Void {
+        if (_liveView == which) {
+            return;
+        }
+        _liveView = which;
+        updateRepCounting();
+        if (which != Tuning.LIVE_NONE) {
+            WatchUi.requestUpdate();
+        }
+    }
+
+    //! Say a screen is gone. Called from onHide, and deliberately not a plain
+    //! `setLiveView(Tuning.LIVE_NONE)`: Connect IQ does not promise that the outgoing
+    //! view's onHide runs before the incoming view's onShow, and on the order
+    //! that does not, clearing unconditionally would switch the new screen's
+    //! own repainting off the moment it appeared. A view can only retract its
+    //! own claim.
+    public function clearLiveView(which as Number) as Void {
+        if (_liveView == which) {
+            setLiveView(Tuning.LIVE_NONE);
+        }
+    }
+
     //! Start or stop counting, from whatever just changed.
     //!
     //! One place decides, because four things can change the answer — the
@@ -199,6 +258,7 @@ class AppController {
         var wanted = Settings.repCounter() &&
             _engine != null &&
             !_rest.isRunning() &&
+            _liveView == Tuning.LIVE_EXERCISE &&
             _exercisePage == Tuning.PAGE_SET;
         if (wanted == _counting) {
             return;
@@ -806,7 +866,12 @@ class AppController {
             // Reached zero exactly on this tick.
             _signalRestOver();
         }
-        WatchUi.requestUpdate();
+        // Everything above happens whatever is on screen — the countdown has
+        // to reach zero and buzz from behind a menu. Only the repaint is
+        // conditional, and only a screen that changes by itself asks for one.
+        if (_liveView != Tuning.LIVE_NONE) {
+            WatchUi.requestUpdate();
+        }
     }
 
     //! Leave the rest screen and get back to work.

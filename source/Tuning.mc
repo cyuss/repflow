@@ -62,6 +62,20 @@ module Tuning {
     const REST_PAGE_COUNT = 3;
 
     // ------------------------------------------------------------------
+    // Which screen the 1 Hz tick is repainting
+    // ------------------------------------------------------------------
+
+    //! No screen that changes by itself is in front — a menu, an editor, a
+    //! list. The tick keeps sampling and keeps the countdown running; it just
+    //! stops repainting a picture nothing is changing.
+    const LIVE_NONE = 0;
+    //! The exercise screen. Its timer runs, and it is the only screen on which
+    //! repetitions may be counted.
+    const LIVE_EXERCISE = 1;
+    //! The rest screen. Its countdown runs.
+    const LIVE_REST = 2;
+
+    // ------------------------------------------------------------------
     // Set editor focus
     // ------------------------------------------------------------------
 
