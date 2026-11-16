@@ -148,3 +148,29 @@ workout picker, landing straight back on the exercise that was active.
   navigation already supports the behaviour.
 
 Nothing speculative was built for these. See the roadmap in `README.md`.
+
+## Analytics
+
+Statistics live inside RepFlow — a second Connect IQ app could not read
+RepFlow's storage, and the only bridge between two apps on the watch is a
+hand-off that asks for confirmation every time. Decided, with the alternatives
+(a server, Hevy as a source, a phone app) rejected.
+
+| File | Role |
+|---|---|
+| `SessionLog.mc` | every saved session, exercises and muscles included, one Storage value per month, twelve months |
+| `NativeActivities.mc` | the watch's own activity history (date and duration only) and the calendar; loaded in the glance |
+| `AnalyticsData.mc` | Garmin cache, deduplication against RepFlow, period totals, the glance's cache |
+| `AnalyticsViews.mc` | overview pages, charts, history, session detail |
+| `AnalyticsGlance.mc` | the glance (Connect IQ 4+), drawn in 32–64 KB from one small Storage value |
+| `AnalyticsHooks.mc` / `AnalyticsOff.mc` | the only entry points the rest of the app uses; the empty one is built for products too small to hold Analytics (see `monkey.jungle`) |
+| `DevLaunch.mc` | simulator launch modes, patched per build by `scripts/build.sh` |
+
+A Garmin session is a date and a duration: the watch gives nothing more. It
+adds to counts and time, never to volume, sets or reps, and every screen that
+mixes the two says so. A RepFlow session is also a Garmin activity, so anything
+starting within five minutes of a logged RepFlow session is that session.
+
+Simulator: `just sim-analytics`, `just glance-preview` (the glance at its real
+size, full screen), `just glance` (the real glance mode); `DEMO=1` overwrites
+the simulator's history with ten weeks of demo sessions.

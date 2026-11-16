@@ -8,6 +8,13 @@ base.sourcePath = source
 # so they cost nothing in a normal or release build.
 base.sourcePath = source;tests
 
+# Analytics is excluded on the two products with 128 KB for a watch app — it
+# does not fit there — and its empty stand-in everywhere else. See
+# source/AnalyticsHooks.mc.
+base.excludeAnnotations = noAnalytics
+fenix6.excludeAnnotations = analytics
+fenix6s.excludeAnnotations = analytics
+
 # Shared resources: strings, and the fallback launcher icon.
 base.resourcePath = resources
 

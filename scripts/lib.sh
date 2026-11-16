@@ -59,6 +59,38 @@ resolve_sdk() {
   return 1
 }
 
+# Set the simulator's Settings > Glance Launch Mode: "glance" or "normal".
+#
+# With glance mode on, an app that has a glance starts *as* its glance, and
+# START opens the app from there — RepFlow then opens on Analytics, as it does
+# when launched from the glance loop on the watch. The setting is not stored on
+# disk, so the only way to set it is the simulator's own menu; this clicks it.
+# Best effort: it needs the terminal to be allowed to control the computer
+# (System Settings > Privacy & Security > Accessibility). Without that, it says
+# which menu item to click and carries on.
+sim_glance_mode() {
+  local item="Launch in Normal Mode"
+  [ "$1" = "glance" ] && item="Launch in Glance Mode"
+  # The menus have to be opened one after the other: a click straight on the
+  # nested item is accepted and silently ignored.
+  osascript - "$item" >/dev/null 2>&1 <<'APPLESCRIPT' \
+    || warn "Could not set the simulator's glance mode. Pick Settings > Glance Launch Mode > $item by hand."
+on run argv
+  set wanted to item 1 of argv
+  tell application "System Events" to tell process "simulator"
+    set frontmost to true
+    delay 0.3
+    set settingsMenu to menu "Settings" of menu bar item "Settings" of menu bar 1
+    click menu bar item "Settings" of menu bar 1
+    delay 0.3
+    click menu item "Glance Launch Mode" of settingsMenu
+    delay 0.3
+    click menu item wanted of menu 1 of menu item "Glance Launch Mode" of settingsMenu
+  end tell
+end run
+APPLESCRIPT
+}
+
 # Put the SDK's bin on PATH for the current shell only — never edits dotfiles.
 activate_sdk() {
   SDK_HOME="$(resolve_sdk)" || die "No Connect IQ SDK found. Run scripts/bootstrap-macos.sh (or doctor.sh for details)."

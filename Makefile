@@ -3,9 +3,11 @@ SHELL := /bin/bash
 
 # Override the build target on the command line:
 #   make build DEVICE=fenix847mm
-DEVICE ?= fenix6pro
+DEVICE ?= fenix9pro47mm
 # monkeyc type-check level: 0=off 1=gradual 2=informative 3=strict
 TYPECHECK ?= 3
+# Analytics targets: DEMO=1 overwrites the simulator's history with a demo year.
+DEMO ?= 0
 
 # The simulator targets ask which device to run when you do not name one.
 # Passing DEVICE=<id> on the command line skips the question.
@@ -20,7 +22,7 @@ export TYPECHECK
 
 .PHONY: help doctor bootstrap key devices devices-all devices-missing \
         build build-all test test-watch test-backend sim sim-fresh sim-attach \
-        sim-empty sim-seed sim-seed-forget \
+        sim-empty sim-seed sim-seed-forget sim-analytics glance glance-preview \
         shot sideload clean package release-check backend-setup \
         sync-garmin sync-garmin-show sync-hevy sync-hevy-show
 
@@ -94,6 +96,15 @@ sim-fresh: ## Same, but clear the session — keeping the seeded workouts
 
 sim-empty: ## Same, but with nothing stored at all — a first-ever install
 	@REPFLOW_DETACH=1 REPFLOW_RESET=1 REPFLOW_NO_SEED=1 scripts/run-simulator.sh $(SIM_DEVICE)
+
+sim-analytics: ## Open RepFlow straight on Analytics (DEMO=1 for demo data)
+	@REPFLOW_LAUNCH=analytics REPFLOW_DEMO=$(DEMO) REPFLOW_DETACH=1 scripts/run-simulator.sh $(DEVICE)
+
+glance-preview: ## The Analytics glance, full screen, to work on its design (DEMO=1)
+	@REPFLOW_LAUNCH=glance-preview REPFLOW_DEMO=$(DEMO) REPFLOW_DETACH=1 scripts/run-simulator.sh $(DEVICE)
+
+glance: ## The real glance, in the simulator's glance mode (Connect IQ 4+ devices)
+	@scripts/glance.sh $(DEVICE)
 
 sim-seed: ## Remember the simulator's workouts, so sim-fresh puts them back
 	@scripts/sim-seed.sh save

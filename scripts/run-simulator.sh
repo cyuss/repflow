@@ -61,6 +61,15 @@ elif ! ensure_simulator; then
   exit 1
 fi
 
+# The app opens as itself unless REPFLOW_GLANCE=1 asks for its glance — see
+# sim_glance_mode. Without this, a simulator left in glance mode by the last
+# `just glance` would open every later run on the glance.
+if [ -n "${REPFLOW_GLANCE:-}" ]; then
+  sim_glance_mode glance
+else
+  sim_glance_mode normal
+fi
+
 # 3. Push and run
 #
 # monkeydo stays attached for as long as the app runs, relaying println() output

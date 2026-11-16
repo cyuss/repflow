@@ -145,4 +145,45 @@
     <string id="HevyRoutines">routines</string>
     <string id="HevyFull">Storage full</string>
     <string id="HevyLastTime">Fetching last time...</string>
+    <!-- Analytics -->
+    <string id="GlanceTitle" scope="glance">SESSIONS</string>
+    <string id="GlanceSession" scope="glance">session</string>
+    <string id="GlanceSessions" scope="glance">sessions</string>
+    <string id="GlanceVsPrev" scope="glance">vs last wk</string>
+    <string id="GlanceSamePrev" scope="glance">= last week</string>
+    <string id="GlanceToday" scope="glance">today</string>
+    <string id="GlanceYesterday" scope="glance">yesterday</string>
+    <string id="GlanceDaysAgo" scope="glance">$1$ days ago</string>
+    <string id="GlanceNone" scope="glance">No session this week</string>
+    <string id="GlanceGarmin" scope="glance">Garmin session</string>
+    <string id="AnalyticsTitle">Analytics</string>
+    <string id="ThisMonth">THIS MONTH</string>
+    <string id="Last30Days">LAST 30 DAYS</string>
+    <string id="LastSession">LAST SESSION</string>
+    <string id="VsLastWeek">vs last week</string>
+    <string id="VsLastMonth">vs last month</string>
+    <string id="VsPrevious30">vs previous 30 days</string>
+    <string id="SetsRepsRow">Sets/reps</string>
+    <string id="GarminSummaryOnly">Garmin: time only</string>
+    <string id="HistoryHint">START  history</string>
+    <string id="NoSessions">No sessions</string>
+    <string id="NoSessionsHint">RepFlow and Garmin sessions land here</string>
+    <string id="HistoryTitle">History</string>
+    <string id="Filters">Filters</string>
+    <string id="FilterPeriod">Period</string>
+    <string id="FilterSource">Source</string>
+    <string id="Period7">7 days</string>
+    <string id="Period30">30 days</string>
+    <string id="Period12m">12 months</string>
+    <string id="SourceAll">All</string>
+    <string id="SourceRepFlow">RepFlow</string>
+    <string id="SourceGarmin">Garmin</string>
+    <string id="NoDetail">No exercise detail for this session</string>
+    <string id="UnitSession">session</string>
+    <string id="UnitSessions">sessions</string>
+    <string id="GarminSession">Garmin session</string>
+    <string id="ChartSessions">Sessions / week</string>
+    <string id="ChartVolume">Volume / week</string>
+    <string id="ChartRepFlowOnly">RepFlow sessions only</string>
+    <string id="ChartThisWeek">this week</string>
 </strings>

@@ -840,6 +840,14 @@ class AppController {
         var summary = engine.finishWorkout(finishedAt);
         _recorder.updateTotals(summary);
         SessionRepository.appendHistory(engine.getSession(), summary);
+        // Analytics: the whole session, exercises and muscles included, and
+        // the glance's figures with it. Saved sessions only — a discarded one
+        // is deleted from Garmin too, so as far as the record goes it never
+        // happened.
+        if (save) {
+            AnalyticsHooks.onSessionSaved(engine.getSession(), summary, engine.getWorkout(),
+                finishedAt);
+        }
         // Records and the week's volume are written once, here, never mid-set.
         History.commitSession(_bests, engine.getWorkout(), finishedAt);
         SessionRepository.clearActive();

@@ -162,6 +162,10 @@ class WorkoutListDelegate extends WatchUi.BehaviorDelegate {
                 WatchUi.loadResource(Rez.Strings.EditWorkoutItem) as String,
                 (_view.selected() as Workout).name, ITEM_EDIT, {}));
         }
+        if (AnalyticsHooks.ENABLED) {
+            menu.addItem(new WatchUi.MenuItem(
+                WatchUi.loadResource(Rez.Strings.AnalyticsTitle) as String, null, ITEM_ANALYTICS, {}));
+        }
         menu.addItem(new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.NewWorkout) as String, null, ITEM_NEW, {}));
         menu.addItem(new WatchUi.MenuItem(
@@ -180,6 +184,7 @@ class WorkoutListDelegate extends WatchUi.BehaviorDelegate {
     public static const ITEM_NEW = "new";
     public static const ITEM_SETTINGS = "settings";
     public static const ITEM_HEVY = "hevy";
+    public static const ITEM_ANALYTICS = "analytics";
 
 
     //! START — begin the highlighted workout, or open the editor when the
@@ -219,6 +224,10 @@ class WorkoutListMenuDelegate extends WatchUi.Menu2InputDelegate {
         var id = item.getId() as String;
         if (id.equals(WorkoutListDelegate.ITEM_SETTINGS)) {
             AppSettingsMenu.show();
+            return;
+        }
+        if (id.equals(WorkoutListDelegate.ITEM_ANALYTICS)) {
+            AnalyticsHooks.openOverview();
             return;
         }
         if (id.equals(WorkoutListDelegate.ITEM_HEVY)) {

@@ -145,4 +145,45 @@
     <string id="HevyLastTime">Recuperation...</string>
     <string id="SetHevyKey">Cle API Hevy (hevy.com/settings?developer)</string>
     <string id="SetPrivate">Publier les seances en prive sur Hevy</string>
+    <!-- Analytics -->
+    <string id="GlanceTitle" scope="glance">SEANCES</string>
+    <string id="GlanceSession" scope="glance">seance</string>
+    <string id="GlanceSessions" scope="glance">seances</string>
+    <string id="GlanceVsPrev" scope="glance">vs sem. prec.</string>
+    <string id="GlanceSamePrev" scope="glance">= sem. prec.</string>
+    <string id="GlanceToday" scope="glance">aujourd'hui</string>
+    <string id="GlanceYesterday" scope="glance">hier</string>
+    <string id="GlanceDaysAgo" scope="glance">il y a $1$ j</string>
+    <string id="GlanceNone" scope="glance">Aucune seance cette semaine</string>
+    <string id="GlanceGarmin" scope="glance">Seance Garmin</string>
+    <string id="AnalyticsTitle">Statistiques</string>
+    <string id="ThisMonth">CE MOIS</string>
+    <string id="Last30Days">30 DERNIERS JOURS</string>
+    <string id="LastSession">DERNIERE SEANCE</string>
+    <string id="VsLastWeek">vs sem. prec.</string>
+    <string id="VsLastMonth">vs mois prec.</string>
+    <string id="VsPrevious30">vs 30 j prec.</string>
+    <string id="SetsRepsRow">Series/reps</string>
+    <string id="GarminSummaryOnly">Garmin : duree seule</string>
+    <string id="HistoryHint">START  historique</string>
+    <string id="NoSessions">Aucune seance</string>
+    <string id="NoSessionsHint">Les seances RepFlow et Garmin arrivent ici</string>
+    <string id="HistoryTitle">Historique</string>
+    <string id="Filters">Filtres</string>
+    <string id="FilterPeriod">Periode</string>
+    <string id="FilterSource">Source</string>
+    <string id="Period7">7 jours</string>
+    <string id="Period30">30 jours</string>
+    <string id="Period12m">12 mois</string>
+    <string id="SourceAll">Toutes</string>
+    <string id="SourceRepFlow">RepFlow</string>
+    <string id="SourceGarmin">Garmin</string>
+    <string id="NoDetail">Pas de detail d'exercices pour cette seance</string>
+    <string id="UnitSession">seance</string>
+    <string id="UnitSessions">seances</string>
+    <string id="GarminSession">Seance Garmin</string>
+    <string id="ChartSessions">Seances / semaine</string>
+    <string id="ChartVolume">Volume / semaine</string>
+    <string id="ChartRepFlowOnly">Seances RepFlow uniquement</string>
+    <string id="ChartThisWeek">cette sem.</string>
 </strings>
