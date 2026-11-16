@@ -112,6 +112,8 @@
     <string id="AddSet">Add a set</string>
     <string id="RecordOne">record</string>
     <string id="RecordMany">records</string>
+    <string id="SummaryDone">done</string>
+    <string id="SummaryBody">BODY</string>
     <string id="ThisWeek">THIS WEEK</string>
     <string id="RpeByMuscle">RPE by muscle</string>
     <string id="LastTime">Last</string>

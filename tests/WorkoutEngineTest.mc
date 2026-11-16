@@ -2343,9 +2343,13 @@ function testOverviewRowsDraw(logger as Test.Logger) as Boolean {
     new OverviewTitle("A workout name far too long for one line").draw(dc);
     Marquee.endFrame();
 
-    // The text window has to leave the icon column alone at both ends, or a
-    // long name scrolls over the state dot.
-    Test.assert(RowLayout.textWidth(dc) <= dc.getWidth() - RowLayout.gutter(dc) * 2);
+    // The text window starts clear of the icon column, or a long name scrolls
+    // over the state dot, and stops at the right margin, or it runs into the
+    // curve of the glass.
+    Test.assert(RowLayout.textLeft(dc) >= RowLayout.gutter(dc));
+    Test.assert(RowLayout.textLeft(dc) + RowLayout.textWidth(dc)
+        <= dc.getWidth() - RowLayout.rightMargin(dc));
+    Test.assert(RowLayout.rightMargin(dc) > 0);
     Test.assert(RowLayout.iconCentre(dc) < RowLayout.gutter(dc));
     return true;
 }

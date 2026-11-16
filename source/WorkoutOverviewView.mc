@@ -134,13 +134,20 @@ module RowLayout {
 
     //! Width available to text.
     //!
-    //! The gutter is taken off **both** sides even though only the left one
-    //! holds an icon: the right one is what keeps the longest name clear of the
-    //! curve of the glass.
+    //! Only the left gutter holds an icon, so only the left one is a full
+    //! gutter. The right margin used to mirror it, which spent a fifth of the
+    //! screen on nothing and cut "Hack Squat" to "Hack Squa". The rows a
+    //! name is read on sit near the middle of the glass, where it is widest,
+    //! so a much smaller margin still keeps the text off the curve.
     public function textWidth(dc as Graphics.Dc) as Number {
         var width = dc.getWidth();
-        var usable = width - gutter(dc) * 2;
+        var usable = width - gutter(dc) - rightMargin(dc);
         return usable < 1 ? 1 : usable;
+    }
+
+    //! The margin on the right of every row.
+    public function rightMargin(dc as Graphics.Dc) as Number {
+        return dc.getWidth() / 11;
     }
 
     //! The biggest font a row's name can take, given the row it sits in.
@@ -155,8 +162,9 @@ module RowLayout {
         subFont as Graphics.FontDefinition
     ) as Graphics.FontDefinition {
         var room = rowHeight - dc.getFontHeight(subFont) - rowHeight / 16;
+        // SMALL at most. MEDIUM filled the row's height and left room for
+        // eight letters across it; a name read whole beats a bigger one cut.
         var ladder = [
-            Graphics.FONT_MEDIUM,
             Graphics.FONT_SMALL,
             Graphics.FONT_TINY,
             Graphics.FONT_XTINY
@@ -201,7 +209,7 @@ module RowLayout {
 
     //! The icon column, mirrored as a margin on the right.
     public function gutter(dc as Graphics.Dc) as Number {
-        return dc.getWidth() / 5;
+        return dc.getWidth() / 6;
     }
 
     //! Where the state icon's centre goes.
