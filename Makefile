@@ -22,7 +22,7 @@ export TYPECHECK
 
 .PHONY: help doctor bootstrap key devices devices-all devices-missing \
         build build-all test test-watch test-backend sim sim-fresh sim-attach \
-        sim-empty sim-seed sim-seed-forget sim-analytics sim-recap sim-glance glance glance-preview glance-memory \
+        sim-empty sim-seed sim-seed-forget sim-analytics sim-recap sim-showcase sim-glance glance glance-preview glance-memory \
         shot sideload clean package release-check backend-setup \
         sync-garmin sync-garmin-show sync-hevy sync-hevy-show
 
@@ -99,6 +99,9 @@ sim-empty: ## Same, but with nothing stored at all — a first-ever install
 
 sim-analytics: ## Open RepFlow straight on Analytics (DEMO=1 for demo data)
 	@REPFLOW_LAUNCH=analytics REPFLOW_DEMO=$(DEMO) REPFLOW_DETACH=1 scripts/run-simulator.sh $(DEVICE)
+
+sim-showcase: ## A Push Day under way, for screenshots (SCREEN=set|rest|overview)
+	@REPFLOW_LAUNCH=showcase-$(or $(SCREEN),set) REPFLOW_DETACH=1 scripts/run-simulator.sh $(DEVICE)
 
 sim-recap: ## The end-of-workout recap of a full demo session, every page filled
 	@REPFLOW_LAUNCH=recap REPFLOW_DETACH=1 scripts/run-simulator.sh $(DEVICE)

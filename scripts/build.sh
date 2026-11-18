@@ -126,6 +126,7 @@ inject_hevy_key
 #   REPFLOW_LAUNCH=analytics        open straight on Analytics
 #   REPFLOW_LAUNCH=glance-preview   the glance, full screen
 #   REPFLOW_LAUNCH=recap            the recap of a full demo session
+#   REPFLOW_LAUNCH=showcase-set     a Push Day under way (also -rest, -overview)
 #   REPFLOW_DEMO=1                  overwrite the log with a demo year
 #
 # Patched for this build only and put back by the same trap as the Hevy key. A
@@ -151,7 +152,10 @@ inject_launch_mode() {
     analytics)       mode=1 ;;
     glance-preview)  mode=2 ;;
     recap)           mode=3 ;;
-    *) die "REPFLOW_LAUNCH must be normal, analytics, glance-preview or recap (got: $launch)" ;;
+    showcase-set)    mode=4 ;;
+    showcase-rest)   mode=5 ;;
+    showcase-overview) mode=6 ;;
+    *) die "REPFLOW_LAUNCH must be normal, analytics, glance-preview, recap or showcase-set|rest|overview (got: $launch)" ;;
   esac
   case "$demo" in
     ""|0|no|false) demo=false ;;

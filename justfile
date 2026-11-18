@@ -112,6 +112,10 @@ sim-analytics:
 sim-recap device=DEVICE:
     @REPFLOW_LAUNCH=recap REPFLOW_DETACH=1 scripts/run-simulator.sh {{device}}
 
+# A Push Day under way, for screenshots: screen is set, rest or overview
+sim-showcase screen="set" device=DEVICE:
+    @REPFLOW_LAUNCH=showcase-{{screen}} REPFLOW_DETACH=1 scripts/run-simulator.sh {{device}}
+
 # The glance as the watch shows it: centred, real size; START opens Analytics (DEMO=1 for demo data)
 sim-glance device=DEVICE:
     @REPFLOW_LAUNCH=glance-preview REPFLOW_DEMO={{DEMO}} REPFLOW_DETACH=1 scripts/run-simulator.sh {{device}}

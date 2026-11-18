@@ -3,31 +3,30 @@
 Material for the Connect IQ Store listing. `scripts/package.sh` copies this
 directory into `build/release/`.
 
-| File | Purpose | Status |
-|---|---|---|
-| `short-description.txt` | ~100 char store subtitle | ready |
-| `full-description.txt` | Full listing body | ready |
-| `release-notes.txt` | Per-version notes | update each release |
-| `icon.png` | Square PNG, 256x256 minimum | **TODO** |
-| `screenshots/` | Device or simulator captures | **TODO** |
-| `support-url.txt` | Where users report problems | **TODO** |
-| `privacy-policy.md` | Data handling statement | draft present |
+Everything the Store form asks for, field by field: **`listing/LISTING.md`**.
+
+| File | Purpose |
+|---|---|
+| `full-description.txt` / `full-description-fr.txt` | Listing body, EN / FR (under 4000 characters) |
+| `short-description.txt` | One-line subtitle |
+| `release-notes.txt` | "What's new" for this version |
+| `privacy-policy.md` | Privacy statement (link it from the form) |
+| `listing/hero-1440x720.png` | Cover image |
+| `listing/icon-512.png` | Store icon |
+| `listing/screens/` | Premium screen images, 1080x1080 |
+| `screenshots/` | The same screens at native resolution (Fenix 9 Pro, 454x454) |
+| `support-url.txt` | Where users report problems |
 
 ## Capturing screenshots
 
-Run RepFlow in the simulator (`make sim`) and use **File -> Save Screenshot**
-for each screen:
+The screens are staged in the simulator on a Fenix 9 Pro 47 mm and captured at
+the watch's native resolution, colour-corrected to sRGB, with the round screen
+masked from the case:
 
-1. `01-workouts.png`   workout picker
-2. `02-exercise.png`   exercise screen mid-set
-3. `03-rest.png`       rest timer with "next up"
-4. `04-overview.png`   overview showing mixed states (done / pending / active)
-5. `05-summary.png`    end-of-workout summary
+    just sim-showcase set        # a Push Day under way (also: rest, overview)
+    just sim-recap               # the recap, every page filled
+    DEMO=1 just sim-analytics    # Analytics with a demo year
 
-Screenshot 4 is the one that sells the app: capture it with at least one
-completed, one pending and one untouched exercise visible.
-
-## Icon
-
-Derive it from `resources/drawables/launcher_icon.svg` (a dumbbell on black
-with the RepFlow blue #00A8E8 bar) and export at 256x256 or larger.
+Then `python3 listing/render.py` builds the cover, the icon and the premium
+screen images from `screenshots/`. See `listing/LISTING.md` for the regeneration
+steps.

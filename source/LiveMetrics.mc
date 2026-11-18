@@ -30,6 +30,10 @@ module LiveMetrics {
     }
 
     public function heartRate() as Number? {
+        var demo = AnalyticsHooks.demoHeartRate();
+        if (demo != null) {
+            return demo;
+        }
         var i = info();
         return i == null ? null : i.currentHeartRate;
     }

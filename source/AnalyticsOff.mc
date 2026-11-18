@@ -19,6 +19,10 @@ module AnalyticsHooks {
         return null;
     }
 
+    public function demoHeartRate() as Number? {
+        return null;
+    }
+
     public function overview() as [WatchUi.Views, WatchUi.InputDelegates] or Null {
         return null;
     }

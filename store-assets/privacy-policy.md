@@ -1,15 +1,35 @@
 # RepFlow privacy policy
 
-RepFlow does not collect, transmit or share any personal data.
+Last updated: 18 November 2026
 
-- All workout data (exercises, sets, reps, weights and history) is stored
-  locally on your Garmin watch using Connect IQ application storage.
-- RepFlow makes no network requests. It requires no internet connection, no
-  phone connection and no account.
-- The only data that leaves the watch is the activity you choose to save, which
-  is written as a standard Garmin FIT file and handled by Garmin Connect under
-  Garmin's own privacy policy.
-- RepFlow requests a single Connect IQ permission, `Fit`, used solely to record
-  that activity.
+RepFlow does not collect, sell or share any personal data. The developer
+receives nothing: there is no account, no analytics and no server.
 
-Questions: <SUPPORT EMAIL OR URL — TODO>
+## What stays on your watch
+
+Your workouts, sets, reps, weights, records and history are stored on your
+Garmin watch, in RepFlow's own Connect IQ storage. Uninstalling RepFlow deletes
+them.
+
+## What leaves your watch, and only when you choose
+
+- **Garmin Connect.** A workout you save is recorded as a standard Garmin
+  activity and synced to Garmin Connect by Garmin, under Garmin's privacy
+  policy. A workout you discard is not saved.
+- **Hevy (optional).** Only if you paste your own Hevy API key in RepFlow's
+  settings, RepFlow reads your Hevy routines and sends each workout you save
+  (exercises, sets, reps, weights, times) to your Hevy account, through Garmin
+  Connect Mobile on your phone. It goes straight to Hevy under Hevy's privacy
+  policy; the developer never sees it. Remove the key and nothing is sent.
+
+## What RepFlow reads on your watch
+
+Heart rate, heart rate zones, calories, training effect and Body Battery are
+read from your watch to show them during and after a workout. They are not
+sent anywhere by RepFlow. Your other Garmin activities are read from the watch's
+history to count them in RepFlow's statistics, and only their start time and
+duration are used.
+
+## Contact
+
+Questions: https://github.com/cyuss/repflow/issues

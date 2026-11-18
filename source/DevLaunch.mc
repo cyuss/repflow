@@ -14,6 +14,7 @@ import Toybox.Application;
 //!   just sim-analytics            open straight on Analytics
 //!   just sim-glance               the glance, centred at its real size
 //!   just sim-recap                the end-of-workout recap of a full session
+//!   just sim-showcase set|rest|overview   a Push Day under way (screenshots)
 //!   ... demo=1                    with a demo year of sessions
 (:analytics)
 module DevLaunch {
@@ -22,6 +23,11 @@ module DevLaunch {
     const ANALYTICS = 1;
     const GLANCE_PREVIEW = 2;
     const RECAP = 3;
+    //! A Push Day under way, for the Store screenshots: the set screen, the
+    //! rest screen and the overview. See Showcase.
+    const SHOW_SET = 4;
+    const SHOW_REST = 5;
+    const SHOW_OVERVIEW = 6;
 
     //! Rewritten by scripts/build.sh. Never edit by hand.
     const MODE = 0;
@@ -72,6 +78,64 @@ module DevLaunch {
                 natives as Application.Storage.ValueType);
         } catch (e) {
         }
+    }
+}
+
+//! A Push Day under way, staged for the Store screenshots: bench and incline
+//! done, the cable fly put off for a busy station with a set already in, and
+//! the overhead press on its third set. The workout is started for real — it
+//! records in the simulator and replaces whatever session was stored there.
+(:analytics)
+module Showcase {
+
+    public function build(mode as Number) as [WatchUi.Views, WatchUi.InputDelegates] {
+        var c = AppController.instance();
+        var list = [
+            RecapDemo._exercise("A", "Bench Press", 4, 8, 80.0, Muscle.CHEST),
+            RecapDemo._exercise("B", "Incline Press", 3, 10, 30.0, Muscle.CHEST),
+            RecapDemo._exercise("C", "Cable Fly", 3, 12, 22.5, Muscle.CHEST),
+            RecapDemo._exercise("D", "Arnold Press", 4, 8, 24.0, Muscle.SHOULDERS),
+            RecapDemo._exercise("E", "Lateral Raise", 4, 15, 12.0, Muscle.SHOULDERS),
+            RecapDemo._exercise("F", "Triceps Pushdown", 3, 12, 30.0, Muscle.TRICEPS)
+        ] as Array<Exercise>;
+        c.startWorkout(new Workout("demo", "Push Day", list));
+        var engine = c.engine() as WorkoutEngine;
+        var t = AppController.now() - 2400;
+        // [exercise, sets done, reps, kg, first RPE]
+        var plan = [
+            ["A", 4, 8, 82.5, 7.5],
+            ["B", 3, 10, 32.0, 8.0],
+            ["C", 1, 12, 22.5, 7.0],
+            ["D", 2, 8, 24.0, 7.5]
+        ] as Array<Array>;
+        for (var i = 0; i < plan.size(); i++) {
+            var row = plan[i];
+            engine.selectExercise(row[0] as String);
+            for (var s = 0; s < (row[1] as Number); s++) {
+                t += 180;
+                engine.completeCurrentSet(row[2] as Number, row[3] as Float,
+                    (row[4] as Float) + s * 0.5, t);
+            }
+        }
+        engine.deferExercise("C");
+        c.selectExercise("D");
+
+        if (mode == DevLaunch.SHOW_REST) {
+            c.restTimer().start(90);
+            // The set peaked at 146; the tick then reads the demo heart rate,
+            // so the recovery figure has something to show.
+            c.recovery().startRest();
+            c.recovery().sample(146);
+            return [new RestView(), new RestDelegate()];
+        }
+        if (mode == DevLaunch.SHOW_OVERVIEW) {
+            // Centred on the station put off for later, so a finished, a
+            // waiting and the current exercise are all in view.
+            var overview = new WorkoutOverviewView();
+            overview.setFocus(2);
+            return [overview, new WorkoutOverviewDelegate()];
+        }
+        return [new ExerciseView(), new ExerciseDelegate()];
     }
 }
 

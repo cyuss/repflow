@@ -1,14 +1,8 @@
-v1.0.0 — first release
+v1.1.0
 
-- Select any exercise at any time. Skip an occupied machine, come back to it
-  later with every set intact.
-- Build and edit workouts on the watch: 82 movements across ten muscle groups,
-  no phone needed.
-- Start from an empty workout and add exercises as you go.
-- Add, substitute or add a set to any exercise mid-session.
-- Personal records, with their own alert the moment one falls.
-- Weekly training volume per muscle group.
-- Live heart rate with a zone gauge, and time in zone at the end.
-- Heart rate recovery between sets, and Body Battery before and after.
-- Optional automatic rep counting from the wrist.
-- Kilograms or pounds, following your watch.
+- A new end-of-workout recap: aerobic training effect, calories and Body Battery, time in each heart rate zone, records and this week's volume per muscle.
+- Analytics: your week, month and last 30 days, with your other Garmin activities counted alongside.
+- A glance that shows your week day by day.
+- Optional Hevy sync: import your routines and log every saved workout (Hevy Pro API key, set in Garmin Connect). Discarded workouts are never sent.
+- Longer battery life on AMOLED watches: nothing is redrawn while the screen is off.
+- Page indicators follow the curve of the screen; clearer labels on large screens.

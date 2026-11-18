@@ -1,56 +1,54 @@
-RepFlow is a flexible strength-training app for Garmin watches.
+RepFlow is strength training built for the way a real gym works. Change the order of your workout at any time, put off a busy station and come back to it later, and never lose a set.
 
-Change exercise order at any time, skip occupied machines, resume exercises
-later and track your sets, reps and weights without interrupting your workout.
+YOUR WORKOUT. YOUR ORDER.
+Structured workouts assume you will do the exercises in the order they were written. The gym disagrees: the bench is taken, you want to superset, you want to come back to something later. RepFlow lets you move freely without losing a single set.
+- Pick any exercise at any time from a one-press overview
+- Station taken? Put it off: it waits, marked as pending, and resumes exactly where you left it
+- Swap an exercise for good and keep the sets you already did
+- Add an exercise, or one more set, in the middle of a session
+- The next set is pre-filled with what you actually lifted
+- The LAP button ends the set and shows what is about to be logged, so eight reps instead of ten is corrected in two seconds, on the wrist
 
-Your workout. Your order.
+UNDER THE BAR
+- Load, reps, heart rate, set clock and exercise clock on one screen, sized to be read mid-set
+- Live heart rate zone gauge
+- Rest as a countdown or open until you press, with heart-rate recovery and the next set ready
+- Rate each set's effort (RPE)
+- Last time's numbers for every movement, before you choose the load
+- Personal records - heaviest set, best estimated 1RM, best volume - with their own alert the moment one falls
 
-WHY REPFLOW
-Structured workouts assume you will do the exercises in the order they were
-written. Real gyms disagree: the machine is taken, you want to superset, you
-want to come back to something later. RepFlow lets you move freely without
-losing a single set.
+THE RECAP
+Every session ends with a recap worth reading:
+- Time, sets against plan, reps and volume
+- Aerobic training effect, calories and the Body Battery the session cost
+- Time in each heart rate zone, with average, peak and recovery heart rate
+- Every exercise, how far it went, and effort by muscle group
+- The records that fell
+- This week's volume per muscle group, so you can see what you are skipping
 
-ON THE GYM FLOOR
-- Select any exercise at any time from a one-press workout overview
-- "Skip for now" marks an occupied machine as pending, never as completed or
-  skipped, and it resumes exactly where you left it
-- Substitute an exercise when the machine is taken for good — the sets you
-  already did are kept, not deleted
-- Add an unplanned exercise, or one more set than you planned, mid-session
-- The next set is pre-filled with the weight and reps you actually performed
-- BACK ends a set — it is the LAP button — and shows what is about to be
-  recorded, so eight reps where you planned ten is corrected in two seconds
-  rather than in an app that evening
+ANALYTICS AND GLANCE
+- Your week, your month and the last 30 days: sessions, time, volume, sets and reps
+- Your other Garmin activities counted alongside, never twice
+- Sessions per week over time, and a full history you can filter
+- A glance that shows your week day by day without opening the app
 
-BUILD YOUR OWN, ON THE WATCH
+BUILD ON THE WATCH
 - 82 movements across ten muscle groups
 - Start from an empty workout and add exercises as you go
 - Edit sets, reps, load, rest and order without touching a phone
-- Custom workouts name themselves after what is in them
 
-WHAT YOU GET BACK
-- Last time's numbers for every movement, before you decide the load
-- Personal records — heaviest set, best estimated maximum, best volume — with
-  their own alert the moment one falls
-- Weekly training volume per muscle group, so you can see what you are
-  neglecting
-- Live heart rate with a five-segment zone gauge, and time in zone at the end
-- Heart rate recovery between sets
-- Body Battery before and after the session
-- Optional automatic rep counting from the wrist, which suggests a number and
-  never logs one on its own
+HEVY SYNC (OPTIONAL)
+Have a Hevy Pro account? Paste your Hevy API key in RepFlow's settings in the Garmin Connect app, and RepFlow imports your Hevy routines and logs every saved workout to Hevy. A discarded workout is never sent. Without a key, RepFlow works exactly the same, fully on the watch.
 
-DETAILS
-- Records a real strength training activity that syncs to Garmin Connect, with
-  one lap per set carrying the exercise, reps and load
-- Kilograms or pounds, following your watch, with an override in the settings
-- Works fully offline: no phone, no internet, no account
-- Survives an interrupted workout: your session is restored with every set
+GARMIN, PROPERLY
+- Records a genuine Strength Training activity that syncs to Garmin Connect, one lap per set with the exercise, reps and load
+- Battery-friendly on AMOLED watches: nothing is redrawn while the screen is off
+- Kilograms or pounds, following your watch
+- Black or white background
+- English and French
+- An interrupted workout is restored with every set
 
 PLEASE NOTE
-Garmin's Connect IQ platform does not allow third-party apps to write native
-per-set data into the FIT file. RepFlow records a genuine strength training
-activity, marks one lap per set, and labels every lap with the exercise, set
-number, reps and load — so the detail is there in the activity, in Garmin
-Connect's Connect IQ section rather than in Garmin's own per-set view.
+Garmin's Connect IQ platform does not let third-party apps write Garmin's own per-set strength data. RepFlow records a real strength training activity and labels every lap with the exercise, set, reps and load, so the detail is in the activity, in Garmin Connect's Connect IQ section rather than in Garmin's native set view.
+
+Hevy is a trademark of its owner. RepFlow is not affiliated with Hevy or Garmin.

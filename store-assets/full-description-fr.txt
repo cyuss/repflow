@@ -1,0 +1,54 @@
+RepFlow, c'est la musculation pensée pour une vraie salle. Changez l'ordre de votre séance à tout moment, mettez de côté un poste occupé pour y revenir plus tard, et ne perdez jamais une série.
+
+VOTRE SÉANCE. VOTRE ORDRE.
+Une séance structurée suppose que vous ferez les exercices dans l'ordre prévu. La salle n'est pas d'accord : le banc est pris, vous voulez enchaîner deux exercices, vous voulez revenir à quelque chose plus tard. RepFlow vous laisse circuler librement sans perdre une seule série.
+- Choisissez n'importe quel exercice à tout moment, en une pression
+- Poste occupé ? Mettez-le de côté : il attend, marqué « en attente », et reprend exactement où vous l'avez laissé
+- Remplacez un exercice et gardez les séries déjà faites
+- Ajoutez un exercice, ou une série de plus, en pleine séance
+- La série suivante est pré-remplie avec ce que vous avez vraiment soulevé
+- Le bouton LAP termine la série et montre ce qui va être enregistré : huit répétitions au lieu de dix se corrigent en deux secondes, au poignet
+
+SOUS LA BARRE
+- Charge, répétitions, fréquence cardiaque, chrono de série et d'exercice sur un seul écran, lisibles en pleine série
+- Jauge de zone cardiaque en direct
+- Repos en compte à rebours ou libre jusqu'à votre pression, avec la récupération cardiaque et la série suivante prête
+- Notez l'effort de chaque série (RPE)
+- Vos chiffres de la dernière fois pour chaque mouvement, avant de choisir la charge
+- Records personnels (série la plus lourde, meilleur 1RM estimé, meilleur volume) avec une alerte dès qu'un record tombe
+
+LE BILAN
+Chaque séance se termine par un bilan qui vaut la peine d'être lu :
+- Durée, séries faites sur prévues, répétitions et volume
+- Effet d'entraînement aérobie, calories et Body Battery consommée
+- Temps dans chaque zone cardiaque, avec FC moyenne, maximale et récupération
+- Chaque exercice, jusqu'où il est allé, et l'effort par groupe musculaire
+- Les records battus
+- Le volume de la semaine par groupe musculaire, pour voir ce que vous négligez
+
+STATISTIQUES ET GLANCE
+- Votre semaine, votre mois et les 30 derniers jours : séances, durée, volume, séries et répétitions
+- Vos autres activités Garmin comptées aussi, jamais en double
+- Séances par semaine dans le temps, et un historique complet filtrable
+- Un glance qui montre votre semaine jour par jour sans ouvrir l'app
+
+CRÉEZ SUR LA MONTRE
+- 82 mouvements répartis sur dix groupes musculaires
+- Partez d'une séance vide et ajoutez les exercices au fil de l'eau
+- Modifiez séries, répétitions, charge, repos et ordre sans toucher au téléphone
+
+SYNCHRO HEVY (OPTIONNELLE)
+Vous avez un compte Hevy Pro ? Collez votre clé API Hevy dans les réglages de RepFlow, dans l'app Garmin Connect : RepFlow importe vos routines Hevy et enregistre chaque séance sauvegardée dans Hevy. Une séance abandonnée n'est jamais envoyée. Sans clé, RepFlow fonctionne exactement pareil, entièrement sur la montre.
+
+GARMIN, COMME IL FAUT
+- Enregistre une vraie activité Musculation synchronisée avec Garmin Connect, un tour par série avec l'exercice, les répétitions et la charge
+- Économe en batterie sur les montres AMOLED : rien n'est redessiné écran éteint
+- Kilogrammes ou livres, selon votre montre
+- Fond noir ou blanc
+- Anglais et français
+- Une séance interrompue est restaurée avec toutes ses séries
+
+À SAVOIR
+La plateforme Connect IQ de Garmin ne permet pas aux apps tierces d'écrire les données de séries natives de Garmin. RepFlow enregistre une vraie activité de musculation et étiquette chaque tour avec l'exercice, la série, les répétitions et la charge : le détail est dans l'activité, dans la section Connect IQ de Garmin Connect plutôt que dans la vue des séries de Garmin.
+
+Hevy est une marque de son propriétaire. RepFlow n'est affilié ni à Hevy ni à Garmin.

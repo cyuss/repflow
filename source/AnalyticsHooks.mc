@@ -35,6 +35,9 @@ module AnalyticsHooks {
         if (DevLaunch.MODE == DevLaunch.RECAP) {
             return RecapDemo.build();
         }
+        if (DevLaunch.MODE >= DevLaunch.SHOW_SET && DevLaunch.MODE <= DevLaunch.SHOW_OVERVIEW) {
+            return Showcase.build(DevLaunch.MODE);
+        }
         return null;
     }
 
@@ -44,6 +47,16 @@ module AnalyticsHooks {
     public function fromGlance() as [WatchUi.Views, WatchUi.InputDelegates] or Null {
         AnalyticsNav.fromGlance = true;
         return overview();
+    }
+
+    //! A heart rate for the staged screenshot screens (Showcase), which the
+    //! simulator does not produce on its own. Null in every normal build:
+    //! MODE is a constant 0 there.
+    public function demoHeartRate() as Number? {
+        if (DevLaunch.MODE >= DevLaunch.SHOW_SET && DevLaunch.MODE <= DevLaunch.SHOW_OVERVIEW) {
+            return DevLaunch.MODE == DevLaunch.SHOW_REST ? 118 : 132;
+        }
+        return null;
     }
 
     public function overview() as [WatchUi.Views, WatchUi.InputDelegates] or Null {
