@@ -140,7 +140,12 @@ if monkeyc -e -w -r \
   if [ -n "$PERSONAL_KEY" ]; then
     BARE="$(printf '%s' "$PERSONAL_KEY" | tr -d '-')"
     SCAN="$(mktemp -d)"
-    unzip -q -o "$IQ" -d "$SCAN" 2>/dev/null || cp "$IQ" "$SCAN/"
+    # An .iq is a 7-zip archive (SDK 9); bsdtar reads it, unzip does not.
+    # A bundle that cannot be opened cannot be checked, so it is refused.
+    if ! bsdtar -xf "$IQ" -C "$SCAN" 2>/dev/null || [ -z "$(ls -A "$SCAN")" ]; then
+      rm -rf "$SCAN" "$IQ"
+      die "Could not open $IQ to check it for your Hevy key. It has been deleted."
+    fi
     if grep -rqiaF -e "$PERSONAL_KEY" -e "$BARE" "$SCAN"; then
       rm -rf "$SCAN" "$IQ"
       die "Your Hevy key was found inside the bundle. It has been deleted; do not upload anything."
