@@ -27,7 +27,7 @@ require_device_installed "$DEVICE"
 # 1. Compile
 info "Building for $DEVICE..."
 "$REPO_ROOT/scripts/build.sh" "$DEVICE"
-PRG="$BUILD_DIR/RepFlow-$DEVICE.prg"
+PRG="$(prg_path "$DEVICE")"
 
 # Optionally start from a clean slate. Without this the app resumes whatever
 # session was stored, which is rarely what you want when you are looking at a
@@ -51,6 +51,16 @@ if [ -n "${REPFLOW_RESET:-}" ]; then
   fi
 fi
 
+# The app opens as itself unless REPFLOW_GLANCE=1 asks for its glance — see
+# sim_glance_mode. Without this, a simulator left in glance mode by the last
+# `just glance-memory` would open every later run on the glance. It may restart
+# the simulator, so it comes before the launch below.
+if [ -n "${REPFLOW_GLANCE:-}" ]; then
+  sim_glance_mode glance
+else
+  sim_glance_mode normal
+fi
+
 # 2. Launch the simulator if it is not already up
 if simulator_running; then
   ok "Connect IQ Simulator already running."
@@ -59,15 +69,6 @@ elif ! ensure_simulator; then
   info "Start it by hand, then run:"
   info "  monkeydo \"$PRG\" $DEVICE"
   exit 1
-fi
-
-# The app opens as itself unless REPFLOW_GLANCE=1 asks for its glance — see
-# sim_glance_mode. Without this, a simulator left in glance mode by the last
-# `just glance` would open every later run on the glance.
-if [ -n "${REPFLOW_GLANCE:-}" ]; then
-  sim_glance_mode glance
-else
-  sim_glance_mode normal
 fi
 
 # 3. Push and run

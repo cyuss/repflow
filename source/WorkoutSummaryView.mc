@@ -6,9 +6,10 @@ import Toybox.Math;
 
 //! End-of-workout recap.
 //!
-//!   Page 1 — the work        time, sets done / planned, reps, volume
-//!   Page 2 — the body        Body Battery, recovery, calories, heart rate
-//!   Page 3 — time in zones   the bar chart a Fenix shows after any activity
+//!   Page 1 — the session     time, sets done / planned, reps, volume
+//!   Page 2 — effort          Training Effect, calories, Body Battery
+//!   Page 3 — time in zones   the bar chart a Fenix shows after any activity,
+//!                            with average, peak and recovery heart rate
 //!   Page 4 — the exercises   what was actually done, exercise by exercise
 //!   Page 5 — effort          average RPE per muscle group, this session
 //!   Page 6 — records         what was beaten, one card each
@@ -458,79 +459,161 @@ class WorkoutSummaryView extends WatchUi.View {
         }
     }
 
-    //! The ink height `_drawFigure` would use for these arguments.
-    private function _figureInk(
+    //! A pill: a rectangle with fully rounded ends, in the current colour.
+    private function _pill(
         dc as Graphics.Dc,
+        x as Number,
+        y as Number,
+        width as Number,
+        height as Number
+    ) as Void {
+        if (width <= 0) {
+            return;
+        }
+        if (dc has :fillRoundedRectangle) {
+            var radius = (width < height ? width : height) / 2;
+            dc.fillRoundedRectangle(x, y, width, height, radius);
+        } else {
+            dc.fillRectangle(x, y, width, height);
+        }
+    }
+
+    //! A track the full width, filled from the left by `fraction`.
+    private function _drawBar(
+        dc as Graphics.Dc,
+        x as Number,
+        y as Number,
+        width as Number,
+        height as Number,
+        fraction as Float,
+        color as Number
+    ) as Void {
+        dc.setColor(_track(), Graphics.COLOR_TRANSPARENT);
+        _pill(dc, x, y, width, height);
+        var f = fraction < 0.0 ? 0.0 : (fraction > 1.0 ? 1.0 : fraction);
+        var fill = (width * f * Animator.value()).toNumber();
+        if (fill > 0) {
+            dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+            _pill(dc, x, y, fill < height ? height : fill, height);
+        }
+    }
+
+    //! One segment per planned set, the done ones lit — the way the watch
+    //! counts the steps of a structured workout. A long session would make
+    //! slivers of them, so past that it is one continuous bar.
+    private function _drawSetBar(
+        dc as Graphics.Dc,
+        x as Number,
+        y as Number,
+        width as Number,
+        height as Number,
+        done as Number,
+        planned as Number,
+        color as Number
+    ) as Void {
+        var gap = height / 3 < 2 ? 2 : height / 3;
+        if (planned <= 0 || (width - gap * (planned - 1)) / planned < height) {
+            _drawBar(dc, x, y, width, height,
+                planned > 0 ? done.toFloat() / planned.toFloat() : 0.0, color);
+            return;
+        }
+        var lit = (done * Animator.value()).toNumber();
+        for (var i = 0; i < planned; i++) {
+            // Spread the remainder over the segments, so the bar ends exactly
+            // at its right edge.
+            var from = x + (i * (width + gap)) / planned;
+            var to = x + ((i + 1) * (width + gap)) / planned - gap;
+            dc.setColor(i < lit ? color : _track(), Graphics.COLOR_TRANSPARENT);
+            _pill(dc, from, y, to - from, height);
+        }
+    }
+
+    //! A line of a list: caption on the left, figure on the right, on one
+    //! centre line. `sub`, when there is one, sits small and dim after the
+    //! figure on its baseline — the "/17" of "12/17".
+    private function _drawLabelled(
+        dc as Graphics.Dc,
+        left as Number,
+        right as Number,
+        mid as Number,
+        caption as String,
         value as String,
-        unit as String,
-        maxWidth as Number,
+        sub as String,
+        color as Number,
         maxInk as Number
     ) as Number {
+        var capFont = Theme.captionFont();
+        dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
+        dc.drawText(left, mid, capFont, caption,
+            Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+
+        var subFont = Graphics.FONT_TINY;
+        var subWidth = sub.length() > 0 ? dc.getTextWidthInPixels(sub, subFont) : 0;
+        var room = right - left - dc.getTextWidthInPixels(caption, capFont)
+            - dc.getHeight() / 20 - subWidth;
         var fonts = [
-            Graphics.FONT_NUMBER_MEDIUM,
             Graphics.FONT_NUMBER_MILD,
-            Graphics.FONT_LARGE,
             Graphics.FONT_MEDIUM,
             Graphics.FONT_SMALL,
             Graphics.FONT_TINY
         ] as Array<Graphics.FontDefinition>;
-        var unitWidth = unit.length() > 0
-            ? dc.getTextWidthInPixels(" " + unit, Graphics.FONT_XTINY)
-            : 0;
-        return Theme.inkHeight(Theme.pickFontFitting(dc, value, fonts, maxWidth - unitWidth, maxInk));
+        var font = Theme.pickFontFitting(dc, value, fonts, room, maxInk);
+        var ink = Theme.inkHeight(font);
+        // The ascent carries a little air above the digits; lift the figure
+        // by it so it centres on the caption by eye, not by box.
+        var top = mid - ink / 2 - ink / 12;
+        if (subWidth > 0) {
+            dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
+            dc.drawText(right, top + ink - Theme.inkHeight(subFont), subFont, sub,
+                Graphics.TEXT_JUSTIFY_RIGHT);
+        }
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(right - subWidth, top, font, value, Graphics.TEXT_JUSTIFY_RIGHT);
+        return right - subWidth - dc.getTextWidthInPixels(value, font);
     }
 
-    //! An arc gauge: a track of `span` degrees opening at the bottom, filled
-    //! clockwise from its left end by `fraction`.
-    private function _drawGauge(
+    //! A column: caption on top, figure below, both centred on `cx`.
+    //! `figure` is `[value, unit]`. Returns the y below the figure.
+    private function _drawCell(
         dc as Graphics.Dc,
         cx as Number,
-        cy as Number,
-        radius as Number,
-        pen as Number,
-        span as Number,
-        fraction as Float,
-        color as Number
-    ) as Void {
-        var start = 270 - (360 - span) / 2;          // left end, degrees
-        var finish = (start - span + 360) % 360;     // right end
-        dc.setPenWidth(pen);
-        dc.setColor(_track(), Graphics.COLOR_TRANSPARENT);
-        if (span >= 360) {
-            dc.drawCircle(cx, cy, radius);
-        } else {
-            dc.drawArc(cx, cy, radius, Graphics.ARC_CLOCKWISE, start, finish);
-        }
-        var f = fraction > 1.0 ? 1.0 : fraction;
-        var sweep = (span * f * Animator.value()).toNumber();
-        if (sweep > 0) {
-            dc.setColor(color, Graphics.COLOR_TRANSPARENT);
-            if (sweep >= 360) {
-                dc.drawCircle(cx, cy, radius);
-            } else {
-                dc.drawArc(cx, cy, radius, Graphics.ARC_CLOCKWISE, start, (start - sweep + 360) % 360);
-            }
-        }
-        dc.setPenWidth(1);
+        y as Number,
+        width as Number,
+        caption as String,
+        figure as Array<String>,
+        color as Number,
+        maxInk as Number,
+        heart as Boolean
+    ) as Number {
+        var below = _drawCaption(dc, cx, y, caption, width, heart);
+        return _drawFigure(dc, cx, below + dc.getHeight() / 90, figure[0], figure[1],
+            color, width, maxInk, false);
+    }
+
+    //! The half-width of a band whose lowest edge is at `y`: the chord there,
+    //! less a margin, so the band reads as set inside the glass.
+    private function _bandHalf(dc as Graphics.Dc, y as Number) as Number {
+        return (_halfAt(dc, y) * 86) / 100;
     }
 
     // ==================================================================
-    // Page 1 — the work
+    // Page 1 — the session
     // ==================================================================
 
-    //!              PUSH DAY
-    //!            🏆 3 RECORDS
-    //!              1:05:20
-    //!                TIME
-    //!        ( 12 )  ( 122 )  ( 4.6 )
-    //!         /17
-    //!         SETS     REPS    VOLUME
+    //!               PUSH DAY
+    //!           ✓ WORKOUT DONE
+    //!               1:05:20
+    //!                 TIME
+    //!     SETS                     12/17
+    //!     ▬ ▬ ▬ ▬ ▬ ▬ ▬ ▬ ▬ ▬ ▬ ▬ ▭ ▭ ▭ ▭
+    //!            REPS   │   VOLUME
+    //!             122   │   4.6 t
     //!
-    //! The session's name and how it ended, then the time as the hero, then
-    //! three pods — small ring gauges, the shape the watch gives its own
-    //! glanceable figures. The SETS pod is the only one with a real fraction
-    //! to show, sets done against sets planned, so it is the only one whose
-    //! ring fills partway; the other two close their ring in their colour.
+    //! No rings. A figure inside a ring only has the ring's hole to live in,
+    //! and the numbers were squeezed into it. Here every figure has a whole
+    //! column or a whole line. Sets done against sets planned is the only
+    //! real fraction on the page, so it is the only bar: a segment per planned
+    //! set, green when the session was finished, amber when it was cut short.
     //! A record, when there is one, is the headline: "Workout done" is true
     //! of every session, "2 records" of this one.
     private function _drawWorkPage(dc as Graphics.Dc, bottom as Number) as Void {
@@ -557,210 +640,280 @@ class WorkoutSummaryView extends WatchUi.View {
         }
         var top = _drawTitleAt(dc, y + h / 120, status, statusColor, mark);
 
-        // The pods sit low, as large as they can be while their outer edges
-        // stay inside the ring; the hero takes the space above them.
-        var gap = h / 32;
-        var r = (h * 12) / 100;
-        var pcy = h / 2 + (h * 19) / 100;
-        var reach = _maskRadius(dc) - h / 60;
-        // Shrink until the outer pods clear the curve.
-        while (r > 10) {
-            var step0 = r * 2 + gap;
-            var dy0 = pcy - h / 2;
-            if (Math.sqrt((step0 * step0 + dy0 * dy0).toFloat()).toNumber() + r <= reach) {
-                break;
-            }
-            r -= 1;
-        }
-        var podsTop = pcy - r;
+        // The hero: how long it took.
+        var heroTop = top + h / 50;
+        var below = _drawFigure(dc, cx, heroTop, Theme.formatDuration(_summary.durationSec), "",
+            Theme.colorText(), (_halfAt(dc, heroTop) * 2 * 80) / 100, (h * 15) / 100, true);
+        below = _drawCaption(dc, cx, below + h / 90,
+            WatchUi.loadResource(Rez.Strings.FieldTime) as String, _halfAt(dc, below) * 2, false);
 
-        // The hero, centred between the status line and the pods.
-        var capLine = dc.getFontHeight(Graphics.FONT_XTINY);
-        var heroInk = podsTop - top - capLine - h / 14;
-        if (heroInk > h / 5) {
-            heroInk = h / 5;
-        }
-        var duration = Theme.formatDuration(_summary.durationSec);
-        var heroWidth = _halfAt(dc, top) * 2;
-        var ink = _figureInkLarge(dc, duration, heroWidth, heroInk);
-        var heroTop = top + (podsTop - top - ink - capLine - h / 80) / 2;
-        var below = _drawFigure(dc, cx, heroTop, duration, "",
-            Theme.colorText(), heroWidth, heroInk, true);
-        dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, below + h / 120, Graphics.FONT_XTINY,
-            WatchUi.loadResource(Rez.Strings.FieldTime) as String, Graphics.TEXT_JUSTIFY_CENTER);
-
-        var step = r * 2 + gap;
+        // Sets: the count on a line, the bar under it.
         var planned = _summary.plannedSets;
         var done = _summary.completedSets;
-        var volume = _splitVolume(_summary.totalVolume);
-        _drawPod(dc, cx - step, pcy, r, done.toString(), "/" + planned.toString(),
+        var setsColor = done >= planned ? Theme.colorDone() : Theme.colorWarm();
+        var lineTop = below + h / 50;
+        var lineHeight = (h * 8) / 100;
+        var barHeight = h / 40;
+        var barTop = lineTop + lineHeight + h / 45;
+        var half = _bandHalf(dc, barTop + barHeight);
+        _drawLabelled(dc, cx - half, cx + half, lineTop + lineHeight / 2,
             WatchUi.loadResource(Rez.Strings.FieldSets) as String,
-            planned > 0 ? done.toFloat() / planned.toFloat() : 0.0,
-            done >= planned ? Theme.colorDone() : Theme.colorWarm());
-        _drawPod(dc, cx, pcy, r, _summary.totalReps.toString(), "",
-            WatchUi.loadResource(Rez.Strings.FieldReps) as String, 1.0, Theme.colorText());
-        _drawPod(dc, cx + step, pcy, r, volume[0], volume[1],
-            WatchUi.loadResource(Rez.Strings.FieldVolume) as String, 1.0, Theme.colorAccent());
+            done.toString(), "/" + planned.toString(), setsColor, (lineHeight * 80) / 100);
+        _drawSetBar(dc, cx - half, barTop, half * 2, barHeight, done, planned, setsColor);
+
+        // Reps and volume: a column each, a rule between. The columns keep
+        // the width of the band above; only their figures run lower.
+        var cellTop = barTop + barHeight + h / 30;
+        var q = half / 2;
+        var volume = _splitVolume(_summary.totalVolume);
+        var end = _drawSmallCell(dc, cx - q, cellTop,
+            WatchUi.loadResource(Rez.Strings.FieldReps) as String,
+            _summary.totalReps.toString(), "");
+        _drawSmallCell(dc, cx + q, cellTop,
+            WatchUi.loadResource(Rez.Strings.FieldVolume) as String,
+            volume[0], volume[1]);
+        _hairline(dc, cx, cellTop + h / 90, cx, end);
     }
 
-    private function _figureInkLarge(
-        dc as Graphics.Dc,
-        value as String,
-        maxWidth as Number,
-        maxInk as Number
-    ) as Number {
-        var fonts = [
-            Graphics.FONT_NUMBER_HOT,
-            Graphics.FONT_NUMBER_MEDIUM,
-            Graphics.FONT_NUMBER_MILD,
-            Graphics.FONT_LARGE,
-            Graphics.FONT_MEDIUM,
-            Graphics.FONT_SMALL
-        ] as Array<Graphics.FontDefinition>;
-        return Theme.inkHeight(Theme.pickFontFitting(dc, value, fonts, maxWidth, maxInk));
-    }
-
-    //! One pod: a ring gauge with the figure and its caption inside it. A
-    //! secondary part of the figure — the "/17" of "12/17", the "t" of
-    //! "4.6 t" — sits small beside it, on its baseline.
-    private function _drawPod(
+    //! A column set small, under the sets bar: caption on top, figure below,
+    //! its unit smaller after it, all centred on `cx`. The same scalable
+    //! Roboto as the heart-rate row, so the two pages read as one family.
+    //! Returns the y below the figure.
+    private function _drawSmallCell(
         dc as Graphics.Dc,
         cx as Number,
-        cy as Number,
-        r as Number,
-        value as String,
-        sub as String,
+        y as Number,
         caption as String,
-        fraction as Float,
-        color as Number
-    ) as Void {
-        var pen = r / 8 < 3 ? 3 : r / 8;
-        _drawGauge(dc, cx, cy, r, pen, 360, fraction, color);
-
-        var hole = (r - pen) * 2;
-        var capFont = Graphics.FONT_XTINY;
-        var capLine = dc.getFontHeight(capFont);
-        var maxInk = (hole * 34) / 100;
-        var inner = (hole * 80) / 100;
-        var ink = _figureInk(dc, value, sub, inner, maxInk);
-        var block = ink + (capLine * 85) / 100;
-        var y = cy - block / 2;
-        _drawFigure(dc, cx, y, value, sub, color, inner, maxInk, false);
+        value as String,
+        unit as String
+    ) as Number {
+        var h = dc.getHeight();
+        var capFont = _sizedFont(["RobotoCondensedRegular", "RobotoRegular"] as Array<String>,
+            (h * 55) / 1000, Graphics.FONT_XTINY);
+        var valueFont = _sizedFont(["RobotoCondensedBold", "RobotoMedium", "RobotoRegular"] as Array<String>,
+            (h * 100) / 1000, Graphics.FONT_MEDIUM);
+        var unitFont = _sizedFont(["RobotoCondensedRegular", "RobotoRegular"] as Array<String>,
+            (h * 60) / 1000, Graphics.FONT_XTINY);
         dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
-        var shown = Theme.clipToWidth(dc, caption, capFont, inner + pen);
-        dc.drawText(cx, y + ink + capLine / 10, capFont, shown, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, y, capFont, caption, Graphics.TEXT_JUSTIFY_CENTER);
+
+        var valueTop = y + dc.getFontHeight(capFont) + h / 120;
+        var valueLine = dc.getFontHeight(valueFont);
+        var gap = unit.length() > 0 ? h / 90 : 0;
+        var valueWidth = dc.getTextWidthInPixels(value, valueFont);
+        var unitWidth = unit.length() > 0 ? dc.getTextWidthInPixels(unit, unitFont) : 0;
+        var left = cx - (valueWidth + gap + unitWidth) / 2;
+        dc.setColor(Theme.colorText(), Graphics.COLOR_TRANSPARENT);
+        dc.drawText(left, valueTop, valueFont, value, Graphics.TEXT_JUSTIFY_LEFT);
+        if (unitWidth > 0) {
+            // On the figure's baseline.
+            var baseline = valueTop + Graphics.getFontAscent(valueFont);
+            dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
+            dc.drawText(left + valueWidth + gap, baseline - Graphics.getFontAscent(unitFont),
+                unitFont, unit, Graphics.TEXT_JUSTIFY_LEFT);
+        }
+        return valueTop + (valueLine * 85) / 100;
     }
 
     // ==================================================================
     // Page 2 — the body
     // ==================================================================
 
-    //!                BODY
-    //!     REC HR    ╭─────╮    KCAL
-    //!       -31    (  -21  )    512
-    //!              ( BODY  )
-    //!     ♥ AVG     ╰ BATT╯    ♥ MAX
-    //!       118                 161
+    //!               EFFORT
+    //!            ╭─────────╮
+    //!          ╱             ╲
+    //!         │      3.4      │
+    //!          ╲  Improving  ╱
     //!
-    //! What the session cost the athlete, rather than how much iron moved.
-    //! Body Battery is the centre of the page, on the arc the watch draws it
-    //! with everywhere else — filled to where the session left you, with what
-    //! it cost in the middle. The four heart and energy figures sit in the
-    //! four corners around it, where a round screen has room and nothing else
-    //! to put there.
+    //!        KCAL    │   BODY BATT
+    //!         486    │    81 ▸ 63
+    //!
+    //! What the session did to the athlete, led by the figure the watch's own
+    //! summary leads with: aerobic Training Effect, on Garmin's 0-5 scale.
+    //! The gauge is large on purpose — the number sits alone in the middle of
+    //! a ring three times its width, and the ring is the scale itself, five
+    //! segments in the colours Garmin gives the levels, lit up to the score,
+    //! with a marker at the exact value. Garmin's word for the level sits in
+    //! the gauge's opening.
+    //!
+    //! Under it the two things the session spent: energy, and Body Battery
+    //! from where the session started to where it left you. The heart-rate
+    //! figures are on the zones page, with the zones they belong to.
     private function _drawBodyPage(dc as Graphics.Dc, bottom as Number) as Void {
         var h = dc.getHeight();
         var cx = dc.getWidth() / 2;
         var top = _drawPageTitle(dc,
-            WatchUi.loadResource(Rez.Strings.SummaryBody) as String,
+            WatchUi.loadResource(Rez.Strings.SummaryEffort) as String,
             Theme.colorAccent(), MARK_NONE);
 
-        // Best beats dropped in a minute of rest, and what the session cost in
-        // Body Battery. "--" when the watch could not measure them.
-        var recoveryText = _metrics.recovery == null
-            ? LiveMetrics.NO_VALUE
-            : "-" + (_metrics.recovery as Number).toString();
-        var batteryText = LiveMetrics.NO_VALUE;
-        var batteryColor = Theme.colorFaint();
-        var start = _metrics.batteryStart;
-        var finish = LiveMetrics.bodyBattery();
-        if (start != null && finish != null) {
-            var spent = (start as Number) - (finish as Number);
-            batteryText = spent > 0 ? "-" + spent.toString() : (finish as Number).toString();
-            batteryColor = Theme.colorText();
-        } else if (finish != null) {
-            batteryText = (finish as Number).toString();
-            batteryColor = Theme.colorText();
+        // The gauge.
+        var radius = (h * 23) / 100;
+        var pen = h / 34 < 5 ? 5 : h / 34;
+        var gy = top + h / 30 + pen / 2 + radius;
+        _drawEffectGauge(dc, cx, gy, radius, pen);
+
+        // Energy and Body Battery, a column each.
+        var cellTop = gy + (radius * 62) / 100 + h / 22;
+        // The columns stand well apart, so neither figure crowds the rule
+        // between them or the curve beside it.
+        var q = (_bandHalf(dc, h / 2) * 50) / 100;
+        var width = q * 2 - h / 12;
+        var cellInk = (h * 9) / 100;
+        var end = _drawCell(dc, cx - q, cellTop, width,
+            WatchUi.loadResource(Rez.Strings.FieldKcal) as String,
+            [LiveMetrics.format(_metrics.calories), ""] as Array<String>,
+            _metrics.calories == null ? Theme.colorFaint() : Theme.colorText(),
+            cellInk, false);
+        _drawBatteryCell(dc, cx + q, cellTop, width, cellInk);
+        var barWidth = (width * 55) / 100;
+        var barHeight = h / 60;
+        _drawBatteryBar(dc, cx + q - barWidth / 2, end + h / 25, barWidth, barHeight);
+        _hairline(dc, cx, cellTop + h / 90, cx, end + h / 25 + barHeight);
+    }
+
+    //! Training Effect as a gauge: a 240-degree arc open at the bottom, cut
+    //! into the five levels of Garmin's scale. Levels up to the score are lit
+    //! in their colour, the rest are track; a marker sits at the exact value.
+    private function _drawEffectGauge(
+        dc as Graphics.Dc,
+        cx as Number,
+        cy as Number,
+        radius as Number,
+        pen as Number
+    ) as Void {
+        var h = dc.getHeight();
+        var te = _metrics.trainingEffect;
+        var score = te == null ? 0.0 : (te as Float) * Animator.value();
+        var span = 240;
+        var start = 210;                      // the left end, in degrees
+        var step = span / 5;
+        var gap = 3;
+        dc.setPenWidth(pen);
+        for (var k = 0; k < 5; k++) {
+            var from = start - k * step - (k == 0 ? 0 : gap / 2 + 1);
+            var to = start - (k + 1) * step + (k == 4 ? 0 : gap / 2 + 1);
+            var lit = te != null && score > k.toFloat();
+            dc.setColor(lit ? Theme.zoneColor(k + 1) : _track(), Graphics.COLOR_TRANSPARENT);
+            dc.drawArc(cx, cy, radius, Graphics.ARC_CLOCKWISE,
+                (from + 360) % 360, (to + 360) % 360);
+        }
+        dc.setPenWidth(1);
+
+        var level = te == null ? 0 : (te as Float).toNumber();
+        var color = te == null ? Theme.colorFaint() : Theme.zoneColor(level < 1 ? 1 : (level > 5 ? 5 : level));
+        if (te != null) {
+            // The marker: a disc in the background colour with the score's
+            // colour inside, so it reads on a lit segment and on the track.
+            var f = score / 5.0;
+            var angle = Math.toRadians(start - span * f);
+            var mx = cx + (radius * Math.cos(angle)).toNumber();
+            var my = cy - (radius * Math.sin(angle)).toNumber();
+            dc.setColor(Theme.colorBg(), Graphics.COLOR_TRANSPARENT);
+            dc.fillCircle(mx, my, pen);
+            dc.setColor(Theme.colorText(), Graphics.COLOR_TRANSPARENT);
+            dc.fillCircle(mx, my, (pen * 62) / 100);
         }
 
-        // Two columns: the gauge on the left, the four figures stacked on the
-        // right, the pair centred on the glass a little below the title.
-        var capFont = Graphics.FONT_XTINY;
-        var capLine = dc.getFontHeight(capFont);
-        var radius = (h * 12) / 100;
-        var pen = h / 40 < 4 ? 4 : h / 40;
-        var gx = cx - (h * 26) / 100;
-        var gy = h / 2 + h / 40 - capLine / 2;
-        _drawGauge(dc, gx, gy, radius, pen, 270,
-            finish != null ? (finish as Number).toFloat() / 100.0 : 0.0, Theme.colorAccent());
+        // The score, alone in the middle.
         var hole = (radius - pen) * 2;
-        var maxInk = (hole * 48) / 100;
-        var ink = _figureInk(dc, batteryText, "", (hole * 78) / 100, maxInk);
-        _drawFigure(dc, gx, gy - ink / 2, batteryText, "", batteryColor,
-            (hole * 78) / 100, maxInk, false);
-        dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
-        dc.drawText(gx, gy + radius + h / 120 - capLine / 3, capFont,
-            WatchUi.loadResource(Rez.Strings.FieldBattery) as String, Graphics.TEXT_JUSTIFY_CENTER);
-
-        // The list: four rows, caption left, figure right, hairlines between.
-        var rowHeight = (h * 12) / 100;
-        var listTop = h / 2 + h / 40 - rowHeight * 2;
-        var listLeft = gx + radius + pen + h / 25;
-        var rows = [
-            [WatchUi.loadResource(Rez.Strings.FieldRecovery) as String, recoveryText,
-                _metrics.recovery == null ? Theme.colorFaint() : Theme.colorDone(), false],
-            [WatchUi.loadResource(Rez.Strings.FieldKcal) as String,
-                LiveMetrics.format(_metrics.calories), Theme.colorWarm(), false],
-            [WatchUi.loadResource(Rez.Strings.FieldAvgHr) as String,
-                LiveMetrics.format(_metrics.averageHeartRate), Theme.colorHr(), true],
-            [WatchUi.loadResource(Rez.Strings.FieldMaxHr) as String,
-                LiveMetrics.format(_metrics.maxHeartRate), Theme.colorHr(), true]
-        ] as Array<Array>;
+        var value = te == null ? LiveMetrics.NO_VALUE : (te as Float).format("%.1f");
+        var maxInk = (hole * 30) / 100;
         var fonts = [
+            Graphics.FONT_NUMBER_HOT,
+            Graphics.FONT_NUMBER_MEDIUM,
             Graphics.FONT_NUMBER_MILD,
-            Graphics.FONT_MEDIUM,
-            Graphics.FONT_SMALL,
-            Graphics.FONT_TINY
+            Graphics.FONT_LARGE
         ] as Array<Graphics.FontDefinition>;
-        // One right edge for the whole column, at its narrower end, so the
-        // figures line up.
-        var topHalf = _halfAt(dc, listTop);
-        var bottomHalf = _halfAt(dc, listTop + rowHeight * rows.size());
-        var right = cx + (topHalf < bottomHalf ? topHalf : bottomHalf) - h / 50;
-        for (var i = 0; i < rows.size(); i++) {
-            var row = rows[i];
-            var rowTop = listTop + i * rowHeight;
-            var mid = rowTop + rowHeight / 2;
-            var x = listLeft;
-            if (row[3] as Boolean) {
-                var size = (capLine * 50) / 100;
-                Theme.drawHeart(dc, x + size / 2, mid, size, Theme.colorHr());
-                x += size + size / 2;
-            }
-            var caption = row[0] as String;
+        var font = Theme.pickFontFitting(dc, value, fonts, (hole * 60) / 100, maxInk);
+        var ink = Theme.inkHeight(font);
+        var capFont = Theme.captionFont();
+        var capLine = dc.getFontHeight(capFont);
+        var valueTop = cy - ink / 2;
+        dc.setColor(te == null ? Theme.colorFaint() : Theme.colorText(), Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, valueTop, font, value, Graphics.TEXT_JUSTIFY_CENTER);
+
+        // Above it what it is; below it, in the opening, Garmin's word.
+        var caption = WatchUi.loadResource(Rez.Strings.FieldEffect) as String;
+        var room = (hole * 80) / 100;
+        if (dc.getTextWidthInPixels(caption, Graphics.FONT_XTINY) <= room) {
             dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
-            dc.drawText(x, mid, capFont, caption,
-                Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
-            var room = right - (x + dc.getTextWidthInPixels(caption, capFont) + h / 16);
-            var value = row[1] as String;
-            var font = Theme.pickFontFitting(dc, value, fonts, room, (rowHeight * 50) / 100);
-            var valueInk = Theme.inkHeight(font);
-            dc.setColor(row[2] as Number, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(right, mid - valueInk / 2, font, value, Graphics.TEXT_JUSTIFY_RIGHT);
-            if (i < rows.size() - 1) {
-                _hairline(dc, listLeft, rowTop + rowHeight, right, rowTop + rowHeight);
-            }
+            dc.drawText(cx, valueTop - capLine - h / 120, Graphics.FONT_XTINY, caption,
+                Graphics.TEXT_JUSTIFY_CENTER);
+        }
+        if (te != null) {
+            dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+            var word = WatchUi.loadResource(_effectLabel(level)) as String;
+            dc.drawText(cx, valueTop + ink + h / 40, capFont,
+                Theme.clipToWidth(dc, word, capFont, (radius * 2 * 80) / 100),
+                Graphics.TEXT_JUSTIFY_CENTER);
+        }
+    }
+
+    //! Garmin's word for a Training Effect: 0 no benefit … 5 overreaching.
+    private function _effectLabel(level as Number) as ResourceId {
+        switch (level) {
+            case 0: return Rez.Strings.Te0;
+            case 1: return Rez.Strings.Te1;
+            case 2: return Rez.Strings.Te2;
+            case 3: return Rez.Strings.Te3;
+            case 4: return Rez.Strings.Te4;
+            default: return Rez.Strings.Te5;
+        }
+    }
+
+    //! The Body Battery cell: where the session left you, as large as the
+    //! calories beside it, and what it moved by, small, after it — "63 -18".
+    //! The bar under it shows the same thing: blue up to the level, amber
+    //! over what the session spent. Whichever end the watch could give,
+    //! alone, when it had only one; "--" when it had neither.
+    private function _drawBatteryCell(
+        dc as Graphics.Dc,
+        cx as Number,
+        y as Number,
+        width as Number,
+        maxInk as Number
+    ) as Void {
+        var start = _metrics.batteryStart;
+        var finish = _metrics.batteryEnd;
+        var only = finish != null ? finish : start;
+        var change = "";
+        if (start != null && finish != null && start != finish) {
+            var delta = (finish as Number) - (start as Number);
+            change = (delta > 0 ? "+" : "") + delta.toString();
+        }
+        _drawCell(dc, cx, y, width,
+            WatchUi.loadResource(Rez.Strings.FieldBattery) as String,
+            [LiveMetrics.format(only), change] as Array<String>,
+            only == null ? Theme.colorFaint() : Theme.colorText(), maxInk, false);
+    }
+
+    //! The Body Battery bar: blue up to where the session left it, amber over
+    //! the part the session spent.
+    private function _drawBatteryBar(
+        dc as Graphics.Dc,
+        x as Number,
+        y as Number,
+        width as Number,
+        height as Number
+    ) as Void {
+        var start = _metrics.batteryStart;
+        var finish = _metrics.batteryEnd;
+        var level = finish != null ? finish : start;
+        if (level == null) {
+            _drawBar(dc, x, y, width, height, 0.0, Theme.colorFaint());
+            return;
+        }
+        var t = Animator.value();
+        dc.setColor(_track(), Graphics.COLOR_TRANSPARENT);
+        _pill(dc, x, y, width, height);
+        if (start != null && finish != null && (start as Number) > (finish as Number)) {
+            dc.setColor(Theme.colorWarm(), Graphics.COLOR_TRANSPARENT);
+            _pill(dc, x, y, ((width * (start as Number)) * t).toNumber() / 100, height);
+        }
+        var fill = ((width * (level as Number)) * t).toNumber() / 100;
+        if (fill > 0) {
+            dc.setColor(Theme.colorAccent(), Graphics.COLOR_TRANSPARENT);
+            _pill(dc, x, y, fill < height ? height : fill, height);
         }
     }
 
@@ -794,14 +947,17 @@ class WorkoutSummaryView extends WatchUi.View {
         }
         // Five rows centred on the middle of the glass, where it is widest,
         // in a block narrow enough that its corners clear the curve.
-        var font = _rowFont(dc, bottom - top, ZoneTracker.ZONE_COUNT + 1, 1);
+        // Under the bars, the heart rate itself: average, peak, recovery.
+        var hrInk = (h * 6) / 100;
+        var hrRow = h / 22 + (h * 125) / 1000;
+        var font = _rowFont(dc, bottom - top - hrRow, ZoneTracker.ZONE_COUNT + 1, 1);
         var line = dc.getFontHeight(font);
-        var rowHeight = (line * 128) / 100;
+        var rowHeight = (line * 118) / 100;
         var block = rowHeight * ZoneTracker.ZONE_COUNT - (rowHeight - line);
-        var y = h / 2 - block / 2 + h / 40;
-        if (y < top + h / 40) {
-            y = top + h / 40;
-        }
+        // The bars start right under the title, so the heart-rate row below
+        // them sits where the glass is still wide.
+        var y = top + h / 50;
+        _drawHeartRow(dc, y + block + h / 22, hrInk);
         var cx = dc.getWidth() / 2;
         // As long as the glass allows at the block's narrower edge, measured
         // just inside the ring rather than with the list's margin.
@@ -875,6 +1031,62 @@ class WorkoutSummaryView extends WatchUi.View {
         }
     }
 
+    //! Average, peak and recovery heart rate, a column each, under the zones.
+    //! Set small, as a footnote to the zones above it: smaller than the
+    //! system's smallest font, which on a Fenix 9 is still a large one, so
+    //! drawn in the watch's own Roboto at a chosen size where the device has
+    //! scalable fonts, and in the smallest system font where it does not.
+    private function _drawHeartRow(dc as Graphics.Dc, y as Number, maxInk as Number) as Void {
+        var h = dc.getHeight();
+        var cx = dc.getWidth() / 2;
+        var capFont = _sizedFont(["RobotoCondensedRegular", "RobotoRegular"] as Array<String>,
+            (h * 50) / 1000, Graphics.FONT_XTINY);
+        var valueFont = _sizedFont(["RobotoCondensedBold", "RobotoMedium", "RobotoRegular"] as Array<String>,
+            (h * 80) / 1000, Graphics.FONT_SMALL);
+        var capLine = dc.getFontHeight(capFont);
+        var valueLine = dc.getFontHeight(valueFont);
+        var step = (_halfAt(dc, y + capLine) * 58) / 100;
+        var recovery = _metrics.recovery;
+        var cells = [
+            [WatchUi.loadResource(Rez.Strings.FieldAvgHr) as String,
+                LiveMetrics.format(_metrics.averageHeartRate)],
+            [WatchUi.loadResource(Rez.Strings.FieldMaxHr) as String,
+                LiveMetrics.format(_metrics.maxHeartRate)],
+            [WatchUi.loadResource(Rez.Strings.FieldRecoveryShort) as String,
+                recovery == null ? LiveMetrics.NO_VALUE : "-" + (recovery as Number).toString()]
+        ] as Array<Array<String>>;
+        var valueTop = y + capLine;
+        for (var i = 0; i < cells.size(); i++) {
+            var x = cx + (i - 1) * step;
+            var value = cells[i][1];
+            dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
+            dc.drawText(x, y, capFont, cells[i][0], Graphics.TEXT_JUSTIFY_CENTER);
+            dc.setColor(value.equals(LiveMetrics.NO_VALUE) ? Theme.colorFaint() : Theme.colorText(),
+                Graphics.COLOR_TRANSPARENT);
+            dc.drawText(x, valueTop, valueFont, value, Graphics.TEXT_JUSTIFY_CENTER);
+        }
+        var end = valueTop + (valueLine * 85) / 100;
+        _hairline(dc, cx - step / 2, y + h / 90, cx - step / 2, end);
+        _hairline(dc, cx + step / 2, y + h / 90, cx + step / 2, end);
+    }
+
+    //! The first of `faces` the device has, at `size` pixels; `fallback`
+    //! when the device has no scalable fonts (Connect IQ before 4.2) or none
+    //! of those faces.
+    private function _sizedFont(
+        faces as Array<String>,
+        size as Number,
+        fallback as Graphics.FontDefinition
+    ) as Graphics.FontType {
+        if (Graphics has :getVectorFont) {
+            var font = Graphics.getVectorFont({:face => faces, :size => size});
+            if (font != null) {
+                return font;
+            }
+        }
+        return fallback;
+    }
+
     // ==================================================================
     // Page 4 — the exercises
     // ==================================================================
@@ -915,7 +1127,7 @@ class WorkoutSummaryView extends WatchUi.View {
 
         var font = _rowFont(dc, bottom - top, 5, 1);
         var line = dc.getFontHeight(font);
-        var rowHeight = line + line / 2;
+        var rowHeight = (line * 175) / 100;
         var start = _listStart(dc, top, bottom, list.size(), rowHeight, 0);
         var y = start[0];
         var clipped = start[1] == 1;
@@ -929,7 +1141,7 @@ class WorkoutSummaryView extends WatchUi.View {
                     dc.setClip(0, top, dc.getWidth(), floor - top);
                 }
                 var whole = y >= top && y + rowHeight <= bottom;
-                _drawExerciseRow(dc, list[i], span[0], y + line / 4, span[1], font, radius, whole);
+                _drawExerciseRow(dc, list[i], span[0], y + (rowHeight - line) / 2, span[1], font, radius, whole);
                 if (i < list.size() - 1) {
                     var rule = y + rowHeight - 1;
                     _hairline(dc, span[0] + radius * 3, rule, span[0] + span[1], rule);
@@ -964,7 +1176,7 @@ class WorkoutSummaryView extends WatchUi.View {
         dc.drawText(left + width, y, font, count, Graphics.TEXT_JUSTIFY_RIGHT);
 
         var nameLeft = left + radius * 3;
-        var nameWidth = left + width - countWidth - radius - nameLeft;
+        var nameWidth = left + width - countWidth - radius * 4 - nameLeft;
         if (nameWidth <= 0) {
             return;
         }
@@ -1093,7 +1305,7 @@ class WorkoutSummaryView extends WatchUi.View {
                 dc.setColor(Theme.colorText(), Graphics.COLOR_TRANSPARENT);
                 dc.drawText(nameLeft, y, font,
                     Theme.clipToWidth(dc, Muscle.name(group), font,
-                        left + width - valueWidth - width / 16 - nameLeft),
+                        left + width - valueWidth - width / 10 - nameLeft),
                     Graphics.TEXT_JUSTIFY_LEFT);
 
                 var segGap = width / 60 < 2 ? 2 : width / 60;
@@ -1202,8 +1414,11 @@ class WorkoutSummaryView extends WatchUi.View {
         var height = pad * 2 + dc.getFontHeight(nameFont) + dc.getFontHeight(smallFont);
         _panel(dc, left, y, width, height, height / 4);
 
-        var inner = left + pad;
-        var innerWidth = width - pad * 2;
+        // Wider at the sides than at the top: a figure set right needs air
+        // between it and the card's rounded edge.
+        var side = (pad * 7) / 4;
+        var inner = left + side;
+        var innerWidth = width - side * 2;
         var kind = row[1] as Number;
         var reps = row[2] as Number;
         var weight = row[3] as Float?;
@@ -1329,7 +1544,7 @@ class WorkoutSummaryView extends WatchUi.View {
 
         var hero = _splitVolume(total.toFloat());
         top = _drawFigure(dc, dc.getWidth() / 2, top + h / 60, hero[0], hero[1],
-            Theme.colorText(), _halfAt(dc, top) * 2, h / 11, false) + h / 30;
+            Theme.colorText(), _halfAt(dc, top) * 2, h / 11, false) + h / 22;
 
         // The split: one rounded bar cut into the groups' colours.
         var barHeight = h / 45 < 4 ? 4 : h / 45;
@@ -1354,12 +1569,12 @@ class WorkoutSummaryView extends WatchUi.View {
             }
             x += share;
         }
-        top += barHeight + h / 30;
+        top += barHeight + h / 22;
 
         var font = _rowFont(dc, bottom - top, 5, 1);
         var line = dc.getFontHeight(font);
-        var rowHeight = line + line / 3;
-        var start = _listStart(dc, top, bottom, groups.size(), rowHeight, line / 3);
+        var rowHeight = (line * 150) / 100;
+        var start = _listStart(dc, top, bottom, groups.size(), rowHeight, line / 2);
         var y = start[0];
         var clipped = start[1] == 1;
         var dot = line / 7 < 3 ? 3 : line / 7;

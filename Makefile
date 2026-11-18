@@ -22,7 +22,7 @@ export TYPECHECK
 
 .PHONY: help doctor bootstrap key devices devices-all devices-missing \
         build build-all test test-watch test-backend sim sim-fresh sim-attach \
-        sim-empty sim-seed sim-seed-forget sim-analytics glance glance-preview \
+        sim-empty sim-seed sim-seed-forget sim-analytics sim-recap sim-glance glance glance-preview glance-memory \
         shot sideload clean package release-check backend-setup \
         sync-garmin sync-garmin-show sync-hevy sync-hevy-show
 
@@ -100,10 +100,16 @@ sim-empty: ## Same, but with nothing stored at all — a first-ever install
 sim-analytics: ## Open RepFlow straight on Analytics (DEMO=1 for demo data)
 	@REPFLOW_LAUNCH=analytics REPFLOW_DEMO=$(DEMO) REPFLOW_DETACH=1 scripts/run-simulator.sh $(DEVICE)
 
-glance-preview: ## The Analytics glance, full screen, to work on its design (DEMO=1)
+sim-recap: ## The end-of-workout recap of a full demo session, every page filled
+	@REPFLOW_LAUNCH=recap REPFLOW_DETACH=1 scripts/run-simulator.sh $(DEVICE)
+
+sim-glance: ## The glance as the watch shows it, centred; START opens Analytics (DEMO=1)
 	@REPFLOW_LAUNCH=glance-preview REPFLOW_DEMO=$(DEMO) REPFLOW_DETACH=1 scripts/run-simulator.sh $(DEVICE)
 
-glance: ## The real glance, in the simulator's glance mode (Connect IQ 4+ devices)
+glance: sim-glance
+glance-preview: sim-glance
+
+glance-memory: ## The glance in the simulator's glance mode, only to check its memory limit
 	@scripts/glance.sh $(DEVICE)
 
 sim-seed: ## Remember the simulator's workouts, so sim-fresh puts them back

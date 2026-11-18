@@ -69,9 +69,9 @@ module FieldGrid {
         caption as String,
         valueColor as Number
     ) as Void {
-        // 88%, a hair under the 92% the value gets, so two captions side by
-        // side in a pair cannot meet in the middle.
-        var captionFont = Theme.captionFontFor(dc, caption, (width * 88) / 100);
+        // A quarter of the cell held clear, so two captions side by side never
+        // read as one (see testFieldCaptionsFitTheirCells).
+        var captionFont = Theme.captionFontFor(dc, caption, (width * 75) / 100);
         var captionHeight = dc.getFontHeight(captionFont);
         var area = valueArea(dc, height);
 

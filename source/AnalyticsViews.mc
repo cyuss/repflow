@@ -260,7 +260,19 @@ class AnalyticsDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
+    //! Opened from the workout picker, BACK returns to it. Opened from the
+    //! glance, BACK hands the button to the system, which closes the app and
+    //! shows the glance loop again — as every Garmin glance does. In the
+    //! simulator's glance preview, the preview stands in for that loop.
     public function onBack() as Boolean {
+        if (DevLaunch.MODE == DevLaunch.GLANCE_PREVIEW) {
+            WatchUi.switchToView(new GlancePreviewView(), new GlancePreviewDelegate(),
+                WatchUi.SLIDE_RIGHT);
+            return true;
+        }
+        if (AnalyticsNav.fromGlance) {
+            return false;
+        }
         var list = new WorkoutListView();
         WatchUi.switchToView(list, new WorkoutListDelegate(list), WatchUi.SLIDE_RIGHT);
         return true;
@@ -280,6 +292,10 @@ module AnalyticsNav {
     var source as Number = 0;      //! 0 all, 1 RepFlow, 2 Garmin
 
     const PERIOD_DAYS = [7, 30, 400] as Array<Number>;
+
+    //! The app was opened from its glance. BACK on the overview then leaves
+    //! the app, back to the glance loop, instead of opening the workout picker.
+    var fromGlance as Boolean = false;
 
     public function overview(transition as WatchUi.SlideType) as Void {
         var view = new AnalyticsView();

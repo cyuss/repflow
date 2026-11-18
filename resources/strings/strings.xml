@@ -113,12 +113,20 @@
     <string id="RecordOne">record</string>
     <string id="RecordMany">records</string>
     <string id="SummaryDone">done</string>
-    <string id="SummaryBody">BODY</string>
     <string id="ThisWeek">THIS WEEK</string>
     <string id="RpeByMuscle">RPE by muscle</string>
     <string id="LastTime">Last</string>
     <string id="FieldRecovery">REC HR</string>
-    <string id="FieldBattery">BODY BATT</string>
+    <string id="FieldBattery">B.BATT</string>
+    <string id="SummaryEffort">EFFORT</string>
+    <string id="Te0">No benefit</string>
+    <string id="Te1">Minor</string>
+    <string id="Te2">Maintaining</string>
+    <string id="Te3">Improving</string>
+    <string id="Te4">Highly improving</string>
+    <string id="Te5">Overreaching</string>
+    <string id="FieldRecoveryShort">REC</string>
+    <string id="FieldEffect">AEROBIC TE</string>
     <string id="AppSettings">Settings</string>
     <string id="EditWorkoutItem">Edit workout</string>
     <string id="SettingOn">On</string>
@@ -156,6 +164,7 @@
     <string id="GlanceDaysAgo" scope="glance">$1$ days ago</string>
     <string id="GlanceNone" scope="glance">No session this week</string>
     <string id="GlanceGarmin" scope="glance">Garmin session</string>
+    <string id="GlanceDayLetters" scope="glance">MTWTFSS</string>
     <string id="AnalyticsTitle">Analytics</string>
     <string id="ThisMonth">THIS MONTH</string>
     <string id="Last30Days">LAST 30 DAYS</string>

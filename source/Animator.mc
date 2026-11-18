@@ -34,7 +34,7 @@ module Animator {
 
     //! Begin an entrance. Harmless — and free — on a device that should not.
     public function start(durationMs as Number) as Void {
-        if (!Device.animates() || durationMs <= 0) {
+        if (!Device.animates() || durationMs <= 0 || Power.dimmed()) {
             _running = false;
             return;
         }

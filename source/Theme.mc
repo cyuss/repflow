@@ -143,19 +143,56 @@ module Theme {
     //! `captionFont` is a size up and "AVG HR" beside "MAX HR" ran together.
     //!
     //! Shrinking rather than clipping: a caption is a word, and half a word is
-    //! worse than a small one. There is nothing below XTINY, so a label that
-    //! still does not fit is a label that is too long — which is what
-    //! testFieldCaptionsFitTheirCells is for.
+    //! worse than a small one. Below XTINY there is no system font — and on a
+    //! Fenix 9 XTINY is still a large one, too wide for "TIMER" in a corner
+    //! cell — so where the watch has scalable fonts, the caption is set in its
+    //! own Roboto at the size that fits. The system fonts stay the rule; this
+    //! only catches what they cannot.
     public function captionFontFor(
         dc as Graphics.Dc,
         text as String,
         maxWidth as Number
-    ) as Graphics.FontDefinition {
+    ) as Graphics.FontType {
         var font = captionFont();
         if (dc.getTextWidthInPixels(text, font) <= maxWidth) {
             return font;
         }
+        var width = dc.getTextWidthInPixels(text, Graphics.FONT_XTINY);
+        if (width <= maxWidth || !(Graphics has :getVectorFont) || width <= 0) {
+            return Graphics.FONT_XTINY;
+        }
+        // Scaled by width, then stepped down until it truly fits: a face's
+        // width does not grow exactly with its size.
+        var size = (dc.getFontHeight(Graphics.FONT_XTINY) * maxWidth) / width;
+        for (var i = 0; i < 6 && size >= 8; i++) {
+            var vf = _captionVector(size);
+            if (vf == null) {
+                break;
+            }
+            if (dc.getTextWidthInPixels(text, vf) <= maxWidth) {
+                return vf;
+            }
+            size -= size / 10 + 1;
+        }
         return Graphics.FONT_XTINY;
+    }
+
+    //! The last scalable caption font made, by size. A live screen asks for
+    //! the same one every second, and making a vector font is not free.
+    var _captionVectorSize as Number = 0;
+    var _captionVectorFont as Graphics.VectorFont? = null;
+
+    function _captionVector(size as Number) as Graphics.VectorFont? {
+        if (size == _captionVectorSize && _captionVectorFont != null) {
+            return _captionVectorFont;
+        }
+        var vf = Graphics.getVectorFont({
+            :face => ["RobotoCondensedRegular", "RobotoRegular"],
+            :size => size
+        });
+        _captionVectorSize = size;
+        _captionVectorFont = vf;
+        return vf;
     }
 
     // ------------------------------------------------------------------
@@ -1112,6 +1149,10 @@ module Theme {
         return dc.getWidth() - (dc.getWidth() / 22) - radius - (radius + 1);
     }
 
+    //! The page dots, down the right edge. On a round screen they sit on an
+    //! arc concentric with the glass, the way the watch's own pages do, rather
+    //! than on a straight line the bezel curves away from; the middle dot is
+    //! where the straight column had it. A rectangular screen keeps the column.
     public function drawPageDots(dc as Graphics.Dc, count as Number, active as Number) as Void {
         if (count <= 1) {
             return;
@@ -1121,10 +1162,25 @@ module Theme {
         var spacing = pageDotSpacing(dc);
         var radius = pageDotRadius(dc);
         var x = w - (w / 22) - radius;
-        var startY = h / 2 - ((count - 1) * spacing) / 2;
+        var settings = System.getDeviceSettings();
+        var round = settings.screenShape == System.SCREEN_SHAPE_ROUND;
+        var cx = w / 2;
+        var cy = h / 2;
+        // Distance from the centre to the dots, and the angle between two
+        // neighbours that keeps them `spacing` apart along the arc.
+        var arc = (x - cx).toFloat();
+        var step = arc > 0.0 ? spacing.toFloat() / arc : 0.0;
+        var first = -((count - 1).toFloat() / 2.0);
         for (var i = 0; i < count; i++) {
+            var dx = x;
+            var dy = cy + ((i.toFloat() + first) * spacing).toNumber();
+            if (round && arc > 0.0) {
+                var angle = (i.toFloat() + first) * step;
+                dx = cx + (arc * Math.cos(angle)).toNumber();
+                dy = cy + (arc * Math.sin(angle)).toNumber();
+            }
             dc.setColor(i == active ? colorAccent() : colorFaint(), Graphics.COLOR_TRANSPARENT);
-            dc.fillCircle(x, startY + i * spacing, i == active ? radius + 1 : radius);
+            dc.fillCircle(dx, dy, i == active ? radius + 1 : radius);
         }
     }
 

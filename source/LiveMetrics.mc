@@ -2,6 +2,7 @@ import Toybox.Lang;
 import Toybox.Activity;
 import Toybox.UserProfile;
 import Toybox.SensorHistory;
+import Toybox.Time;
 
 //! Read-only access to the Garmin metrics that are genuinely available while an
 //! activity is recording.
@@ -151,13 +152,25 @@ module LiveMetrics {
         return (hr - floor).toFloat() / (ceiling - floor).toFloat();
     }
 
-    //! The wearer's current Body Battery, 0-100, or null.
+    //! How far back the Body Battery history is searched for a reading, and
+    //! how many samples are looked at, at most.
+    const BATTERY_LOOKBACK = 21600;        // six hours
+    const BATTERY_SAMPLES = 120;
+
+    //! The wearer's latest Body Battery, 0-100, or null.
     //!
     //! Garmin's own number, read rather than computed — RepFlow has no business
     //! estimating it. Not every device tracks it and not every firmware exposes
     //! the history module, so both are checked with `has` rather than a
     //! try/catch: a missing symbol is a Monkey C runtime error, and those are
     //! not Exceptions.
+    //!
+    //! **The newest sample is often empty.** On a real watch the slot being
+    //! filled carries no data until Garmin has computed it, and during an
+    //! activity that can be a while, so asking for one sample — which is what
+    //! this used to do — reads "--" on the wrist while the simulator, whose
+    //! history is canned, shows a value. The history is walked back from the
+    //! newest sample to the first that holds a reading.
     public function bodyBattery() as Number? {
         if (!(Toybox has :SensorHistory)) {
             return null;
@@ -167,22 +180,51 @@ module LiveMetrics {
         }
         try {
             var iterator = SensorHistory.getBodyBatteryHistory({
-                :period => 1,
+                :period => new Time.Duration(BATTERY_LOOKBACK),
                 :order => SensorHistory.ORDER_NEWEST_FIRST
             });
             var sample = iterator.next();
-            if (sample == null) {
-                return null;
+            var walked = 0;
+            while (sample != null && walked < BATTERY_SAMPLES) {
+                var n = percent(sample.data);
+                if (n != null) {
+                    return n;
+                }
+                sample = iterator.next();
+                walked++;
             }
-            var value = sample.data;
-            if (!(value instanceof Number) && !(value instanceof Float)) {
-                return null;
-            }
-            var n = (value instanceof Float) ? (value as Float).toNumber() : value as Number;
-            return (n >= 0 && n <= 100) ? n : null;
         } catch (e) {
+            // Nothing readable is the same as nothing there.
+        }
+        return null;
+    }
+
+    //! A history sample as a whole percentage, or null when it holds none.
+    public function percent(value as Numeric?) as Number? {
+        if (value == null) {
             return null;
         }
+        if (!(value instanceof Number) && !(value instanceof Float)) {
+            return null;
+        }
+        var n = (value instanceof Float) ? (value as Float).toNumber() : value as Number;
+        return (n >= 0 && n <= 100) ? n : null;
+    }
+
+    //! Aerobic Training Effect of the activity being recorded, 0.0 to 5.0, or
+    //! null. Garmin computes it live (Firstbeat), strength sessions included;
+    //! it is the same figure the watch's own summary leads with.
+    public function trainingEffect() as Float? {
+        var i = info();
+        if (i == null) {
+            return null;
+        }
+        var te = (i as Activity.Info).trainingEffect;
+        if (te == null) {
+            return null;
+        }
+        var f = te.toFloat();
+        return (f >= 0.0 && f <= 5.0) ? f : null;
     }
 
     //! Render a nullable number, or "--" when the device has nothing to give.

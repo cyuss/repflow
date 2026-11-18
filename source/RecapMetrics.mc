@@ -20,6 +20,12 @@ class RecapMetrics {
     public var batteryStart as Number?;
     //! Best beats dropped in a minute of rest during the session.
     public var recovery as Number?;
+    //! Body Battery when the session ended, read with the recording still
+    //! open — the recap is drawn every second and must not walk the history
+    //! each time.
+    public var batteryEnd as Number? = null;
+    //! Aerobic Training Effect, 0.0 to 5.0.
+    public var trainingEffect as Float? = null;
 
     public function initialize(
         calories as Number?,
@@ -40,11 +46,14 @@ class RecapMetrics {
         batteryStart as Number?,
         recovery as Number?
     ) as RecapMetrics {
-        return new RecapMetrics(
+        var metrics = new RecapMetrics(
             LiveMetrics.calories(),
             LiveMetrics.averageHeartRate(),
             LiveMetrics.maxHeartRate(),
             batteryStart,
             recovery);
+        metrics.batteryEnd = LiveMetrics.bodyBattery();
+        metrics.trainingEffect = LiveMetrics.trainingEffect();
+        return metrics;
     }
 }

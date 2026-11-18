@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-18
+
+### Added
+
+- **Battery**: on AMOLED watches nothing is redrawn while the screen is off,
+  and in always-on mode a live screen is redrawn every 5 s instead of every
+  second (the last 10 s of a rest still count down one by one). Scrolling names
+  and entrances stop whenever the screen is dimmed.
+- **Glance**: the week as seven columns on faint tracks, one colour, with the
+  day's initial under each. Opening RepFlow from the glance shows Analytics
+  only, and BACK returns to the glance loop.
+- **Recap**: redesigned pages — an aerobic training-effect gauge, Body Battery
+  at the end and what the session cost, heart rate under the zones.
+- Personal builds with a Hevy key baked in are named
+  `RepFlow-<device>-private.prg`; the Store bundle never carries a key.
+
+### Changed
+
+- A session is sent to Hevy only when it is saved, never when it is discarded.
+- The page dots follow the curve of the screen.
+- Muscle groups in the exercise picker are a plain list again.
+
 ### Added
 
 - `backend/` — `repflow-garmin`, an optional command-line tool that fills in

@@ -55,6 +55,15 @@ class RepFlowApp extends Application.AppBase {
         WatchUi.requestUpdate();
     }
 
+    //! The display dimmed, went off or came back (AMOLED watches). See Power.
+    //! Not in the glance, which the system repaints on its own schedule.
+    (:typecheck(disableGlanceCheck))
+    public function onDisplayModeChanged() as Void {
+        if (_foreground) {
+            AppController.instance().onDisplayModeChanged();
+        }
+    }
+
     //! Persist whatever is in progress. The app may be backgrounded at any time.
     //! Not in the glance: there is no workout there, and no AppController.
     (:typecheck(disableGlanceCheck))
@@ -80,6 +89,15 @@ class RepFlowApp extends Application.AppBase {
         if (dev != null) {
             return dev;
         }
+        // The glance opens Analytics, and only Analytics: never the workout
+        // picker, never a session. An interrupted workout stays stored and
+        // comes back the next time the app itself is opened.
+        if (_fromGlance) {
+            var analytics = AnalyticsHooks.fromGlance();
+            if (analytics != null) {
+                return analytics;
+            }
+        }
         // An interrupted workout takes priority over the workout picker.
         var restored = SessionRepository.loadActive();
         if (restored != null) {
@@ -88,13 +106,6 @@ class RepFlowApp extends Application.AppBase {
                 return [new ExerciseView(), new ExerciseDelegate()];
             }
             return [new WorkoutOverviewView(), new WorkoutOverviewDelegate()];
-        }
-        // The glance's figures are a tap away from their detail.
-        if (_fromGlance) {
-            var analytics = AnalyticsHooks.overview();
-            if (analytics != null) {
-                return analytics;
-            }
         }
         var listView = new WorkoutListView();
         return [listView, new WorkoutListDelegate(listView)];

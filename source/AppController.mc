@@ -36,6 +36,8 @@ class AppController {
     //! exercise screen leaves the page where it was, and the accelerometer used
     //! to keep sampling at 25 Hz for as long as the menu stayed open.
     private var _liveView as Number;
+    //! Seconds counted by the tick, for the low-power repaint cadence (Power).
+    private var _ticks as Number = 0;
     //! Time in heart rate zone, counted off the same 1 Hz tick. Garmin shows
     //! this at the end of its own activities and gives no API to read it back.
     private var _zones as ZoneTracker;
@@ -781,9 +783,27 @@ class AppController {
             _signalRestOver();
         }
         // Everything above happens whatever is on screen — the countdown has
-        // to reach zero and buzz from behind a menu. Only the repaint is
-        // conditional, and only a screen that changes by itself asks for one.
+        // to reach zero and buzz from behind a menu, and with the display off.
+        // Only the repaint is conditional: only a screen that changes by
+        // itself asks for one, and only as often as the display can show it.
+        _ticks++;
         if (_liveView != Tuning.LIVE_NONE) {
+            var restLeft = _rest.isRunning() && !_rest.isOpen() ? _rest.remaining() : -1;
+            if (Power.repaintOnTick(_ticks, restLeft)) {
+                WatchUi.requestUpdate();
+            }
+        }
+    }
+
+    //! The display went dark, dimmed, or came back (see Power). Nothing moves
+    //! on a screen nobody can see; one that comes back is repainted at once,
+    //! so the first frame seen is current.
+    public function onDisplayModeChanged() as Void {
+        if (Power.dimmed()) {
+            Marquee.stop();
+            Animator.stop();
+        }
+        if (!Power.screenOff()) {
             WatchUi.requestUpdate();
         }
     }
@@ -932,11 +952,12 @@ class AppController {
             _recorder.stopAndDiscard();
         }
 
-        // Discarding is about the Garmin recording, not about the training.
-        // A session the athlete performed is logged to Hevy either way — it is
+        // Only a saved session goes to Hevy. Discard means the session did not
+        // count — an aborted start, a test, a workout logged by mistake — and
+        // Hevy must not keep what Garmin was told to throw away. A saved one is
         // queued first, so a phone in a locker costs nothing.
         var workout = _closingWorkout;
-        if (workout != null) {
+        if (closing == CLOSE_SAVE && workout != null) {
             HevySync.sendSession(workout as Workout, _closingStartedAt,
                 _closingFinishedAt, _closingMetrics);
         }

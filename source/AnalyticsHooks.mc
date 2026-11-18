@@ -32,7 +32,18 @@ module AnalyticsHooks {
         if (DevLaunch.MODE == DevLaunch.ANALYTICS) {
             return overview();
         }
+        if (DevLaunch.MODE == DevLaunch.RECAP) {
+            return RecapDemo.build();
+        }
         return null;
+    }
+
+    //! What the glance opens: Analytics, and nothing else. BACK from here
+    //! leaves the app for the glance loop rather than landing on the workout
+    //! picker — the glance is for looking, not for starting a session.
+    public function fromGlance() as [WatchUi.Views, WatchUi.InputDelegates] or Null {
+        AnalyticsNav.fromGlance = true;
+        return overview();
     }
 
     public function overview() as [WatchUi.Views, WatchUi.InputDelegates] or Null {

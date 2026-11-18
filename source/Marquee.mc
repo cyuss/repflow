@@ -203,6 +203,14 @@ module Marquee {
         if (overflow <= 0) {
             return 0;
         }
+        // A dimmed or dark screen gets the start of the phrase, still: ten
+        // frames a second that nobody can read are the most expensive thing
+        // this app could do. Forgetting the travel means the name starts
+        // again from its beginning when the screen comes back.
+        if (Power.dimmed()) {
+            stop();
+            return 0;
+        }
         // Each scrolling thing decides for itself, off the shared clock. A
         // single "we are done" latch would let the shortest name on a recap
         // page finish its two trips and freeze the list still scrolling under

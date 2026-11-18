@@ -59,6 +59,29 @@ module GlanceDraw {
     const F_DAY_REPFLOW = 7;   //! seconds per weekday, Monday first
     const F_DAY_GARMIN = 8;
 
+    //! How long worked-out figures are reused. The glance is repainted far
+    //! more often than its figures change — a session count moves a few times
+    //! a week — and each fresh answer means reading Storage and walking the
+    //! watch's activity history.
+    const FIGURES_TTL = 300;
+
+    var _figures as Array? = null;
+    var _figuresAt as Number = 0;
+
+    //! `figures`, reused for a few minutes, and worked out again at once when
+    //! the week has turned since (Monday midnight changes everything shown).
+    public function cachedFigures(now as Number) as Array {
+        var f = _figures;
+        if (f != null && now >= _figuresAt && now - _figuresAt < FIGURES_TTL
+                && NativeActivities.weekStart(now) == NativeActivities.weekStart(_figuresAt)) {
+            return f;
+        }
+        f = figures(now);
+        _figures = f;
+        _figuresAt = now;
+        return f;
+    }
+
     //! Everything the glance shows, worked out live from the app's cache and
     //! the watch's own history.
     public function figures(now as Number) as Array {
@@ -175,7 +198,7 @@ module GlanceDraw {
     //! week going" from a different side.
     public function draw(dc as Graphics.Dc, x as Number, y as Number, w as Number, h as Number) as Void {
         var now = Time.now().value();
-        var f = figures(now);
+        var f = cachedFigures(now);
         var thisWeek = f[F_WEEK] as Number;
         var lastWeek = f[F_PREVIOUS] as Number;
         var kg = f[F_KG] as Number;
@@ -205,18 +228,40 @@ module GlanceDraw {
         _drawMark(dc, markCx, markCy, markR);
         var textLeft = x + markR * 2 + markR / 2 + 2;
 
-        // Title, across the whole row.
+        // Title, set smaller than the system's smallest where the watch has
+        // scalable fonts: it labels the count, it is not the thing read, and
+        // at full size it crowded the week beside it.
+        var titleFont = small as Graphics.FontType;
+        if (Graphics has :getVectorFont) {
+            var vf = Graphics.getVectorFont({
+                :face => ["RobotoCondensedBold", "RobotoMedium", "RobotoRegular"],
+                :size => (smallLine * 62) / 100
+            });
+            if (vf != null) {
+                titleFont = vf;
+            }
+        }
+        var title = WatchUi.loadResource(Rez.Strings.GlanceTitle) as String;
         dc.setColor(ACCENT, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(textLeft, top, small,
-            clip(dc, (WatchUi.loadResource(Rez.Strings.GlanceTitle) as String), small, x + width - textLeft),
+        dc.drawText(textLeft, top + (smallLine - dc.getFontHeight(titleFont)) / 2, titleFont,
+            clip(dc, title, titleFont, x + width - textLeft),
             Graphics.TEXT_JUSTIFY_LEFT);
         var heroTop = top + smallLine;
 
         // The week, day by day, beside the hero.
-        var chartW = (width * 42) / 100;
+        // It starts after the title, so the two never touch, and runs the
+        // height of title and hero together, its initials level with the
+        // bottom of the count.
         var chartRight = x + width;
-        var chartLeft = chartRight - chartW;
-        _drawWeek(dc, chartLeft, heroTop + heroH / 10, chartW, heroH - heroH / 10,
+        var chartLeft = textLeft + dc.getTextWidthInPixels(title, titleFont) + width / 16;
+        if (chartLeft < chartRight - (width * 44) / 100) {
+            chartLeft = chartRight - (width * 44) / 100;
+        }
+        if (chartLeft > chartRight - (width * 32) / 100) {
+            chartLeft = chartRight - (width * 32) / 100;
+        }
+        var chartW = chartRight - chartLeft;
+        _drawWeek(dc, chartLeft, top + smallLine / 6, chartW, smallLine + heroH - smallLine / 6,
             f[F_DAY_REPFLOW] as Array<Number>, f[F_DAY_GARMIN] as Array<Number>,
             (now - NativeActivities.weekStart(now)) / NativeActivities.DAY);
 
@@ -301,9 +346,15 @@ module GlanceDraw {
         }
     }
 
-    //! Seven bars, Monday first: training time per day, RepFlow at the base,
-    //! Garmin above it after a two-pixel gap. A day with nothing is a dot;
-    //! today is underlined in the accent; days still to come are fainter.
+    //! The week, Monday first: a column per day, each on its own faint track
+    //! so the seven read as one shape, filled from the bottom with that day's
+    //! training time, RepFlow and Garmin as one. Days to come keep an even
+    //! fainter track.
+    //! Under each column its initial, today's in white, the rest dim.
+    //!
+    //!     ▐ ▐ █ ▐ ▐ ▐ ▐
+    //!     ▐ █ █ ▐ ▐ ▐ ▐
+    //!     M T W T F S S
     function _drawWeek(
         dc as Graphics.Dc,
         left as Number,
@@ -314,14 +365,27 @@ module GlanceDraw {
         garmin as Array<Number>,
         today as Number
     ) as Void {
-        var gap = width / 16 < 2 ? 2 : width / 16;
+        // The initials, at a size of their own where the watch has scalable
+        // fonts; without them the system's smallest is too big for the row,
+        // and today is marked by a white track instead.
+        var letters = null as Graphics.FontType?;
+        if (Graphics has :getVectorFont) {
+            letters = Graphics.getVectorFont({
+                :face => ["RobotoCondensedBold", "RobotoMedium", "RobotoRegular"],
+                :size => (height * 19) / 100
+            });
+        }
+        var letterH = letters != null ? dc.getFontHeight(letters as Graphics.FontType) : 0;
+        var plotTop = top;
+        var plotBottom = top + height - (letterH > 0 ? (letterH * 95) / 100 : 0);
+        var plot = plotBottom - plotTop;
+
+        var gap = width / 14 < 3 ? 3 : width / 14;
         var bar = (width - gap * 6) / 7;
-        if (bar < 2) {
+        if (bar < 3 || plot < bar) {
             return;
         }
-        var markH = bar / 3 < 2 ? 2 : bar / 3;
-        var bottom = top + height - markH - 2;
-        var plot = bottom - top;
+        var radius = bar / 2;
         // Scaled to at least an hour, so one short session is not a full bar.
         var peak = 3600;
         for (var d = 0; d < 7; d++) {
@@ -329,42 +393,51 @@ module GlanceDraw {
                 peak = repflow[d] + garmin[d];
             }
         }
+        var initials = WatchUi.loadResource(Rez.Strings.GlanceDayLetters) as String;
         var rounded = dc has :fillRoundedRectangle;
         for (var d = 0; d < 7; d++) {
             var bx = left + d * (bar + gap);
+
+            // The track.
+            dc.setColor(d > today ? 0x1F1F1F : (letters == null && d == today ? 0x555555 : 0x333333),
+                Graphics.COLOR_TRANSPARENT);
+            _pill(dc, bx, plotTop, bar, plot, radius, rounded);
+
+            // The day's training time, RepFlow and Garmin together.
             var total = repflow[d] + garmin[d];
-            if (total <= 0) {
-                dc.setColor(d > today ? 0x262626 : FAINT, Graphics.COLOR_TRANSPARENT);
-                dc.fillCircle(bx + bar / 2, bottom - bar / 4, bar / 4 < 1 ? 1 : bar / 4);
-            } else {
-                var y = bottom;
-                var parts = [repflow[d], garmin[d]] as Array<Number>;
-                var colors = [REPFLOW, GARMIN] as Array<Number>;
-                for (var s = 0; s < 2; s++) {
-                    if (parts[s] <= 0) {
-                        continue;
-                    }
-                    var segment = (plot * parts[s]) / peak;
-                    if (segment < bar / 2) {
-                        segment = bar / 2;
-                    }
-                    if (y < bottom) {
-                        y -= 2;
-                    }
-                    dc.setColor(colors[s], Graphics.COLOR_TRANSPARENT);
-                    if (rounded && segment >= bar) {
-                        dc.fillRoundedRectangle(bx, y - segment, bar, segment, bar / 2);
-                        dc.fillRectangle(bx, y - segment / 2, bar, segment / 2);
-                    } else {
-                        dc.fillRectangle(bx, y - segment, bar, segment);
-                    }
-                    y -= segment;
+            if (total > 0) {
+                var fill = (plot * total) / peak;
+                // Never thinner than round: a sliver reads as a smudge.
+                if (fill < bar) {
+                    fill = bar;
                 }
+                dc.setColor(REPFLOW, Graphics.COLOR_TRANSPARENT);
+                _pill(dc, bx, plotBottom - fill, bar, fill, radius, rounded);
             }
-            if (d == today) {
-                dc.setColor(ACCENT, Graphics.COLOR_TRANSPARENT);
-                dc.fillRectangle(bx, bottom + 2, bar, markH);
+
+            if (letters != null && d < initials.length()) {
+                dc.setColor(d == today ? TEXT : (d > today ? 0x5A5A5A : DIM),
+                    Graphics.COLOR_TRANSPARENT);
+                dc.drawText(bx + bar / 2, plotBottom + letterH / 20, letters as Graphics.FontType,
+                    initials.substring(d, d + 1) as String, Graphics.TEXT_JUSTIFY_CENTER);
             }
+        }
+    }
+
+    //! A rounded column where the device can draw one, a plain one otherwise.
+    function _pill(
+        dc as Graphics.Dc,
+        x as Number,
+        y as Number,
+        w as Number,
+        h as Number,
+        radius as Number,
+        rounded as Boolean
+    ) as Void {
+        if (rounded && h >= w) {
+            dc.fillRoundedRectangle(x, y, w, h, radius);
+        } else {
+            dc.fillRectangle(x, y, w, h);
         }
     }
 
@@ -425,7 +498,7 @@ module GlanceDraw {
     }
 
     //! Cut a line to the width, ending in a dot rather than at the bezel.
-    public function clip(dc as Graphics.Dc, text as String, font as Graphics.FontDefinition, width as Number) as String {
+    public function clip(dc as Graphics.Dc, text as String, font as Graphics.FontType, width as Number) as String {
         if (width <= 0) {
             return "";
         }

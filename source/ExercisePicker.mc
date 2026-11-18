@@ -28,6 +28,11 @@ module ExercisePicker {
     public function open(intent as Number, targetId as String?) as Void {
         _intent = intent;
         _targetId = targetId;
+        WatchUi.switchToView(muscleMenu(), new MuscleMenuDelegate(), WatchUi.SLIDE_UP);
+    }
+
+    //! The muscle groups, in browse order.
+    public function muscleMenu() as WatchUi.Menu2 {
         var menu = new WatchUi.Menu2({
             :title => WatchUi.loadResource(Rez.Strings.PickMuscle) as String
         });
@@ -36,7 +41,7 @@ module ExercisePicker {
             menu.addItem(new WatchUi.MenuItem(
                 Muscle.name(groups[i]), null, groups[i].toString(), {}));
         }
-        WatchUi.switchToView(menu, new MuscleMenuDelegate(), WatchUi.SLIDE_UP);
+        return menu;
     }
 
     public function showGroup(group as Number) as Void {
@@ -149,14 +154,8 @@ class CatalogueMenuDelegate extends WatchUi.Menu2InputDelegate {
     //! BACK returns to the muscle list rather than out of the picker: one wrong
     //! group should cost one press, not the whole journey.
     public function onBack() as Void {
-        var menu = new WatchUi.Menu2({
-            :title => WatchUi.loadResource(Rez.Strings.PickMuscle) as String
-        });
-        var groups = Muscle.browseOrder();
-        for (var i = 0; i < groups.size(); i++) {
-            menu.addItem(new WatchUi.MenuItem(
-                Muscle.name(groups[i]), null, groups[i].toString(), {}));
-        }
-        WatchUi.switchToView(menu, new MuscleMenuDelegate(), WatchUi.SLIDE_RIGHT);
+        WatchUi.switchToView(ExercisePicker.muscleMenu(), new MuscleMenuDelegate(),
+            WatchUi.SLIDE_RIGHT);
     }
 }
+

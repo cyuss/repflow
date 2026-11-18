@@ -63,32 +63,55 @@ resolve_sdk() {
 #
 # With glance mode on, an app that has a glance starts *as* its glance, and
 # START opens the app from there — RepFlow then opens on Analytics, as it does
-# when launched from the glance loop on the watch. The setting is not stored on
-# disk, so the only way to set it is the simulator's own menu; this clicks it.
-# Best effort: it needs the terminal to be allowed to control the computer
-# (System Settings > Privacy & Security > Accessibility). Without that, it says
-# which menu item to click and carries on.
+# when launched from the glance loop on the watch.
+#
+# The setting is the `Glance=` line of simulator.ini, read when the simulator
+# starts and written back when it quits. Clicking the menu item from a script
+# is accepted and ignored, so the file is the only reliable switch: when the
+# mode has to change, the simulator is quit, the line rewritten, and the
+# simulator started again by the caller. Call it BEFORE ensure_simulator.
 sim_glance_mode() {
-  local item="Launch in Normal Mode"
-  [ "$1" = "glance" ] && item="Launch in Glance Mode"
-  # The menus have to be opened one after the other: a click straight on the
-  # nested item is accepted and silently ignored.
-  osascript - "$item" >/dev/null 2>&1 <<'APPLESCRIPT' \
-    || warn "Could not set the simulator's glance mode. Pick Settings > Glance Launch Mode > $item by hand."
-on run argv
-  set wanted to item 1 of argv
-  tell application "System Events" to tell process "simulator"
-    set frontmost to true
-    delay 0.3
-    set settingsMenu to menu "Settings" of menu bar item "Settings" of menu bar 1
-    click menu bar item "Settings" of menu bar 1
-    delay 0.3
-    click menu item "Glance Launch Mode" of settingsMenu
-    delay 0.3
-    click menu item wanted of menu 1 of menu item "Glance Launch Mode" of settingsMenu
-  end tell
-end run
-APPLESCRIPT
+  local want=0 ini="$CIQ_HOME/simulator.ini" have
+  [ "$1" = "glance" ] && want=1
+  have="$(sed -n 's/^Glance=//p' "$ini" 2>/dev/null | tail -1)"
+  [ "${have:-0}" = "$want" ] && return 0
+
+  if simulator_running; then
+    info "Restarting the simulator in $1 launch mode..."
+    pkill -x simulator >/dev/null 2>&1 || true
+    pkill -f "ConnectIQ.app/Contents/MacOS" >/dev/null 2>&1 || true
+    local i
+    for i in $(seq 1 20); do
+      simulator_running || break
+      sleep 0.5
+    done
+    sleep 1    # it writes simulator.ini on the way out
+  fi
+  if [ ! -f "$ini" ]; then
+    printf 'Glance=%s\n' "$want" > "$ini"
+  elif grep -q '^Glance=' "$ini"; then
+    sed -i '' "s/^Glance=.*/Glance=$want/" "$ini"
+  else
+    printf 'Glance=%s\n' "$want" >> "$ini"
+  fi
+}
+
+# Whether this build carries a personal Hevy key (see build.sh). NO_HEVY_KEY=1
+# — set by package.sh for the Store — turns it off whatever is in secrets/.
+hevy_key_present() {
+  [ -z "${NO_HEVY_KEY:-}" ] || return 1
+  [ -n "${HEVY_API_KEY:-}" ] || [ -s "$REPO_ROOT/secrets/hevy-key.txt" ]
+}
+
+# The PRG build.sh writes for a device. A build with a Hevy key baked in is
+# named RepFlow-<device>-private.prg, so it can never be mistaken for one to
+# hand out; a build without one is RepFlow-<device>.prg.
+prg_path() {
+  if hevy_key_present; then
+    printf '%s' "$BUILD_DIR/RepFlow-$1-private.prg"
+  else
+    printf '%s' "$BUILD_DIR/RepFlow-$1.prg"
+  fi
 }
 
 # Put the SDK's bin on PATH for the current shell only — never edits dotfiles.

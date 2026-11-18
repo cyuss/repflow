@@ -107,13 +107,22 @@ sim-empty device="":
 sim-analytics:
     @REPFLOW_LAUNCH=analytics REPFLOW_DEMO={{DEMO}} REPFLOW_DETACH=1 scripts/run-simulator.sh {{DEVICE}}
 
-# The Analytics glance, full screen in the app, to work on its design (DEMO=1 for demo data)
-glance-preview:
-    @REPFLOW_LAUNCH=glance-preview REPFLOW_DEMO={{DEMO}} REPFLOW_DETACH=1 scripts/run-simulator.sh {{DEVICE}}
 
-# The real glance, in the simulator's glance mode (Connect IQ 4+ devices)
-glance:
-    @scripts/glance.sh {{DEVICE}}
+# The end-of-workout recap of a full demo session, every page filled (UP/DOWN to page)
+sim-recap device=DEVICE:
+    @REPFLOW_LAUNCH=recap REPFLOW_DETACH=1 scripts/run-simulator.sh {{device}}
+
+# The glance as the watch shows it: centred, real size; START opens Analytics (DEMO=1 for demo data)
+sim-glance device=DEVICE:
+    @REPFLOW_LAUNCH=glance-preview REPFLOW_DEMO={{DEMO}} REPFLOW_DETACH=1 scripts/run-simulator.sh {{device}}
+
+alias glance := sim-glance
+alias glance-preview := sim-glance
+
+# The simulator draws its own glance mode in a strip at the top, cut by the bezel.
+# The glance in the simulator's own glance mode, only to check its memory limit
+glance-memory device=DEVICE:
+    @scripts/glance.sh {{device}}
 
 # Remember the simulator's workouts, so sim-fresh puts them back
 sim-seed:

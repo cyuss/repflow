@@ -108,12 +108,20 @@
     <string id="RecordOne">record</string>
     <string id="RecordMany">records</string>
     <string id="SummaryDone">faits</string>
-    <string id="SummaryBody">CORPS</string>
     <string id="ThisWeek">CETTE SEMAINE</string>
     <string id="RpeByMuscle">RPE par muscle</string>
     <string id="LastTime">Derniere</string>
     <string id="FieldRecovery">REC FC</string>
-    <string id="FieldBattery">BODY BATT</string>
+    <string id="FieldBattery">B.BATT</string>
+    <string id="SummaryEffort">EFFORT</string>
+    <string id="Te0">Aucun effet</string>
+    <string id="Te1">Mineur</string>
+    <string id="Te2">Maintien</string>
+    <string id="Te3">Amelioration</string>
+    <string id="Te4">Forte amelioration</string>
+    <string id="Te5">Surcharge</string>
+    <string id="FieldRecoveryShort">REC</string>
+    <string id="FieldEffect">EFFET AERO</string>
     <string id="SetTheme">Fond d'ecran</string>
     <string id="SetThemeDark">Noir</string>
     <string id="SetThemeLight">Blanc</string>
@@ -156,6 +164,7 @@
     <string id="GlanceDaysAgo" scope="glance">il y a $1$ j</string>
     <string id="GlanceNone" scope="glance">Aucune seance cette semaine</string>
     <string id="GlanceGarmin" scope="glance">Seance Garmin</string>
+    <string id="GlanceDayLetters" scope="glance">LMMJVSD</string>
     <string id="AnalyticsTitle">Statistiques</string>
     <string id="ThisMonth">CE MOIS</string>
     <string id="Last30Days">30 DERNIERS JOURS</string>

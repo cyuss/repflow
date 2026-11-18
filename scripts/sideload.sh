@@ -15,7 +15,7 @@ DEVICE="${1:-$DEFAULT_DEVICE}"
 # 1. Build an explicitly-targeted, signed release PRG.
 info "Building release PRG for $DEVICE..."
 RELEASE=1 "$REPO_ROOT/scripts/build.sh" "$DEVICE"
-PRG="$BUILD_DIR/RepFlow-$DEVICE.prg"
+PRG="$(prg_path "$DEVICE")"
 ok "PRG ready: $PRG"
 echo
 

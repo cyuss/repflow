@@ -171,6 +171,6 @@ adds to counts and time, never to volume, sets or reps, and every screen that
 mixes the two says so. A RepFlow session is also a Garmin activity, so anything
 starting within five minutes of a logged RepFlow session is that session.
 
-Simulator: `just sim-analytics`, `just glance-preview` (the glance at its real
-size, full screen), `just glance` (the real glance mode); `DEMO=1` overwrites
+Simulator: `just sim-analytics`, `just sim-glance` (the glance at its real
+size, full screen), `just glance-memory` (the simulator's real glance mode, for the memory limit); `DEMO=1` overwrites
 the simulator's history with ten weeks of demo sessions.

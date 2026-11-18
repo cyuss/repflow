@@ -15,12 +15,23 @@ activate_sdk
 # A personal build must never become a published one. A Hevy key baked in is
 # read *and* write over the whole of one person's training history, it cannot be
 # scoped, and every installer of the resulting bundle would hold it.
-if [ -n "${HEVY_API_KEY:-}" ] || [ -s "$REPO_ROOT/secrets/hevy-key.txt" ]; then
-    die "A Hevy key is present (secrets/hevy-key.txt or HEVY_API_KEY).
-       scripts/build.sh bakes it into every build, and a published build would
-       hand it to everyone who installs the app.
-       Move the key aside before packaging for the Store."
-fi
+#
+# So the Store build is made without it, whatever is in secrets/: NO_HEVY_KEY
+# stops build.sh baking it, and the bundle is checked for it at the end. The
+# key stays where it is, and personal builds (RepFlow-<device>-private.prg)
+# keep carrying it. Each Store user enters their own key in RepFlow's settings
+# in Garmin Connect.
+export NO_HEVY_KEY=1
+PERSONAL_KEY="$(tr -d '[:space:]' < "$REPO_ROOT/secrets/hevy-key.txt" 2>/dev/null || true)"
+[ -n "${HEVY_API_KEY:-}" ] && PERSONAL_KEY="$HEVY_API_KEY"
+unset HEVY_API_KEY
+
+# The tracked files must hold no key either: monkeyc -e reads them as they are.
+grep -q 'const COMPILED = "";' "$REPO_ROOT/source/HevyKey.mc" \
+  || die "source/HevyKey.mc carries a key. Restore it: git checkout source/HevyKey.mc"
+grep -qE '<property id="hevyApiKey"[[:space:]]+type="string"></property>' "$REPO_ROOT/resources/properties.xml" \
+  || die "resources/properties.xml carries a key. Restore it: git checkout resources/properties.xml"
+ok "No Hevy key in this build (yours stays in secrets/ for personal builds)"
 
 RELEASE_DIR="$BUILD_DIR/release"
 # The newest *released* version heading in the CHANGELOG, ignoring [Unreleased].
@@ -125,6 +136,18 @@ if monkeyc -e -w -r \
     -y "$DEVELOPER_KEY" \
     -l "${TYPECHECK:-3}"; then
   [ -f "$IQ" ] || die "monkeyc reported success but $IQ does not exist."
+  # The last word: the key, in any form, is nowhere in the bundle.
+  if [ -n "$PERSONAL_KEY" ]; then
+    BARE="$(printf '%s' "$PERSONAL_KEY" | tr -d '-')"
+    SCAN="$(mktemp -d)"
+    unzip -q -o "$IQ" -d "$SCAN" 2>/dev/null || cp "$IQ" "$SCAN/"
+    if grep -rqiaF -e "$PERSONAL_KEY" -e "$BARE" "$SCAN"; then
+      rm -rf "$SCAN" "$IQ"
+      die "Your Hevy key was found inside the bundle. It has been deleted; do not upload anything."
+    fi
+    rm -rf "$SCAN"
+    ok "Checked: your Hevy key is not in the bundle"
+  fi
   ok "Store bundle created: $IQ ($(wc -c < "$IQ" | tr -d ' ') bytes)"
   echo
   printf '%sNEXT MANUAL STEP:%s\n' "$C_BOLD" "$C_OFF"

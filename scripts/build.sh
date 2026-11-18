@@ -26,9 +26,10 @@ mkdir -p "$BUILD_DIR"
 #
 # The key never enters a tracked file. resources/properties.xml is edited in
 # place, the build runs, and a trap puts it back — including when the build
-# fails, when the SDK dies, and when the shell is interrupted. release-check
-# refuses to package while a key is in play, because a published build hands
-# every installer read and write over one person's whole training history.
+# fails, when the SDK dies, and when the shell is interrupted. Such a build is
+# named RepFlow-<device>-private.prg (lib.sh, prg_path). The Store bundle never
+# carries it: package.sh sets NO_HEVY_KEY=1, because a published build would
+# hand every installer read and write over one person's training history.
 # ---------------------------------------------------------------------------
 PROPERTIES="$REPO_ROOT/resources/properties.xml"
 KEY_SOURCE="$REPO_ROOT/source/HevyKey.mc"
@@ -59,6 +60,10 @@ trap 'restore_properties' EXIT
 trap 'restore_properties; exit 1' INT TERM HUP PIPE
 
 hevy_key() {
+  # The Store build: no key, whatever is lying around.
+  if [ -n "${NO_HEVY_KEY:-}" ]; then
+    return
+  fi
   if [ -n "${HEVY_API_KEY:-}" ]; then
     printf '%s' "${HEVY_API_KEY}"
     return
@@ -120,6 +125,7 @@ inject_hevy_key
 #
 #   REPFLOW_LAUNCH=analytics        open straight on Analytics
 #   REPFLOW_LAUNCH=glance-preview   the glance, full screen
+#   REPFLOW_LAUNCH=recap            the recap of a full demo session
 #   REPFLOW_DEMO=1                  overwrite the log with a demo year
 #
 # Patched for this build only and put back by the same trap as the Hevy key. A
@@ -144,7 +150,8 @@ inject_launch_mode() {
     ""|normal)       mode=0 ;;
     analytics)       mode=1 ;;
     glance-preview)  mode=2 ;;
-    *) die "REPFLOW_LAUNCH must be normal, analytics or glance-preview (got: $launch)" ;;
+    recap)           mode=3 ;;
+    *) die "REPFLOW_LAUNCH must be normal, analytics, glance-preview or recap (got: $launch)" ;;
   esac
   case "$demo" in
     ""|0|no|false) demo=false ;;
@@ -172,7 +179,13 @@ inject_launch_mode
 build_one() {
   local device="$1"
   require_device_installed "$device"
-  local out="$BUILD_DIR/RepFlow-$device.prg"
+  local out
+  out="$(prg_path "$device")"
+  # A private build replaces any plain-named one, which may be an older
+  # build with the key in it from before the two were told apart.
+  if hevy_key_present; then
+    rm -f "$BUILD_DIR/RepFlow-$device.prg"
+  fi
   local args=(
     -f "$REPO_ROOT/monkey.jungle"
     -o "$out"

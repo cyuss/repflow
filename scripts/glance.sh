@@ -3,9 +3,10 @@
 #
 #   scripts/glance.sh [device]          (default: $DEVICE, else the default device)
 #
-# The simulator has no command-line switch for glance mode: it is a setting in
-# its own menu, Settings > Glance Launch Mode. run-simulator.sh clicks it (see
-# sim_glance_mode in lib.sh), so the app starts as its glance, with the
+# The simulator has no command-line switch for glance mode: it is Settings >
+# Glance Launch Mode, stored in simulator.ini. run-simulator.sh rewrites that
+# line and restarts the simulator when needed (see sim_glance_mode in lib.sh),
+# so the app starts as its glance, with the
 # glance's memory limit (32 to 64 KB) — the only way to find out whether it
 # fits. START on the glance opens the app on Analytics. Every other sim recipe
 # puts the simulator back in normal mode.
@@ -30,7 +31,7 @@ print(d["partNumbers"][0]["connectIQVersion"])
 ' "$DEVICES_DIR/$DEVICE/compiler.json" 2>/dev/null || echo 0)"
 MAJOR="${VERSION%%.*}"
 if [ "${MAJOR:-0}" -lt 4 ]; then
-  die "$DEVICE runs Connect IQ $VERSION: watch apps only have glances from Connect IQ 4. Try: just DEVICE=fenix9pro47mm glance"
+  die "$DEVICE runs Connect IQ $VERSION: watch apps only have glances from Connect IQ 4. Try: just glance-memory fenix9pro47mm"
 fi
 
 REPFLOW_GLANCE=1 REPFLOW_DETACH=1 "$REPO_ROOT/scripts/run-simulator.sh" "$DEVICE"

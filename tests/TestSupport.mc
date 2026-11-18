@@ -107,4 +107,14 @@ module TestSupport {
             engine.completeCurrentSet(ex.plannedReps(), ex.plannedWeight(), null, T0 + i);
         }
     }
+
+    //! The abc workout, with its first exercise linked to a Hevy template — an
+    //! unlinked exercise is never sent, so without one nothing would be queued
+    //! for Hevy whatever the athlete answered.
+    function hevyLinkedWorkout() as Workout {
+        var workout = abcWorkout();
+        var first = workout.findExercise("A") as Exercise;
+        first.hevyId = "79D0BB3A";
+        return workout;
+    }
 }

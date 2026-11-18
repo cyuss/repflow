@@ -893,6 +893,15 @@ function testSummaryPagesDraw(logger as Test.Logger) as Boolean {
         view.turnPage(1);
     }
 
+    // The body page with every figure there: a Training Effect, and a Body
+    // Battery that moved, which draws the start, the arrow and the spent bar.
+    metrics.batteryEnd = 58;
+    metrics.trainingEffect = 3.4;
+    var full = new WorkoutSummaryView(summary, engine.getWorkout(), zones, weekly,
+        records, metrics, true);
+    full.turnPage(1);
+    full.onUpdate(dc);
+
     // And the same screens with nothing to show: no zone ever reached, and a
     // workout that was ended before a single set was logged.
     var emptyWeek = new [Muscle.COUNT] as Array<Number>;
@@ -2303,7 +2312,9 @@ function _captionsFit(
     var ok = true;
     for (var i = 0; i < captions.size(); i++) {
         var text = WatchUi.loadResource(captions[i] as ResourceId) as String;
-        var width = dc.getTextWidthInPixels(text, Theme.captionFont());
+        // The font the cell will actually use: one size down when the
+        // regular one does not leave the room.
+        var width = dc.getTextWidthInPixels(text, Theme.captionFontFor(dc, text, room));
         if (width > room) {
             logger.debug(text + " is " + width.toString() + "px, cell of " +
                 cell.toString() + "px allows " + room.toString() + "px");
@@ -2817,29 +2828,37 @@ function testSettingsToggleUpdatesInPlace(logger as Test.Logger) as Boolean {
 (:test)
 function testDiscardSurvivesTheDeferral(logger as Test.Logger) as Boolean {
     var controller = AppController.instance();
-    controller.startWorkout(TestSupport.abcWorkout());
+    controller.startWorkout(TestSupport.hevyLinkedWorkout());
     controller.selectExercise("A");
     controller.completeSet();
 
     // The athlete discarded, and the app is closing before the deferred half
-    // has run. The recording must not be saved just because sets exist.
+    // has run. The recording must not be saved just because sets exist —
+    // and the session must not be queued for Hevy either. (The queue is
+    // emptied first: it holds at most a handful, and earlier tests fill it.)
+    HevyApi.clearAllPending();
+    var queued = HevyApi.pendingCount();
     controller.finishWorkout(false);
     Test.assert(controller.closingIsPending());
     controller.onAppStop();
     Test.assert(!controller.closingIsPending());
+    Test.assertEqual(HevyApi.pendingCount(), queued);
 
     // And running it again is a no-op rather than a second stop.
     controller.onClose();
     Test.assert(!controller.closingIsPending());
 
     // The same for a saved session.
-    controller.startWorkout(TestSupport.abcWorkout());
+    controller.startWorkout(TestSupport.hevyLinkedWorkout());
     controller.selectExercise("A");
     controller.completeSet();
     controller.finishWorkout(true);
     Test.assert(controller.closingIsPending());
     controller.onClose();
     Test.assert(!controller.closingIsPending());
+    // A saved one is.
+    Test.assertEqual(HevyApi.pendingCount(), queued + 1);
+    HevyApi.clearAllPending();
     return true;
 }
 
@@ -2955,6 +2974,23 @@ function testRecapKeepsGarminsNumbers(logger as Test.Logger) as Boolean {
     var live = RecapMetrics.capture(66, 18);
     Test.assert(_is(live.batteryStart, 66));
     Test.assert(_is(live.recovery, 18));
+    return true;
+}
+
+//! Body Battery history samples: the newest is often empty on a real watch,
+//! so bodyBattery() walks back to the first that holds a percentage. What
+//! counts as one is decided here.
+(:test)
+function testBodyBatterySamples(logger as Test.Logger) as Boolean {
+    Test.assert(LiveMetrics.percent(null) == null);
+    Test.assert(_is(LiveMetrics.percent(64), 64));
+    Test.assert(_is(LiveMetrics.percent(57.8), 57));
+    Test.assert(_is(LiveMetrics.percent(0), 0));
+    Test.assert(LiveMetrics.percent(-1) == null);
+    Test.assert(LiveMetrics.percent(101) == null);
+    // Whatever the harness's history holds, the answer is a percentage or null.
+    var now = LiveMetrics.bodyBattery();
+    Test.assert(now == null || ((now as Number) >= 0 && (now as Number) <= 100));
     return true;
 }
 
@@ -3620,5 +3656,26 @@ function testFocusingANewRowRestartsItsName(logger as Test.Logger) as Boolean {
     Marquee.focus("row-b");
     Test.assert(Marquee.clock() < 50);
     Marquee.stop();
+    return true;
+}
+
+
+//! With the display dimmed, a live screen repaints every few seconds, except
+//! in the last seconds of a rest, which still count one by one.
+(:test)
+function testLowPowerRepaintCadence(logger as Test.Logger) as Boolean {
+    var drawn = 0;
+    for (var t = 1; t <= 60; t++) {
+        if (Power.lowPowerRepaint(t, -1)) {
+            drawn++;
+        }
+    }
+    Test.assertEqual(drawn, 60 / Power.LOW_POWER_EVERY);
+    // A long rest is on the same slow cadence…
+    Test.assert(!Power.lowPowerRepaint(1, 90));
+    // …until its last seconds, and its very end.
+    Test.assert(Power.lowPowerRepaint(1, Power.LOW_POWER_COUNTDOWN));
+    Test.assert(Power.lowPowerRepaint(3, 1));
+    Test.assert(Power.lowPowerRepaint(7, 0));
     return true;
 }
