@@ -398,7 +398,7 @@ listens.
 The idea of mapping exercise names to Garmin's exercise categories, and of
 producing the strength data outside the watch, comes from
 [hevy2garmin](https://github.com/intergalacticwiseguy/hevy2garmin) by
-@intergalacticwiseguy — thank you. The Garmin exercise catalogue itself is
+intergalacticwiseguy — thank you. The Garmin exercise catalogue itself is
 generated from
 [python-garminconnect](https://github.com/cyberjunky/python-garminconnect).
 
