@@ -395,6 +395,13 @@ make sync-hevy       # post the session to Hevy (the watch usually did it alread
 It runs on your machine when you ask it to. Nothing is scheduled and nothing
 listens.
 
+The idea of mapping exercise names to Garmin's exercise categories, and of
+producing the strength data outside the watch, comes from
+[hevy2garmin](https://github.com/intergalacticwiseguy/hevy2garmin) by
+@intergalacticwiseguy — thank you. The Garmin exercise catalogue itself is
+generated from
+[python-garminconnect](https://github.com/cyberjunky/python-garminconnect).
+
 ## Architecture
 
 ```

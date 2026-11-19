@@ -184,3 +184,13 @@ make test-backend
 `tests/test_watch_contract.py` is the one to read first: it parses
 `source/GarminRecorder.mc` and `resources/fit_contributions.xml` and fails if the
 Monkey C side and this side ever stop agreeing about the developer fields.
+
+## Credits
+
+- [hevy2garmin](https://github.com/intergalacticwiseguy/hevy2garmin) by
+  intergalacticwiseguy, which inspired this tool: it showed that Garmin's
+  native strength data can be produced outside the watch, by mapping exercise
+  names to Garmin's exercise categories.
+- [python-garminconnect](https://github.com/cyberjunky/python-garminconnect)
+  (MIT), from which `data/garmin_exercises.json` is generated
+  (`scripts/generate_catalogue.py`).
