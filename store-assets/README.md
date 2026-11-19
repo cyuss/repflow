@@ -11,7 +11,7 @@ Everything the Store form asks for, field by field: **`listing/LISTING.md`**.
 | `short-description.txt` | One-line subtitle |
 | `release-notes.txt` | "What's new" for this version |
 | `privacy-policy.md` | Privacy statement (link it from the form) |
-| `listing/hero-1440x720.png` | Cover image |
+| `listing/hero-1440x720.jpg` | Cover image |
 | `listing/icon-512.png` | Store icon |
 | `listing/screens/` | Premium screen images, 1080x1080 |
 | `screenshots/` | The same screens at native resolution (Fenix 9 Pro, 454x454) |

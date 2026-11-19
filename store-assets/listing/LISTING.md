@@ -46,29 +46,33 @@ None — available in every region. The app is in English and French.
 
 ## Cover (hero) image — 1440 x 720
 
-`store-assets/listing/hero-1440x720.png`
+`store-assets/listing/hero-1440x720.jpg`
 
 ## Icon
 
 `store-assets/listing/icon-512.png` (512 x 512). The watch keeps its own
 launcher icon; this one is only for the Store.
 
-## Screen images
+## Screen images (the Store takes five)
 
-Premium, 1080 x 1080, in this order (`store-assets/listing/screens/`):
+1080 x 1080 JPEG, each under 150 KB, in this order (`store-assets/listing/screens/`). Each is one
+chapter of a workout, so the five together walk through the whole app:
 
-1. `01-set-screen.png` — Every set, at a glance
-2. `02-overview.png` — Your workout. Your order.
-3. `03-rest.png` — Rest that knows what's next
-4. `04-recap-session.png` — The session, summed up
-5. `05-recap-effort.png` — Effort, measured by Garmin
-6. `06-recap-zones.png` — Time in every zone
-7. `07-recap-week.png` — Volume by muscle, this week
-8. `08-analytics-week.png` — Your training, analysed
-9. `09-analytics-trend.png` — Consistency you can see
+1. `1-your-order.jpg` — **Your workout. Your order.** The overview and the set
+   screen: pick any exercise, put off a busy station, swap or add mid-session.
+2. `2-under-the-bar.jpg` — **Built for under the bar.** The set screen and the
+   rest screen: live HR zone, smart rest, RPE, last time's numbers, PR alerts.
+3. `3-the-recap.jpg` — **A recap worth reading.** Effort, session and zones:
+   training effect, Body Battery, HR zones, records.
+4. `4-every-muscle.jpg` — **See what you're skipping.** This week's volume per
+   muscle; 82 movements, Garmin Connect, Hevy sync.
+5. `5-progress.jpg` — **Consistency you can see.** The week, sessions per week
+   and the glance.
 
-If the form wants the watch's own screen instead, the same nine at native
-resolution (454 x 454, Fenix 9 Pro 47 mm) are in `store-assets/screenshots/`.
+The first image is the one shown in search results: keep it first.
+
+The native captures (454 x 454, Fenix 9 Pro 47 mm) the images are built from
+are in `store-assets/screenshots/`; `10-glance.png` is the glance card.
 
 ## Support / contact
 

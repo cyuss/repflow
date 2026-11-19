@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A session is sent to Hevy only when it is saved, never when it is discarded.
 - The page dots follow the curve of the screen.
+- Sessions per week is one bar per week: RepFlow and Garmin sessions count the
+  same, with no legend. The glance's "vs last week" line is set smaller.
+- The README is a full user guide, with Fenix 9 Pro screens.
 - Muscle groups in the exercise picker are a plain list again.
 
 ### Added

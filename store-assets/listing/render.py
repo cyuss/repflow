@@ -6,9 +6,10 @@
 Reads store-assets/screenshots/*.png (454x454 captures of a Fenix 9 Pro 47 mm,
 taken from the simulator at native resolution) and writes, next to this file:
 
-    hero-1440x720.png          the cover ("hero") image the Store asks for
+    hero-1440x720.jpg          the cover ("hero") image the Store asks for
     icon-512.png               the Store icon (the watch keeps its own launcher icon)
-    screens/NN-name.png        one 1080x1080 marketing image per screenshot
+    screens/N-chapter.jpg      five 1080x1080 images, one chapter of the
+                               workflow each (the Store takes five)
 
 Each image is laid out in HTML and rendered by headless Chrome at exactly its
 pixel size, so the typography (Inter, installed locally) and the shadows are
@@ -36,26 +37,37 @@ CHROME_CANDIDATES = [
 
 ACCENT = "#0092E4"
 
-# One headline per screen: what it does for the athlete, not what it shows.
-SCREENS = [
-    ("01-set-screen", "Every set, at a glance",
-     "Load, reps, heart rate and both clocks — big enough to read under the bar."),
-    ("02-overview", "Your workout. Your order.",
-     "Station taken? Put it off, train something else, come back with every set intact."),
-    ("03-rest", "Rest that knows what's next",
-     "Countdown, heart-rate recovery, and the next set already filled in."),
-    ("04-recap-session", "The session, summed up",
-     "Time, sets against plan, reps and volume — and every record that fell."),
-    ("05-recap-effort", "Effort, measured by Garmin",
-     "Aerobic training effect, calories, and the Body Battery it cost."),
-    ("06-recap-zones", "Time in every zone",
-     "Average, peak and recovery heart rate at the end of every session."),
-    ("07-recap-week", "Volume by muscle, this week",
-     "See what you train — and what you have been skipping."),
-    ("08-analytics-week", "Your training, analysed",
-     "Week, month and 30 days, RepFlow and Garmin sessions together."),
-    ("09-analytics-trend", "Consistency you can see",
-     "Sessions per week, from RepFlow and your other Garmin activities."),
+# The Store takes five images, so each tells one chapter of a workout, in the
+# order the athlete lives it: plan the order, train, read the recap, see the
+# week, track the trend. Each: an eyebrow (step and chapter), a headline that
+# says what it does for the athlete, a one-line subtitle, the watches, and the
+# features of that chapter as chips.
+#
+# Layouts: "duo" = a hero watch and a second one behind it;
+#          "trio" = three fanned, the middle one forward;
+#          "solo" = one watch, centred;
+#          "progress" = two watches and the glance card floating over them.
+STORY = [
+    ("1-your-order", "01", "Your order", "Your workout.<br><em>Your order.</em>",
+     "Station taken? Put it off, train something else, come back with every set intact.",
+     "duo", ["02-overview", "01-set-screen"],
+     ["Pick any exercise", "Put off & resume", "Swap or add mid-session"]),
+    ("2-under-the-bar", "02", "Train", "Built for<br><em>under the bar.</em>",
+     "Load, reps, heart rate and both clocks in one look. Rest with the next set ready.",
+     "duo-even", ["01-set-screen", "03-rest"],
+     ["Live HR zone", "Smart rest", "RPE", "Last time's numbers", "PR alerts"]),
+    ("3-the-recap", "03", "Recap", "A recap<br><em>worth reading.</em>",
+     "Every session ends with the numbers that matter, measured by your Garmin.",
+     "trio", ["05-recap-effort", "04-recap-session", "06-recap-zones"],
+     ["Training effect", "Body Battery", "HR zones", "Records"]),
+    ("4-every-muscle", "04", "Balance", "See what<br><em>you're skipping.</em>",
+     "This week's volume, muscle by muscle, at the end of every workout.",
+     "solo", ["07-recap-week"],
+     ["10 muscle groups", "82 movements", "Garmin Connect", "Hevy sync"]),
+    ("5-progress", "05", "Progress", "Consistency<br><em>you can see.</em>",
+     "Your week, month and trend, with your other Garmin activities counted too.",
+     "progress", ["08-analytics-week", "09-analytics-trend", "10-glance"],
+     ["Week · month · 30 days", "Glance", "Full history"]),
 ]
 
 BASE_CSS = """
@@ -183,16 +195,51 @@ def hero_html() -> str:
     return page(w, h, body)
 
 
-def screen_html(name: str, title: str, sub: str) -> str:
+def chips(items: list) -> str:
+    spans = "".join(
+        f'<span style="padding:12px 22px;border-radius:999px;background:rgba(16,22,29,.92);'
+        f'border:1px solid #223040;white-space:nowrap">{t}</span>' for t in items)
+    return (f'<div style="position:absolute;left:60px;right:60px;bottom:96px;display:flex;'
+            f'flex-wrap:wrap;justify-content:center;gap:12px;font-family:\'Inter\';font-size:22px;'
+            f'font-weight:600;color:#D7DEE6;z-index:10">{spans}</div>')
+
+
+def glance_card(img: pathlib.Path, cx: int, cy: int, w: int) -> str:
+    h = w * 156 // 376
+    return (f'<img src="{data_uri(img)}" style="position:absolute;left:{cx - w // 2}px;top:{cy - h // 2}px;'
+            f'width:{w}px;height:{h}px;border-radius:{h // 4}px;z-index:6;'
+            f'box-shadow:0 40px 80px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.08),'
+            f'0 0 60px rgba(0,146,228,.18)">')
+
+
+def story_html(step: str, eyebrow: str, title: str, sub: str, layout: str, shots: list, feats: list) -> str:
     w = h = 1080
+    s = [SHOTS / f"{n}.png" for n in shots]
+    cy = 610
+    if layout == "duo":
+        art = glow(470, cy, 760) + watch(s[1], 760, cy - 30, 330, 1, 0.55) + watch(s[0], 450, cy, 450, 3)
+    elif layout == "duo-even":
+        art = (glow(540, cy, 820) + watch(s[0], 350, cy - 12, 410, 3)
+               + watch(s[1], 730, cy + 12, 410, 2))
+    elif layout == "trio":
+        art = (glow(540, cy, 820) + watch(s[0], 275, cy + 20, 310, 1, 0.7)
+               + watch(s[2], 805, cy + 20, 310, 1, 0.7) + watch(s[1], 540, cy, 420, 3))
+    elif layout == "solo":
+        art = glow(540, cy, 820) + watch(s[0], 540, cy, 470, 3)
+    else:  # progress: two charts, the glance card over their feet
+        art = (glow(540, cy, 820) + watch(s[0], 350, cy - 70, 370, 2)
+               + watch(s[1], 730, cy - 70, 370, 2) + glance_card(s[2], 540, cy + 190, 480))
     body = f"""
-{glow(540, 672, 820)}
-<div style="position:absolute;left:0;right:0;top:92px;text-align:center;padding:0 90px">
-  <div style="font-size:62px;font-weight:700;letter-spacing:-1.6px;line-height:1.08">{title}</div>
-  <div style="margin:22px auto 0;max-width:820px;font-family:'Inter';font-size:30px;line-height:1.42;color:#A3AEBC">{sub}</div>
+<style>em {{ font-style: normal; color: {ACCENT}; }}</style>
+<div style="position:absolute;left:0;right:0;top:70px;text-align:center;padding:0 80px">
+  <div style="font-family:'Inter';font-size:21px;font-weight:700;letter-spacing:4px;color:{ACCENT};text-transform:uppercase">
+    <span style="color:#5B6775">{step}</span>&nbsp;&nbsp;{eyebrow}</div>
+  <div style="margin-top:18px;font-size:66px;font-weight:700;letter-spacing:-1.8px;line-height:1.04">{title}</div>
+  <div style="margin:20px auto 0;max-width:800px;font-family:'Inter';font-size:26px;line-height:1.42;color:#A3AEBC">{sub}</div>
 </div>
-{watch(SHOTS / f'{name}.png', 540, 672, 580, 2)}
-<div style="position:absolute;left:0;right:0;bottom:38px;display:flex;justify-content:center;align-items:center;gap:12px;font-size:22px;font-weight:600;color:#6E7A88">
+{art}
+{chips(feats)}
+<div style="position:absolute;left:0;right:0;bottom:34px;display:flex;justify-content:center;align-items:center;gap:12px;font-size:22px;font-weight:600;color:#6E7A88">
   {icon_svg(34, 9)}<span>RepFlow</span>
 </div>
 """
@@ -224,20 +271,44 @@ def render(chrome: str, html: str, out: pathlib.Path, w: int, h: int) -> None:
     print(f"  {out.relative_to(ASSETS.parent)}")
 
 
+# The Store refuses images over 150 KB. A 256-colour PNG fits but bands the
+# glow into rings, so each image becomes a JPEG at the best quality that fits
+# (4:4:4, so the blue type keeps its edges).
+MAX_BYTES = 148_000
+
+
+def shrink(png: pathlib.Path) -> pathlib.Path:
+    jpg = png.with_suffix(".jpg")
+    for q in range(95, 59, -1):
+        subprocess.run(["magick", str(png), "-quality", str(q), "-sampling-factor", "4:4:4",
+                        "-strip", str(jpg)], check=True)
+        if jpg.stat().st_size <= MAX_BYTES:
+            break
+    png.unlink()
+    print(f"    -> {jpg.name}, {jpg.stat().st_size // 1000} KB, quality {q}")
+    return jpg
+
+
 def main() -> int:
     chrome = next((c for c in CHROME_CANDIDATES if c and pathlib.Path(c).exists()), None)
     if not chrome:
         print("Needs Google Chrome (or Brave) to render.", file=sys.stderr)
         return 1
-    missing = [n for n, _, _ in SCREENS if not (SHOTS / f"{n}.png").exists()]
+    needed = sorted({n for st in STORY for n in st[6]})
+    missing = [n for n in needed if not (SHOTS / f"{n}.png").exists()]
     if missing:
         print("Missing screenshots: " + ", ".join(missing), file=sys.stderr)
         return 1
     print("Rendering Store artwork:")
     render(chrome, hero_html(), HERE / "hero-1440x720.png", 1440, 720)
+    shrink(HERE / "hero-1440x720.png")
     render(chrome, icon_html(512), HERE / "icon-512.png", 512, 512)
-    for name, title, sub in SCREENS:
-        render(chrome, screen_html(name, title, sub), OUT_SCREENS / f"{name}.png", 1080, 1080)
+    for old in list(OUT_SCREENS.glob("*.png")) + list(OUT_SCREENS.glob("*.jpg")):
+        old.unlink()
+    for name, step, eyebrow, title, sub, layout, shots, feats in STORY:
+        render(chrome, story_html(step, eyebrow, title, sub, layout, shots, feats),
+               OUT_SCREENS / f"{name}.png", 1080, 1080)
+        shrink(OUT_SCREENS / f"{name}.png")
     return 0
 
 

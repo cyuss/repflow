@@ -289,17 +289,30 @@ module GlanceDraw {
         var loadShown = false;
 
         // Context: the trend, then the last session.
-        var lineY = heroTop + heroH + h / 40;
+        // Set smaller than the system's smallest where the watch has
+        // scalable fonts: it is context for the count, not a second headline.
+        var line = small as Graphics.FontType;
+        if (Graphics has :getVectorFont) {
+            var lf = Graphics.getVectorFont({
+                :face => ["RobotoCondensedRegular", "RobotoRegular"],
+                :size => (smallLine * 70) / 100
+            });
+            if (lf != null) {
+                line = lf;
+            }
+        }
+        var lineH = dc.getFontHeight(line);
+        var lineY = heroTop + heroH + h / 40 + (smallLine - lineH) / 2;
         var cx = x;
         if (thisWeek == 0 && lastWeek == 0 && lastStart == 0) {
             dc.setColor(DIM, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, lineY, small, clip(dc, WatchUi.loadResource(Rez.Strings.GlanceNone) as String,
-                small, width), Graphics.TEXT_JUSTIFY_LEFT);
+            dc.drawText(cx, lineY, line, clip(dc, WatchUi.loadResource(Rez.Strings.GlanceNone) as String,
+                line, width), Graphics.TEXT_JUSTIFY_LEFT);
             return;
         }
         var diff = thisWeek - lastWeek;
-        var arrow = (smallLine * 45) / 100;
-        var ay = lineY + smallLine / 2;
+        var arrow = (lineH * 45) / 100;
+        var ay = lineY + lineH / 2;
         if (diff != 0) {
             dc.setColor(diff > 0 ? UP : DOWN, Graphics.COLOR_TRANSPARENT);
             if (diff > 0) {
@@ -311,25 +324,25 @@ module GlanceDraw {
             }
             cx += arrow + arrow / 2;
             var delta = (diff > 0 ? "+" : "") + diff.toString();
-            dc.drawText(cx, lineY, small, delta, Graphics.TEXT_JUSTIFY_LEFT);
-            cx += dc.getTextWidthInPixels(delta, small) + arrow / 2;
+            dc.drawText(cx, lineY, line, delta, Graphics.TEXT_JUSTIFY_LEFT);
+            cx += dc.getTextWidthInPixels(delta, line) + arrow / 2;
             dc.setColor(DIM, Graphics.COLOR_TRANSPARENT);
             var vs = WatchUi.loadResource(Rez.Strings.GlanceVsPrev) as String;
-            dc.drawText(cx, lineY, small, vs, Graphics.TEXT_JUSTIFY_LEFT);
-            cx += dc.getTextWidthInPixels(vs, small);
+            dc.drawText(cx, lineY, line, vs, Graphics.TEXT_JUSTIFY_LEFT);
+            cx += dc.getTextWidthInPixels(vs, line);
         } else {
             dc.setColor(DIM, Graphics.COLOR_TRANSPARENT);
             var same = WatchUi.loadResource(Rez.Strings.GlanceSamePrev) as String;
-            dc.drawText(cx, lineY, small, same, Graphics.TEXT_JUSTIFY_LEFT);
-            cx += dc.getTextWidthInPixels(same, small);
+            dc.drawText(cx, lineY, line, same, Graphics.TEXT_JUSTIFY_LEFT);
+            cx += dc.getTextWidthInPixels(same, line);
         }
         // The week's volume, when the hero line had no room for it.
         if (kg > 0 && !loadShown) {
             var tailLoad = "  ·  " + volume(kg, f[F_IMPERIAL] as Boolean);
-            if (dc.getTextWidthInPixels(tailLoad, small) <= x + width - cx) {
+            if (dc.getTextWidthInPixels(tailLoad, line) <= x + width - cx) {
                 dc.setColor(TEXT, Graphics.COLOR_TRANSPARENT);
-                dc.drawText(cx, lineY, small, tailLoad, Graphics.TEXT_JUSTIFY_LEFT);
-                cx += dc.getTextWidthInPixels(tailLoad, small);
+                dc.drawText(cx, lineY, line, tailLoad, Graphics.TEXT_JUSTIFY_LEFT);
+                cx += dc.getTextWidthInPixels(tailLoad, line);
             }
         }
         // The last session only when it fits whole: a name cut to "Garmi."
@@ -339,9 +352,9 @@ module GlanceDraw {
                 ? WatchUi.loadResource(Rez.Strings.GlanceGarmin) as String
                 : f[F_LAST_NAME] as String;
             var tail = "  ·  " + name + ", " + when(lastStart, now);
-            if (dc.getTextWidthInPixels(tail, small) <= x + width - cx) {
+            if (dc.getTextWidthInPixels(tail, line) <= x + width - cx) {
                 dc.setColor(0x777777, Graphics.COLOR_TRANSPARENT);
-                dc.drawText(cx, lineY, small, tail, Graphics.TEXT_JUSTIFY_LEFT);
+                dc.drawText(cx, lineY, line, tail, Graphics.TEXT_JUSTIFY_LEFT);
             }
         }
     }

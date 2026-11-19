@@ -10,7 +10,7 @@ import Toybox.Math;
 //!
 //!   THIS WEEK / THIS MONTH / 30 DAYS     sessions, against the period before,
 //!                                        then time, volume, sets and reps
-//!   SESSIONS PER WEEK                    eight weeks, RepFlow and Garmin stacked
+//!   SESSIONS PER WEEK                    eight weeks, RepFlow and Garmin as one
 //!   VOLUME PER WEEK                      eight weeks, RepFlow's alone
 //!   LAST SESSION                         what it was and where it came from
 //!   START                                the history, filterable
@@ -189,22 +189,19 @@ class AnalyticsView extends WatchUi.View {
         }
     }
 
-    //! Sessions per week: how regular, at a glance. RepFlow at the base of each
-    //! bar, Garmin on top, a two-pixel gap between them; a legend, because
-    //! there are two series; the count labelled on this week and on the
-    //! busiest week only.
+    //! Sessions per week: how regular, at a glance. Every session counts the
+    //! same, RepFlow's and Garmin's alike, in one bar per week; the count
+    //! labelled on this week and on the busiest week only.
     private function _drawSessionsChart(dc as Graphics.Dc) as Void {
         var h = dc.getHeight();
         var y = AnalyticsUi.title(dc, WatchUi.loadResource(Rez.Strings.ChartSessions) as String,
             Theme.colorAccent());
-        y = AnalyticsUi.legend(dc, y + h / 80);
         var stacks = [] as Array<Array<Number>>;
         for (var k = 0; k < WEEKS; k++) {
-            stacks.add([_weekRepFlow[k], _weekGarmin[k]] as Array<Number>);
+            stacks.add([_weekRepFlow[k] + _weekGarmin[k]] as Array<Number>);
         }
         AnalyticsUi.weekBars(dc, y + h / 18, h - h / 4, stacks,
-            [AnalyticsUi.repflowColor(), AnalyticsUi.garminColor()] as Array<Number>,
-            _firstWeek, false);
+            [AnalyticsUi.repflowColor()] as Array<Number>, _firstWeek, false);
     }
 
     //! Volume per week, RepFlow's alone — Garmin gives no loads, and a bar
@@ -831,33 +828,6 @@ module AnalyticsUi {
 
     public function garminColor() as Number {
         return Theme.light() ? 0xA0600F : 0xBF7A20;
-    }
-
-    //! "■ RepFlow   ■ Garmin", centred. Returns the y below it.
-    public function legend(dc as Graphics.Dc, y as Number) as Number {
-        var font = Graphics.FONT_XTINY;
-        var line = dc.getFontHeight(font);
-        var size = (line * 45) / 100;
-        var gap = size / 2;
-        var space = size * 2;
-        var a = WatchUi.loadResource(Rez.Strings.SourceRepFlow) as String;
-        var b = WatchUi.loadResource(Rez.Strings.SourceGarmin) as String;
-        var total = size + gap + dc.getTextWidthInPixels(a, font) + space
-            + size + gap + dc.getTextWidthInPixels(b, font);
-        var x = dc.getWidth() / 2 - total / 2;
-        var cy = y + line / 2;
-        var names = [a, b] as Array<String>;
-        var colors = [repflowColor(), garminColor()] as Array<Number>;
-        for (var i = 0; i < 2; i++) {
-            dc.setColor(colors[i], Graphics.COLOR_TRANSPARENT);
-            Theme.fillBar(dc, x, cy - size / 2, size, size);
-            x += size + gap;
-            // Text wears text ink; the swatch beside it carries the identity.
-            dc.setColor(Theme.colorDim(), Graphics.COLOR_TRANSPARENT);
-            dc.drawText(x, y, font, names[i], Graphics.TEXT_JUSTIFY_LEFT);
-            x += dc.getTextWidthInPixels(names[i], font) + space;
-        }
-        return y + line;
     }
 
     //! Eight weeks of bars between `top` and `bottom`, oldest on the left.
